@@ -1,8 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #050b21;
+  --background: #0f172a;
   --foreground: #eef1ff;
+  --site-primary: #6366f1;
+  --site-secondary: #a855f7;
+  --site-tertiary: #14b8a6;
+  --site-surface: #151c33;
+  --site-surface-soft: #1c2542;
+  --site-border: rgba(148, 163, 184, 0.18);
+  --site-muted: rgba(226, 232, 240, 0.72);
+  --site-shadow: 0 24px 80px rgba(2, 6, 23, 0.42);
+  --site-hero-start: rgba(24, 31, 58, 0.98);
+  --site-hero-end: rgba(15, 23, 42, 0.98);
+  --site-vibrant-start: rgba(99, 102, 241, 0.94);
+  --site-vibrant-end: rgba(168, 85, 247, 0.9);
+  --site-button-shadow: rgba(99, 102, 241, 0.3);
 }
 
 @theme inline {
@@ -12,17 +25,52 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #050b21;
-    --foreground: #eef1ff;
-  }
+html[data-theme="light"] {
+  --background: #f7f8ff;
+  --foreground: #0f172a;
+  --site-primary: #6366f1;
+  --site-secondary: #a855f7;
+  --site-tertiary: #14b8a6;
+  --site-surface: rgba(255, 255, 255, 0.92);
+  --site-surface-soft: rgba(238, 242, 255, 0.9);
+  --site-border: rgba(15, 23, 42, 0.12);
+  --site-muted: rgba(15, 23, 42, 0.68);
+  --site-shadow: 0 24px 72px rgba(99, 102, 241, 0.12);
+  --site-hero-start: rgba(255, 255, 255, 0.96);
+  --site-hero-end: rgba(238, 242, 255, 0.96);
+  --site-vibrant-start: rgba(99, 102, 241, 0.92);
+  --site-vibrant-end: rgba(20, 184, 166, 0.85);
+  --site-button-shadow: rgba(99, 102, 241, 0.18);
+}
+
+html[data-theme="dark"] {
+  --background: #0f172a;
+  --foreground: #eef1ff;
+  --site-primary: #6366f1;
+  --site-secondary: #a855f7;
+  --site-tertiary: #14b8a6;
+  --site-surface: #151c33;
+  --site-surface-soft: #1c2542;
+  --site-border: rgba(148, 163, 184, 0.18);
+  --site-muted: rgba(226, 232, 240, 0.72);
+  --site-shadow: 0 24px 80px rgba(2, 6, 23, 0.42);
+  --site-hero-start: rgba(24, 31, 58, 0.98);
+  --site-hero-end: rgba(15, 23, 42, 0.98);
+  --site-vibrant-start: rgba(99, 102, 241, 0.94);
+  --site-vibrant-end: rgba(168, 85, 247, 0.9);
+  --site-button-shadow: rgba(99, 102, 241, 0.3);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  transition:
+    background-color 220ms ease,
+    color 220ms ease;
+  background-image:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.12), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(20, 184, 166, 0.1), transparent 22%);
 }
 
 a {
@@ -32,4 +80,89 @@ a {
 
 * {
   border-color: rgba(255, 255, 255, 0.08);
+}
+
+.site-page {
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+.site-panel {
+  background: var(--site-surface) !important;
+  border-color: var(--site-border) !important;
+  box-shadow: var(--site-shadow);
+}
+
+.site-panel-soft {
+  background: var(--site-surface-soft) !important;
+  border-color: var(--site-border) !important;
+}
+
+.site-panel-hero {
+  background: linear-gradient(135deg, var(--site-hero-start), var(--site-hero-end)) !important;
+  border-color: var(--site-border) !important;
+  box-shadow: var(--site-shadow);
+}
+
+.site-panel-vibrant {
+  background: linear-gradient(135deg, var(--site-vibrant-start), var(--site-vibrant-end)) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: var(--site-shadow);
+}
+
+.site-muted {
+  color: var(--site-muted) !important;
+}
+
+.site-accent-text {
+  color: var(--site-primary) !important;
+}
+
+.site-chip {
+  background: var(--site-surface-soft) !important;
+  border-color: var(--site-border) !important;
+  color: var(--foreground) !important;
+}
+
+.site-button-primary {
+  background: linear-gradient(135deg, var(--site-primary), var(--site-secondary)) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 16px 36px var(--site-button-shadow);
+}
+
+.site-button-secondary {
+  background: var(--site-surface-soft) !important;
+  color: var(--foreground) !important;
+  border-color: var(--site-border) !important;
+}
+
+.site-link-accent {
+  color: var(--site-primary) !important;
+}
+
+.site-input {
+  background: var(--site-surface-soft) !important;
+  border-color: var(--site-border) !important;
+  color: var(--foreground) !important;
+}
+
+.site-input::placeholder {
+  color: var(--site-muted);
+}
+
+.site-theme-toggle {
+  background: var(--site-surface) !important;
+  border: 1px solid var(--site-border);
+  box-shadow: var(--site-shadow);
+}
+
+.site-theme-button {
+  color: var(--site-muted);
+}
+
+.site-theme-button[data-active="true"] {
+  background: var(--site-primary);
+  color: #fff;
 }

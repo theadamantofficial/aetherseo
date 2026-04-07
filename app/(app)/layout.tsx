@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import AetherShell from "@/components/aether-shell";
+import { LanguageProvider } from "@/components/language-provider";
 
 /**
  * Wrap all authenticated screens in the dashboard shell.
@@ -7,5 +8,9 @@ import AetherShell from "@/components/aether-shell";
  * @returns Shared app shell layout.
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
-  return <AetherShell>{children}</AetherShell>;
+  return (
+    <LanguageProvider>
+      <AetherShell>{children}</AetherShell>
+    </LanguageProvider>
+  );
 }

@@ -153,7 +153,7 @@ function getProviderLabel(currentUser: User | null): string | null {
   return "email";
 }
 
-function formatFirebaseMessage(error: unknown, fallback: string): string {
+function formatAuthErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null) {
     const maybeCode = "code" in error && typeof error.code === "string" ? error.code : null;
     const maybeMessage = "message" in error && typeof error.message === "string" ? error.message : null;
@@ -332,7 +332,7 @@ function AuthPageContent() {
       router.replace("/dashboard");
     } catch (error) {
       handledUidRef.current = null;
-      setStatus(formatFirebaseMessage(error, copy.status.signInFinishFailed));
+      setStatus(formatAuthErrorMessage(error, copy.status.signInFinishFailed));
     } finally {
       setBusy(false);
     }
@@ -361,7 +361,7 @@ function AuthPageContent() {
       } catch (error) {
         handledUidRef.current = null;
         setBusy(false);
-        setStatus(formatFirebaseMessage(error, copy.status.linkExpired));
+        setStatus(formatAuthErrorMessage(error, copy.status.linkExpired));
       }
     };
 
@@ -411,7 +411,7 @@ function AuthPageContent() {
 
       setStatus(copy.status.linkSent);
     } catch (error) {
-      setStatus(formatFirebaseMessage(error, copy.status.linkFailed));
+      setStatus(formatAuthErrorMessage(error, copy.status.linkFailed));
     } finally {
       setBusy(false);
     }
@@ -433,7 +433,7 @@ function AuthPageContent() {
       handledUidRef.current = null;
       setBusy(false);
       setStatus(
-        formatFirebaseMessage(
+        formatAuthErrorMessage(
           error,
           providerLabel === "apple" ? copy.status.appleFailed : copy.status.googleFailed,
         ),
@@ -469,7 +469,7 @@ function AuthPageContent() {
       clearAuthDraftState();
       router.replace("/dashboard");
     } catch (error) {
-      setStatus(formatFirebaseMessage(error, copy.status.workspaceSaveFailed));
+      setStatus(formatAuthErrorMessage(error, copy.status.workspaceSaveFailed));
     } finally {
       setBusy(false);
     }

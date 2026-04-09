@@ -422,7 +422,7 @@ function summarizeUrl(value: string): string {
 
 function getPlanLimits(plan: BillingPlan, paidPlanTier: PaidPlanTier | null) {
   if (plan === "free") {
-    return { blogs: 5, audits: 3, actions: 8 };
+    return { blogs: 3, audits: 1, actions: 4 };
   }
 
   if (paidPlanTier === "starter") {
@@ -519,7 +519,9 @@ function buildDynamicDashboardState(
         description:
           latestAssistant
             ? `Latest: ${latestAssistant.title}`
-            : "No AI assistant tasks saved yet",
+            : plan === "free"
+              ? "AI assistant unlocks on paid plans"
+              : "No AI assistant tasks saved yet",
       },
     ],
     health: latestAudit
@@ -569,7 +571,9 @@ function buildDynamicDashboardState(
           ? [
               "Generate your first blog draft to start building workspace history",
               "Run a website audit to populate domain health insights",
-              "Use the AI assistant for briefs, metadata, schema, or fix plans on your first target page",
+              plan === "free"
+                ? "Upgrade to unlock the AI assistant and higher workspace limits"
+                : "Use the AI assistant for briefs, metadata, schema, or fix plans on your first target page",
             ]
           : blogCount === 0
             ? [
@@ -581,14 +585,22 @@ function buildDynamicDashboardState(
               ? [
                   "Run your first website audit to add technical health visibility",
                   "Use your latest saved blog topic as the first audit target",
-                  "Compare blog output with audit findings to prioritize next actions",
+                  plan === "free"
+                    ? "Upgrade to unlock the AI assistant and higher workspace limits"
+                    : "Compare blog output with audit findings to prioritize next actions",
                 ]
               : assistantCount === 0
-                ? [
-                    "Use the AI assistant to turn your latest audit into a fix plan",
-                    "Generate metadata or schema before publishing the next draft",
-                    "Save assistant outputs so your workspace history reflects execution, not just ideas",
-                  ]
+                ? plan === "free"
+                  ? [
+                      "Upgrade to unlock the AI assistant for fix plans and structured SEO tasks",
+                      "Re-run audits after major page edits to keep health data fresh",
+                      "Keep publishing blog drafts from your strongest opportunities",
+                    ]
+                  : [
+                      "Use the AI assistant to turn your latest audit into a fix plan",
+                      "Generate metadata or schema before publishing the next draft",
+                      "Save assistant outputs so your workspace history reflects execution, not just ideas",
+                    ]
                 : [
                   "Keep generating new blog drafts from your strongest audited opportunities",
                   "Re-run audits after major page edits to keep health data fresh",
@@ -832,6 +844,11 @@ export async function saveGeneratedBlogForUser(
 
   const ref = doc(firestore, DASHBOARD_COLLECTION, uid);
   const current = await getDashboardForUser(uid);
+
+  if (profile.plan === "free" && current.generatedBlogs.length >= 3) {
+    throw new Error("Free plan includes 3 blog drafts. Upgrade to continue.");
+  }
+
   const nextBlog: GeneratedBlog = {
     id: blog.id ?? createItemId("blog"),
     createdAt: blog.createdAt ?? new Date().toLocaleDateString("en-US", {
@@ -875,6 +892,11 @@ export async function saveAuditRunForUser(
 
   const ref = doc(firestore, DASHBOARD_COLLECTION, uid);
   const current = await getDashboardForUser(uid);
+
+  if (profile.plan === "free" && current.auditRuns.length >= 1) {
+    throw new Error("Free plan includes 1 website audit. Upgrade to run another.");
+  }
+
   const nextAuditRun: AuditRun = {
     id: auditRun.id ?? createItemId("audit"),
     createdAt: auditRun.createdAt ?? new Date().toLocaleDateString("en-US", {
@@ -918,6 +940,11 @@ export async function saveAssistantRunForUser(
 
   const ref = doc(firestore, DASHBOARD_COLLECTION, uid);
   const current = await getDashboardForUser(uid);
+
+  if (profile.plan === "free") {
+    throw new Error("AI assistant is available on paid plans only. Upgrade to continue.");
+  }
+
   const nextAssistantRun: AssistantRun = {
     id: assistantRun.id ?? createItemId("assistant"),
     createdAt: assistantRun.createdAt ?? new Date().toLocaleDateString("en-US", {

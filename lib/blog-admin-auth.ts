@@ -3,6 +3,10 @@ import { cookies } from "next/headers";
 
 const ADMIN_COOKIE_NAME = "aether-blog-admin";
 
+function getAdminApiToken() {
+  return process.env.BLOG_ADMIN_API_TOKEN || "";
+}
+
 function getAdminEmail() {
   return process.env.BLOG_ADMIN_EMAIL || "";
 }
@@ -29,11 +33,38 @@ export function isBlogAdminConfigured() {
   return Boolean(getAdminEmail() && getAdminPassword());
 }
 
+export function isBlogAdminApiTokenConfigured() {
+  return Boolean(getAdminApiToken());
+}
+
 export function validateBlogAdminCredentials(email: string, password: string) {
   return email === getAdminEmail() && password === getAdminPassword();
 }
 
-export async function isBlogAdminAuthenticated() {
+function hasValidApiToken(request: Request) {
+  const expectedToken = getAdminApiToken();
+  if (!expectedToken) {
+    return false;
+  }
+
+  const authorization = request.headers.get("authorization");
+  const bearerToken = authorization?.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length).trim()
+    : "";
+  const headerToken =
+    request.headers.get("x-blog-admin-token") ||
+    request.headers.get("x-api-key") ||
+    "";
+
+  const candidate = bearerToken || headerToken;
+  return Boolean(candidate) && candidate === expectedToken;
+}
+
+export async function isBlogAdminAuthenticated(request?: Request) {
+  if (request && hasValidApiToken(request)) {
+    return true;
+  }
+
   const cookieStore = await cookies();
   return cookieStore.get(ADMIN_COOKIE_NAME)?.value === getSessionToken();
 }

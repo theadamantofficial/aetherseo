@@ -33,7 +33,7 @@ export const privacyCopy: Record<SiteLanguage, LegalDocumentCopy> = {
       {
         title: "Third-party services",
         body:
-          "Authentication, storage, analytics, and notification flows may rely on third-party services such as Firebase and Discord. Final processor disclosures will be listed in the production policy.",
+          "Authentication, storage, analytics, and notification flows may rely on third-party services and infrastructure providers. Final processor disclosures will be listed in the production policy.",
       },
     ],
   },
@@ -55,7 +55,7 @@ export const privacyCopy: Record<SiteLanguage, LegalDocumentCopy> = {
       {
         title: "Servicios de terceros",
         body:
-          "La autenticacion, el almacenamiento, la analitica y las notificaciones pueden depender de servicios externos como Firebase y Discord. La politica final incluira la lista completa.",
+          "La autenticacion, el almacenamiento, la analitica y las notificaciones pueden depender de servicios externos e infraestructura de terceros. La politica final incluira la lista completa.",
       },
     ],
   },
@@ -77,7 +77,7 @@ export const privacyCopy: Record<SiteLanguage, LegalDocumentCopy> = {
       {
         title: "Services tiers",
         body:
-          "L'authentification, le stockage, l'analytics et les notifications peuvent s'appuyer sur des services tiers comme Firebase et Discord. La politique finale les listera en detail.",
+          "L'authentification, le stockage, l'analytics et les notifications peuvent s'appuyer sur des services tiers et fournisseurs d'infrastructure. La politique finale les listera en detail.",
       },
     ],
   },
@@ -99,7 +99,7 @@ export const privacyCopy: Record<SiteLanguage, LegalDocumentCopy> = {
       {
         title: "Third-party services",
         body:
-          "Authentication, storage, analytics aur notifications Firebase aur Discord jaise third-party services par depend kar sakte hain. Final policy me complete processor list hogi.",
+          "Authentication, storage, analytics aur notifications third-party services aur infrastructure providers par depend kar sakte hain. Final policy me complete processor list hogi.",
       },
     ],
   },

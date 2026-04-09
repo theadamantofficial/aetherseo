@@ -15,7 +15,7 @@ const analyticsUiCopy = {
   en: {
     badge: "Live workspace metrics",
     title: "Analytics",
-    body: "Live workspace metrics pulled from your saved Firestore data",
+    body: "Live workspace metrics pulled from your saved workspace data",
     export: "Export Data",
     overview: "Workspace Activity Overview",
     recentActions: "Recent actions",
@@ -37,7 +37,7 @@ const analyticsUiCopy = {
   hi: {
     badge: "Live workspace metrics",
     title: "Analytics",
-    body: "Saved Firestore data se live workspace metrics yahan dikhte hain",
+    body: "Saved workspace data se live workspace metrics yahan dikhte hain",
     export: "Data export karo",
     overview: "Workspace activity overview",
     recentActions: "Recent actions",
@@ -59,7 +59,7 @@ const analyticsUiCopy = {
   fr: {
     badge: "Metriques live du workspace",
     title: "Analytique",
-    body: "Metriques live du workspace issues de vos donnees Firestore enregistrees",
+    body: "Metriques live du workspace issues de vos donnees enregistrees",
     export: "Exporter les donnees",
     overview: "Vue d'ensemble de l'activite",
     recentActions: "Actions recentes",
@@ -81,7 +81,7 @@ const analyticsUiCopy = {
   de: {
     badge: "Live-Workspace-Metriken",
     title: "Analysen",
-    body: "Live-Workspace-Metriken aus deinen gespeicherten Firestore-Daten",
+    body: "Live-Workspace-Metriken aus deinen gespeicherten Workspace-Daten",
     export: "Daten exportieren",
     overview: "Ubersicht der Workspace-Aktivitat",
     recentActions: "Letzte Aktionen",
@@ -103,7 +103,7 @@ const analyticsUiCopy = {
   ja: {
     badge: "ライブワークスペース指標",
     title: "分析",
-    body: "保存されたFirestoreデータから取得したライブワークスペース指標",
+    body: "保存されたワークスペースデータから取得したライブワークスペース指標",
     export: "データを書き出す",
     overview: "ワークスペース活動の概要",
     recentActions: "最近の操作",
@@ -125,7 +125,7 @@ const analyticsUiCopy = {
   ko: {
     badge: "실시간 워크스페이스 지표",
     title: "분석",
-    body: "저장된 Firestore 데이터에서 가져온 실시간 워크스페이스 지표",
+    body: "저장된 워크스페이스 데이터에서 가져온 실시간 워크스페이스 지표",
     export: "데이터 내보내기",
     overview: "워크스페이스 활동 개요",
     recentActions: "최근 작업",

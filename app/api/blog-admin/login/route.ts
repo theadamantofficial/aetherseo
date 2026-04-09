@@ -7,9 +7,9 @@ import {
   validateBlogAdminCredentials,
 } from "@/lib/blog-admin-auth";
 
-export async function GET() {
+export async function GET(request: Request) {
   return NextResponse.json({
-    authenticated: await isBlogAdminAuthenticated(),
+    authenticated: await isBlogAdminAuthenticated(request),
     usesDefaults: false,
   });
 }

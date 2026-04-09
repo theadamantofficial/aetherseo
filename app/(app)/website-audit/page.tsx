@@ -7,7 +7,12 @@ import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { auth } from "@/lib/firebase";
 import { resolveAppUiLanguage, type AppUiLanguage } from "@/lib/app-ui-language";
-import { getDashboardForUser, saveAuditRunForUser, type AuditRun } from "@/lib/firebase-data";
+import {
+  getDashboardForUser,
+  saveAuditRunForUser,
+  type AuditRun,
+  type BillingPlan,
+} from "@/lib/firebase-data";
 
 type StatusState = {
   tone: "muted" | "error";
@@ -27,6 +32,7 @@ const auditUiCopy: Record<
     authRequired: string;
     urlRequired: string;
     loadError: string;
+    freeAuditLimitReached: string;
     runningStatus: string;
     savedStatus: string;
     score: string;
@@ -52,6 +58,7 @@ const auditUiCopy: Record<
     authRequired: "You must be signed in to run an audit.",
     urlRequired: "Enter a domain or URL first.",
     loadError: "Could not load your last audit.",
+    freeAuditLimitReached: "Free plan includes 1 website audit. Upgrade to run another.",
     runningStatus: "Running AI audit...",
     savedStatus: "Audit completed and saved to your workspace.",
     score: "SEO Score",
@@ -76,6 +83,7 @@ const auditUiCopy: Record<
     authRequired: "Audit chalane ke liye sign in hona zaruri hai.",
     urlRequired: "Pehle domain ya URL enter karo.",
     loadError: "Aapka last audit load nahi ho paya.",
+    freeAuditLimitReached: "Free plan me 1 website audit included hai. Dusra audit chalane ke liye upgrade karo.",
     runningStatus: "AI audit chal raha hai...",
     savedStatus: "Audit complete ho gaya aur workspace me save ho gaya.",
     score: "SEO Score",
@@ -100,6 +108,7 @@ const auditUiCopy: Record<
     authRequired: "Vous devez etre connecte pour lancer un audit.",
     urlRequired: "Saisissez d'abord un domaine ou une URL.",
     loadError: "Impossible de charger votre dernier audit.",
+    freeAuditLimitReached: "Le plan Free inclut 1 audit de site. Passez a une offre payante pour en lancer un autre.",
     runningStatus: "Execution de l'audit IA...",
     savedStatus: "Audit termine et enregistre dans votre workspace.",
     score: "Score SEO",
@@ -124,6 +133,7 @@ const auditUiCopy: Record<
     authRequired: "Du musst angemeldet sein, um ein Audit auszufuehren.",
     urlRequired: "Gib zuerst eine Domain oder URL ein.",
     loadError: "Dein letztes Audit konnte nicht geladen werden.",
+    freeAuditLimitReached: "Der Free-Plan enthaelt 1 Website-Audit. Upgrade, um ein weiteres Audit zu starten.",
     runningStatus: "AI-Audit wird ausgefuehrt...",
     savedStatus: "Audit abgeschlossen und im Workspace gespeichert.",
     score: "SEO-Score",
@@ -148,6 +158,7 @@ const auditUiCopy: Record<
     authRequired: "監査を実行するにはサインインが必要です。",
     urlRequired: "まずドメインまたは URL を入力してください。",
     loadError: "前回の監査を読み込めませんでした。",
+    freeAuditLimitReached: "Free プランではサイト監査は 1 回までです。次の監査にはアップグレードしてください。",
     runningStatus: "AI 監査を実行中...",
     savedStatus: "監査が完了し、ワークスペースに保存されました。",
     score: "SEO スコア",
@@ -172,6 +183,7 @@ const auditUiCopy: Record<
     authRequired: "감사를 실행하려면 로그인해야 합니다.",
     urlRequired: "먼저 도메인 또는 URL을 입력하세요.",
     loadError: "이전 감사를 불러오지 못했습니다.",
+    freeAuditLimitReached: "Free 플랜에는 웹사이트 감사 1회가 포함됩니다. 다음 감사를 실행하려면 업그레이드하세요.",
     runningStatus: "AI 감사를 실행하는 중...",
     savedStatus: "감사가 완료되어 워크스페이스에 저장되었습니다.",
     score: "SEO 점수",
@@ -193,10 +205,13 @@ export default function WebsiteAuditPage() {
   const [uid, setUid] = useState("");
   const [url, setUrl] = useState("");
   const [auditRun, setAuditRun] = useState<AuditRun | null>(null);
+  const [plan, setPlan] = useState<BillingPlan | null>(null);
+  const [auditCount, setAuditCount] = useState(0);
   const [status, setStatus] = useState<StatusState | null>(null);
   const [isBusy, setBusy] = useState(false);
   const activeLanguage = resolveAppUiLanguage(language, uiLanguage);
   const ui = auditUiCopy[activeLanguage];
+  const isFreeAuditLimitReached = plan === "free" && auditCount >= 1;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -208,6 +223,12 @@ export default function WebsiteAuditPage() {
       setUid(currentUser.uid);
       try {
         const dashboard = await getDashboardForUser(currentUser.uid);
+        if (dashboard.plan === "free" && dashboard.auditRuns.length >= 1) {
+          router.replace("/billing?upgrade=audit-limit");
+          return;
+        }
+        setPlan(dashboard.plan);
+        setAuditCount(dashboard.auditRuns.length);
         if (dashboard.auditRuns[0]) {
           setAuditRun(dashboard.auditRuns[0]);
           setUrl(dashboard.auditRuns[0].url);
@@ -233,6 +254,12 @@ export default function WebsiteAuditPage() {
       return;
     }
 
+    if (isFreeAuditLimitReached) {
+      setStatus({ tone: "error", text: ui.freeAuditLimitReached });
+      router.replace("/billing?upgrade=audit-limit");
+      return;
+    }
+
     setBusy(true);
     setStatus({ tone: "muted", text: ui.runningStatus });
 
@@ -251,9 +278,15 @@ export default function WebsiteAuditPage() {
 
       const nextAuditRun = payload.audit as AuditRun;
       setAuditRun(nextAuditRun);
-      await saveAuditRunForUser(uid, nextAuditRun);
+      const nextDashboard = await saveAuditRunForUser(uid, nextAuditRun);
+      setPlan(nextDashboard.plan);
+      setAuditCount(nextDashboard.auditRuns.length);
       setStatus({ tone: "muted", text: ui.savedStatus });
     } catch (error) {
+      if (error instanceof Error && error.message === "Free plan includes 1 website audit. Upgrade to run another.") {
+        router.replace("/billing?upgrade=audit-limit");
+        return;
+      }
       setStatus({
         tone: "error",
         text: error instanceof Error ? error.message : "Could not run the website audit.",
@@ -287,14 +320,14 @@ export default function WebsiteAuditPage() {
         <button
           type="button"
           onClick={handleAudit}
-          disabled={isBusy}
+          disabled={isBusy || isFreeAuditLimitReached}
           className="site-button-primary rounded-xl px-7 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-70"
         >
           {isBusy ? ui.running : ui.runButton}
         </button>
       </section>
       <p className={`text-sm ${status?.tone === "error" ? "text-red-500" : "site-muted"}`}>
-        {status?.text ?? ui.idle}
+        {status?.text ?? (isFreeAuditLimitReached ? ui.freeAuditLimitReached : ui.idle)}
       </p>
 
       <section className="grid gap-4 lg:grid-cols-2">

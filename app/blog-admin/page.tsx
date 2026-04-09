@@ -351,7 +351,7 @@ export default function BlogAdminPage() {
                 </form>
 
                 <p className="site-muted mt-6 text-sm leading-7">
-                  Production credentials are controlled through `BLOG_ADMIN_EMAIL` and `BLOG_ADMIN_PASSWORD`.
+                  Browser login uses `BLOG_ADMIN_EMAIL` and `BLOG_ADMIN_PASSWORD`. Automation can use a bearer token through `BLOG_ADMIN_API_TOKEN`.
                 </p>
 
                 {!isConfigured ? (

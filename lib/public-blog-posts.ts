@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { del, get, list, put } from "@vercel/blob";
-import type { BlogLanguage, PublishedBlogPost } from "@/lib/blog-post-utils";
+import { normalizeArticleBody, type BlogLanguage, type PublishedBlogPost } from "@/lib/blog-post-utils";
 
 const LEGACY_STORE_PATH = path.join(process.cwd(), "data", "public-blog-posts.json");
 const BLOB_POSTS_PREFIX = "public-blog-posts/";
@@ -36,7 +36,7 @@ async function readLegacyStore() {
   try {
     const raw = await readFile(LEGACY_STORE_PATH, "utf8");
     const parsed = JSON.parse(raw) as PublishedBlogPost[];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.map(normalizePublishedBlogPost) : [];
   } catch {
     return [] as PublishedBlogPost[];
   }
@@ -89,19 +89,28 @@ async function readBlobPost(pathname: string) {
   }
 
   try {
-    return JSON.parse(raw) as PublishedBlogPost;
+    return normalizePublishedBlogPost(JSON.parse(raw) as PublishedBlogPost);
   } catch {
     return null;
   }
 }
 
 async function writeBlobPost(post: PublishedBlogPost) {
-  await put(getBlobPath(post.id), `${JSON.stringify(post, null, 2)}\n`, {
+  const normalizedPost = normalizePublishedBlogPost(post);
+
+  await put(getBlobPath(normalizedPost.id), `${JSON.stringify(normalizedPost, null, 2)}\n`, {
     access: "private",
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/json; charset=utf-8",
   });
+}
+
+function normalizePublishedBlogPost(post: PublishedBlogPost) {
+  return {
+    ...post,
+    body: normalizeArticleBody(post.body),
+  };
 }
 
 async function seedRemoteStoreIfNeeded() {
@@ -172,17 +181,19 @@ export async function getPublishedBlogPost(language: BlogLanguage, slug: string)
 }
 
 export async function upsertPublishedBlogPost(post: PublishedBlogPost) {
+  const normalizedPost = normalizePublishedBlogPost(post);
+
   if (isBlobStoreConfigured()) {
     await seedRemoteStoreIfNeeded();
-    await writeBlobPost(post);
-    return post;
+    await writeBlobPost(normalizedPost);
+    return normalizedPost;
   }
 
   assertWritableStoreConfigured();
   const posts = await readLegacyStore();
-  const nextPosts = sortPosts([post, ...posts.filter((entry) => entry.id !== post.id)]);
+  const nextPosts = sortPosts([normalizedPost, ...posts.filter((entry) => entry.id !== normalizedPost.id)]);
   await writeLegacyStore(nextPosts);
-  return post;
+  return normalizedPost;
 }
 
 export async function deletePublishedBlogPost(postId: string) {

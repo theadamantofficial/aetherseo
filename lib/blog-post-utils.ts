@@ -1,9 +1,9 @@
-import type { SiteLanguage } from "@/lib/site-language";
+export type BlogLanguage = "en" | "es" | "fr" | "hi" | "de" | "ja" | "ko";
 
 export type PublishedBlogPost = {
   id: string;
   slug: string;
-  language: SiteLanguage;
+  language: BlogLanguage;
   title: string;
   excerpt: string;
   category: string;
@@ -17,8 +17,9 @@ export type PublishedBlogPost = {
   readTime: string;
 };
 
-export const blogLanguageOptions: Array<{ value: SiteLanguage; label: string }> = [
+export const blogLanguageOptions: Array<{ value: BlogLanguage; label: string }> = [
   { value: "en", label: "English" },
+  { value: "es", label: "Spanish" },
   { value: "hi", label: "Hindi" },
   { value: "fr", label: "French" },
   { value: "de", label: "German" },
@@ -27,7 +28,7 @@ export const blogLanguageOptions: Array<{ value: SiteLanguage; label: string }> 
 ];
 
 export const blogUiCopy: Record<
-  SiteLanguage,
+  BlogLanguage,
   {
     eyebrow: string;
     title: string;
@@ -41,6 +42,19 @@ export const blogUiCopy: Record<
   }
 > = {
   en: {
+    eyebrow: "Aether SEO journal",
+    title: "Search-led articles, announcements, and launch notes.",
+    description:
+      "Every published article on Aether SEO lives here. No seeded placeholders, only live posts from the publishing console.",
+    emptyTitle: "No blog posts are live yet.",
+    emptyDescription:
+      "Use the publishing console to create the first article. The public blog will update as soon as a post is published.",
+    backToBlog: "Back to blog",
+    backToHome: "Back to home",
+    readingTimeLabel: "Read time",
+    publishedLabel: "Published",
+  },
+  es: {
     eyebrow: "Aether SEO journal",
     title: "Search-led articles, announcements, and launch notes.",
     description:

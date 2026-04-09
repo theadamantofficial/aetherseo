@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
+import type { BlogLanguage } from "@/lib/blog-post-utils";
 import { listPublishedBlogPosts } from "@/lib/public-blog-posts";
-import type { SiteLanguage } from "@/lib/site-language";
 
-function normalizeLanguage(value: string | null): SiteLanguage | undefined {
-  if (value === "en" || value === "hi" || value === "fr" || value === "de" || value === "ja" || value === "ko") {
+function normalizeLanguage(value: string | null): BlogLanguage | undefined {
+  if (
+    value === "en" ||
+    value === "es" ||
+    value === "hi" ||
+    value === "fr" ||
+    value === "de" ||
+    value === "ja" ||
+    value === "ko"
+  ) {
     return value;
   }
 

@@ -37,7 +37,8 @@ export function resolveUiLanguage(
   value: string | null | undefined,
   fallback: SiteLanguage = defaultLanguage,
 ): SiteLanguage {
-  return isSiteLanguage(value ?? "") ? value : fallback;
+  const nextValue = value ?? "";
+  return isSiteLanguage(nextValue) ? nextValue : fallback;
 }
 
 export type LandingCopy = {
@@ -185,6 +186,7 @@ export type ShellCopy = {
   nav: {
     dashboard: string;
     analytics: string;
+    aiAssistant: string;
     generateBlog: string;
     websiteAudit: string;
     history: string;

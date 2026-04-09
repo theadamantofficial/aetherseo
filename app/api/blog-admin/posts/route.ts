@@ -4,6 +4,7 @@ import {
   normalizeArticleBody,
   normalizeTags,
   slugify,
+  type BlogLanguage,
   type PublishedBlogPost,
 } from "@/lib/blog-post-utils";
 import { isBlogAdminAuthenticated } from "@/lib/blog-admin-auth";
@@ -13,10 +14,8 @@ import {
   upsertPublishedBlogPost,
 } from "@/lib/public-blog-posts";
 import { sendBlogPublishedNotification } from "@/lib/discord-webhooks";
-import type { SiteLanguage } from "@/lib/site-language";
-
-function normalizeLanguage(value: unknown): SiteLanguage {
-  return value === "hi" || value === "fr" || value === "de" || value === "ja" || value === "ko"
+function normalizeLanguage(value: unknown): BlogLanguage {
+  return value === "es" || value === "hi" || value === "fr" || value === "de" || value === "ja" || value === "ko"
     ? value
     : "en";
 }

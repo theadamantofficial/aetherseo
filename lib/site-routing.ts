@@ -13,7 +13,8 @@ export const localeCodes: Record<SiteLanguage, string> = {
 };
 
 export function resolveSiteLanguage(value: string | null | undefined): SiteLanguage {
-  return isSiteLanguage(value ?? "") ? value : defaultLanguage;
+  const nextValue = value ?? "";
+  return isSiteLanguage(nextValue) ? nextValue : defaultLanguage;
 }
 
 export function buildLanguageAlternates(

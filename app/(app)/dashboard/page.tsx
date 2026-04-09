@@ -58,7 +58,9 @@ const dashboardUiCopy: Record<
     runPaidAudit: string;
     assistantTitle: string;
     assistantBody: string;
+    assistantLockedBody: string;
     openAssistant: string;
+    upgradePlan: string;
     recentActivity: string;
     viewHistory: string;
     noActivity: string;
@@ -72,7 +74,7 @@ const dashboardUiCopy: Record<
 > = {
   en: {
     loading: "Loading your workspace data...",
-    loadError: "We could not load your workspace data from Firestore.",
+    loadError: "We could not load your workspace data.",
     empty: "No workspace data is available yet.",
     currentTier: "Current tier",
     signedInAs: "Signed in as",
@@ -87,7 +89,9 @@ const dashboardUiCopy: Record<
     runPaidAudit: "Run {tier} Audit",
     assistantTitle: "SEO AI Assistant",
     assistantBody: "Build briefs, metadata, schema, keyword clusters, and fix plans from one workspace.",
+    assistantLockedBody: "AI Assistant unlocks on paid plans. Upgrade to open briefs, metadata, schema, and fix plans.",
     openAssistant: "Open AI Assistant",
+    upgradePlan: "Upgrade Plan",
     recentActivity: "Recent Activity",
     viewHistory: "View History",
     noActivity:
@@ -106,7 +110,7 @@ const dashboardUiCopy: Record<
   },
   hi: {
     loading: "Aapka workspace data load ho raha hai...",
-    loadError: "Firestore se workspace data load nahi ho paya.",
+    loadError: "Workspace data load nahi ho paya.",
     empty: "Abhi tak koi workspace data available nahi hai.",
     currentTier: "Current tier",
     signedInAs: "Signed in as",
@@ -121,7 +125,9 @@ const dashboardUiCopy: Record<
     runPaidAudit: "{tier} Audit Chalao",
     assistantTitle: "SEO AI Assistant",
     assistantBody: "Ek hi workspace se briefs, metadata, schema, keyword clusters aur fix plans banao.",
+    assistantLockedBody: "AI Assistant paid plans par unlock hota hai. Briefs, metadata, schema aur fix plans ke liye upgrade karo.",
     openAssistant: "AI Assistant Khollo",
+    upgradePlan: "Upgrade Karo",
     recentActivity: "Recent Activity",
     viewHistory: "History Dekho",
     noActivity: "Abhi koi workspace activity nahi hai. Blog draft ya audit chalao aur history banao.",
@@ -139,7 +145,7 @@ const dashboardUiCopy: Record<
   },
   fr: {
     loading: "Chargement des donnees du workspace...",
-    loadError: "Impossible de charger les donnees du workspace depuis Firestore.",
+    loadError: "Impossible de charger les donnees du workspace.",
     empty: "Aucune donnee de workspace n'est disponible pour le moment.",
     currentTier: "Niveau actuel",
     signedInAs: "Connecte en tant que",
@@ -156,7 +162,9 @@ const dashboardUiCopy: Record<
     assistantTitle: "Assistant IA SEO",
     assistantBody:
       "Construisez briefs, metadata, schema, clusters de mots-cles et plans de correction depuis un seul workspace.",
+    assistantLockedBody: "L'assistant IA est reserve aux offres payantes. Passez a une offre superieure pour les briefs et plans de correction.",
     openAssistant: "Ouvrir l'assistant IA",
+    upgradePlan: "Mettre a niveau",
     recentActivity: "Activite recente",
     viewHistory: "Voir l'historique",
     noActivity:
@@ -175,7 +183,7 @@ const dashboardUiCopy: Record<
   },
   de: {
     loading: "Workspace-Daten werden geladen...",
-    loadError: "Die Workspace-Daten konnten nicht aus Firestore geladen werden.",
+    loadError: "Die Workspace-Daten konnten nicht geladen werden.",
     empty: "Noch keine Workspace-Daten vorhanden.",
     currentTier: "Aktueller Tarif",
     signedInAs: "Angemeldet als",
@@ -191,7 +199,9 @@ const dashboardUiCopy: Record<
     assistantTitle: "SEO AI Assistant",
     assistantBody:
       "Erstelle Briefings, Metadata, Schema, Keyword-Cluster und Fix-Plaene in einem Workspace.",
+    assistantLockedBody: "Der AI Assistant ist nur in bezahlten Plaenen verfuegbar. Upgrade fuer Briefings und Fix-Plaene.",
     openAssistant: "AI Assistant oeffnen",
+    upgradePlan: "Upgrade",
     recentActivity: "Letzte Aktivitaet",
     viewHistory: "Verlauf ansehen",
     noActivity:
@@ -210,7 +220,7 @@ const dashboardUiCopy: Record<
   },
   ja: {
     loading: "ワークスペースデータを読み込み中です...",
-    loadError: "Firestore からワークスペースデータを読み込めませんでした。",
+    loadError: "ワークスペースデータを読み込めませんでした。",
     empty: "まだワークスペースデータがありません。",
     currentTier: "現在のプラン",
     signedInAs: "サインイン中",
@@ -226,7 +236,9 @@ const dashboardUiCopy: Record<
     assistantTitle: "SEO AI アシスタント",
     assistantBody:
       "ブリーフ、メタデータ、スキーマ、キーワードクラスタ、修正計画を一つのワークスペースで作成します。",
+    assistantLockedBody: "AI アシスタントは有料プランで利用できます。ブリーフや修正プランを使うにはアップグレードしてください。",
     openAssistant: "AI アシスタントを開く",
+    upgradePlan: "アップグレード",
     recentActivity: "最近のアクティビティ",
     viewHistory: "履歴を見る",
     noActivity: "まだアクティビティがありません。ブログ生成か監査を実行してください。",
@@ -244,7 +256,7 @@ const dashboardUiCopy: Record<
   },
   ko: {
     loading: "워크스페이스 데이터를 불러오는 중...",
-    loadError: "Firestore에서 워크스페이스 데이터를 불러오지 못했습니다.",
+    loadError: "워크스페이스 데이터를 불러오지 못했습니다.",
     empty: "아직 워크스페이스 데이터가 없습니다.",
     currentTier: "현재 플랜",
     signedInAs: "로그인 계정",
@@ -260,7 +272,9 @@ const dashboardUiCopy: Record<
     assistantTitle: "SEO AI Assistant",
     assistantBody:
       "브리프, 메타데이터, 스키마, 키워드 클러스터, 수정 계획을 한 워크스페이스에서 만드세요.",
+    assistantLockedBody: "AI 도우미는 유료 플랜에서만 사용할 수 있습니다. 브리프와 수정 계획을 위해 업그레이드하세요.",
     openAssistant: "AI Assistant 열기",
+    upgradePlan: "업그레이드",
     recentActivity: "최근 활동",
     viewHistory: "기록 보기",
     noActivity: "아직 활동이 없습니다. 블로그를 생성하거나 감사를 실행하세요.",
@@ -366,6 +380,15 @@ export default function DashboardPage() {
     return <div className="site-muted text-sm">{ui.empty}</div>;
   }
 
+  const isFreeBlogLimitReached = dashboard.plan === "free" && dashboard.generatedBlogs.length >= 3;
+  const isFreeAuditLimitReached = dashboard.plan === "free" && dashboard.auditRuns.length >= 1;
+  const blogHref = isFreeBlogLimitReached ? "/billing?upgrade=blog-limit" : "/generate-blog";
+  const auditHref = isFreeAuditLimitReached ? "/billing?upgrade=audit-limit" : "/website-audit";
+  const assistantHref = isPaid ? "/ai-assistant" : "/billing?upgrade=assistant-locked";
+  const draftButtonLabel = isFreeBlogLimitReached ? ui.upgradePlan : draftLabel;
+  const auditButtonLabel = isFreeAuditLimitReached ? ui.upgradePlan : auditLabel;
+  const assistantButtonLabel = isPaid ? ui.openAssistant : ui.upgradePlan;
+
   return (
     <div className="space-y-6">
       <header className="site-panel rounded-2xl border p-6">
@@ -396,11 +419,11 @@ export default function DashboardPage() {
             <p className="mt-3 max-w-md text-sm text-white/85">{ui.generateBody}</p>
           </div>
           <Link
-            href="/generate-blog"
+            href={blogHref}
             className="site-button-secondary mt-6 inline-flex self-start rounded-xl border px-4 py-2 text-sm font-semibold"
             style={{ backgroundColor: "#ffffff", color: "#111111" }}
           >
-            {draftLabel}
+            {draftButtonLabel}
           </Link>
         </article>
         <article className="site-panel flex h-full flex-col rounded-2xl border p-7">
@@ -409,22 +432,22 @@ export default function DashboardPage() {
             <p className="site-muted mt-3 max-w-md text-sm">{ui.auditBody}</p>
           </div>
           <Link
-            href="/website-audit"
+            href={auditHref}
             className="site-button-primary mt-6 inline-flex self-start rounded-xl px-4 py-2 text-sm font-semibold"
           >
-            {auditLabel}
+            {auditButtonLabel}
           </Link>
         </article>
         <article className="site-panel flex h-full flex-col rounded-2xl border p-7">
           <div>
             <h2 className="text-4xl font-semibold">{ui.assistantTitle}</h2>
-            <p className="site-muted mt-3 max-w-md text-sm">{ui.assistantBody}</p>
+            <p className="site-muted mt-3 max-w-md text-sm">{isPaid ? ui.assistantBody : ui.assistantLockedBody}</p>
           </div>
           <Link
-            href="/ai-assistant"
+            href={assistantHref}
             className="site-button-secondary mt-6 inline-flex self-start rounded-xl border px-4 py-2 text-sm font-semibold"
           >
-            {ui.openAssistant}
+            {assistantButtonLabel}
           </Link>
         </article>
       </section>
@@ -475,22 +498,25 @@ export default function DashboardPage() {
       <section className="site-panel rounded-2xl border p-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-2xl font-semibold">{ui.recommendedActions}</h3>
-          <Link href="/ai-assistant" className="site-link-accent text-sm">
-            {ui.openAssistant}
+          <Link href={assistantHref} className="site-link-accent text-sm">
+            {assistantButtonLabel}
           </Link>
         </div>
         {translatedDashboard.recommendations.length ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {translatedDashboard.recommendations.map((recommendation: string) => {
-              const href = latestAuditUrl
-                ? `/ai-assistant?action=fix-plan&input=${encodeURIComponent(recommendation)}&url=${encodeURIComponent(latestAuditUrl)}`
-                : `/ai-assistant?action=fix-plan&input=${encodeURIComponent(recommendation)}`;
+              const href = isPaid
+                ? latestAuditUrl
+                  ? `/ai-assistant?action=fix-plan&input=${encodeURIComponent(recommendation)}&url=${encodeURIComponent(latestAuditUrl)}`
+                  : `/ai-assistant?action=fix-plan&input=${encodeURIComponent(recommendation)}`
+                : "/billing?upgrade=assistant-locked";
+              const actionLabel = isPaid ? ui.launchFixPlan : ui.upgradePlan;
 
               return (
                 <article key={recommendation} className="site-panel-soft rounded-2xl border p-5">
                   <p className="text-sm font-semibold">{recommendation}</p>
                   <Link href={href} className="site-link-accent mt-4 inline-flex text-sm font-semibold">
-                    {ui.launchFixPlan}
+                    {actionLabel}
                   </Link>
                 </article>
               );

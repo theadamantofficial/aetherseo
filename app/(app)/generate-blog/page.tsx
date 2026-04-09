@@ -9,6 +9,7 @@ import { auth } from "@/lib/firebase";
 import {
   getDashboardForUser,
   saveGeneratedBlogForUser,
+  type BillingPlan,
   type GeneratedBlog,
 } from "@/lib/firebase-data";
 import { blogWorkspaceCopy, globalLanguageOptions } from "@/lib/site-language";
@@ -43,10 +44,13 @@ function GenerateBlogPageContent() {
   const [tone, setTone] = useState(toneOptions[0]);
   const [length, setLength] = useState(copy.lengths[1] ?? copy.lengths[0]);
   const [outputLanguage, setOutputLanguage] = useState(language);
+  const [plan, setPlan] = useState<BillingPlan | null>(null);
+  const [blogCount, setBlogCount] = useState(0);
   const [blog, setBlog] = useState<GeneratedBlog | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isBusy, setBusy] = useState(false);
   const currentLanguage = globalLanguageOptions.find((item) => item.code === outputLanguage) ?? globalLanguageOptions[0];
+  const isFreeBlogLimitReached = plan === "free" && blogCount >= 3;
 
   useEffect(() => {
     const queryKeyword = searchParams.get("keyword");
@@ -69,6 +73,12 @@ function GenerateBlogPageContent() {
       setUid(currentUser.uid);
       try {
         const dashboard = await getDashboardForUser(currentUser.uid);
+        setPlan(dashboard.plan);
+        setBlogCount(dashboard.generatedBlogs.length);
+        if (dashboard.plan === "free" && dashboard.generatedBlogs.length >= 3) {
+          router.replace("/billing?upgrade=blog-limit");
+          return;
+        }
         if (dashboard.generatedBlogs[0]) {
           setBlog(dashboard.generatedBlogs[0]);
           setKeyword((currentKeyword) =>
@@ -96,6 +106,11 @@ function GenerateBlogPageContent() {
       return;
     }
 
+    if (isFreeBlogLimitReached) {
+      router.replace("/billing?upgrade=blog-limit");
+      return;
+    }
+
     setBusy(true);
     setStatus("Generating blog draft...");
 
@@ -119,9 +134,15 @@ function GenerateBlogPageContent() {
 
       const generatedBlog = payload.blog as GeneratedBlog;
       setBlog(generatedBlog);
-      await saveGeneratedBlogForUser(uid, generatedBlog);
+      const nextDashboard = await saveGeneratedBlogForUser(uid, generatedBlog);
+      setPlan(nextDashboard.plan);
+      setBlogCount(nextDashboard.generatedBlogs.length);
       setStatus("Blog generated and saved to your workspace.");
     } catch (error) {
+      if (error instanceof Error && error.message === "Free plan includes 3 blog drafts. Upgrade to continue.") {
+        router.replace("/billing?upgrade=blog-limit");
+        return;
+      }
       setStatus(error instanceof Error ? error.message : "Could not generate the blog.");
     } finally {
       setBusy(false);
@@ -210,12 +231,17 @@ function GenerateBlogPageContent() {
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={isBusy}
+            disabled={isBusy || isFreeBlogLimitReached}
             className="site-button-primary w-full rounded-xl px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isBusy ? "Generating..." : `${copy.generateButton} ✦`}
           </button>
-          <p className="site-muted text-xs">{status ?? "Generate a new draft and it will be saved to your workspace history."}</p>
+          <p className="site-muted text-xs">
+            {status ??
+              (isFreeBlogLimitReached
+                ? "Free plan includes 3 blog drafts. Upgrade to continue."
+                : "Generate a new draft and it will be saved to your workspace history.")}
+          </p>
 
           <div className="site-panel-soft rounded-2xl border p-4">
             <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.companyBlogLink}</p>

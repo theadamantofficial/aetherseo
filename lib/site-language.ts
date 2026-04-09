@@ -312,7 +312,7 @@ export const landingCopy: Record<SiteLanguage, LandingCopy> = {
         "User signs in with Google, Apple, or email link",
         "Phone is stored for later verification",
         "Plan choice determines the workspace they enter",
-        "Dashboard loads only that user's Firestore data",
+        "Dashboard loads only that user's workspace data",
       ],
       steps: [
         { step: "01", title: "Frame the goal", body: "Define the site, theme, and business priority so every run starts from a clear target." },
@@ -364,7 +364,7 @@ export const landingCopy: Record<SiteLanguage, LandingCopy> = {
         },
         {
           question: "What happens after sign in?",
-          answer: "Users land in onboarding, choose the free or paid workspace once, and then their dashboard loads from their own Firestore data.",
+          answer: "Users land in onboarding, choose the free or paid workspace once, and then their dashboard loads from their own workspace data.",
         },
         {
           question: "Can I start free and upgrade later?",
@@ -519,7 +519,7 @@ export const landingCopy: Record<SiteLanguage, LandingCopy> = {
         },
         {
           question: "Que pasa despues de iniciar sesion?",
-          answer: "El usuario elige plan una vez y luego el dashboard carga desde sus propios datos en Firestore.",
+          answer: "El usuario elige plan una vez y luego el dashboard carga desde sus propios datos del workspace.",
         },
         {
           question: "Puedo empezar gratis y subir despues?",
@@ -674,7 +674,7 @@ export const landingCopy: Record<SiteLanguage, LandingCopy> = {
         },
         {
           question: "Que se passe-t-il apres connexion ?",
-          answer: "L'utilisateur choisit une offre une fois, puis le dashboard charge ses propres donnees Firestore.",
+          answer: "L'utilisateur choisit une offre une fois, puis le dashboard charge ses propres donnees du workspace.",
         },
         {
           question: "Peut-on commencer gratuitement et evoluer ensuite ?",
@@ -777,7 +777,7 @@ export const landingCopy: Record<SiteLanguage, LandingCopy> = {
         "User Google, Apple ya email link se sign in karta hai",
         "Phone baad ki verification ke liye store hota hai",
         "Plan choice workspace decide karti hai",
-        "Dashboard sirf us user ka Firestore data load karta hai",
+        "Dashboard sirf us user ka workspace data load karta hai",
       ],
       steps: [
         { step: "01", title: "Goal define karo", body: "Site, theme aur business priority clear karo taki har run ka target clean ho." },
@@ -829,7 +829,7 @@ export const landingCopy: Record<SiteLanguage, LandingCopy> = {
         },
         {
           question: "Sign in ke baad kya hota hai?",
-          answer: "User ek baar free ya paid choose karta hai, uske baad dashboard uske khud ke Firestore data se load hota hai.",
+          answer: "User ek baar free ya paid choose karta hai, uske baad dashboard uske khud ke workspace data se load hota hai.",
         },
         {
           question: "Kya main free se start karke later upgrade kar sakta hun?",
@@ -914,7 +914,7 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
       connectingGoogle: "Connecting with Google...",
       googleFailed: "Google sign in failed. Try again.",
       connectingApple: "Connecting with Apple...",
-      appleFailed: "Apple sign in failed. Make sure Apple is enabled in Firebase Authentication.",
+      appleFailed: "Apple sign in failed. Make sure Apple sign-in is enabled.",
       creatingWorkspace: (plan) => `Creating your ${plan} workspace...`,
       workspaceReady: "Workspace ready. Redirecting to your dashboard.",
       workspaceSelected: (plan) => `${plan} workspace selected. Continue with Google, Apple, or email link.`,
@@ -966,7 +966,7 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
       connectingGoogle: "Conectando con Google...",
       googleFailed: "El acceso con Google fallo. Intenta de nuevo.",
       connectingApple: "Conectando con Apple...",
-      appleFailed: "El acceso con Apple fallo. Activa Apple en Firebase Authentication.",
+      appleFailed: "El acceso con Apple fallo. Activa el acceso con Apple.",
       creatingWorkspace: (plan) => `Creando tu espacio ${plan}...`,
       workspaceReady: "Espacio listo. Redirigiendo al dashboard.",
       workspaceSelected: (plan) => `Espacio ${plan} seleccionado. Continua con Google, Apple o enlace por correo.`,
@@ -1018,7 +1018,7 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
       connectingGoogle: "Connexion a Google...",
       googleFailed: "La connexion Google a echoue.",
       connectingApple: "Connexion a Apple...",
-      appleFailed: "La connexion Apple a echoue. Activez Apple dans Firebase Authentication.",
+      appleFailed: "La connexion Apple a echoue. Activez la connexion Apple.",
       creatingWorkspace: (plan) => `Creation de votre espace ${plan}...`,
       workspaceReady: "Espace pret. Redirection vers le dashboard.",
       workspaceSelected: (plan) => `Espace ${plan} selectionne. Continuez avec Google, Apple ou lien email.`,
@@ -1070,7 +1070,7 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
       connectingGoogle: "Google se connect ho raha hai...",
       googleFailed: "Google sign in fail ho gaya.",
       connectingApple: "Apple se connect ho raha hai...",
-      appleFailed: "Apple sign in fail ho gaya. Firebase Authentication me Apple enable karo.",
+      appleFailed: "Apple sign in fail ho gaya. Apple sign-in enable karo.",
       creatingWorkspace: (plan) => `Aapka ${plan} workspace create ho raha hai...`,
       workspaceReady: "Workspace ready hai. Dashboard par redirect ho raha hai.",
       workspaceSelected: (plan) => `${plan} workspace select ho gaya. Ab Google, Apple ya email link se continue karo.`,

@@ -82,6 +82,11 @@ const billingUiCopy: Record<
     alreadyActive: string;
     freePlanName: string;
     paidPlanName: string;
+    notices: {
+      blogLimit: string;
+      auditLimit: string;
+      assistantLocked: string;
+    };
     planBodies: Record<"free" | PaidPlanTier, string>;
   }
 > = {
@@ -112,8 +117,13 @@ const billingUiCopy: Record<
     alreadyActive: "Already Active",
     freePlanName: "Free",
     paidPlanName: "Paid",
+    notices: {
+      blogLimit: "Free plan includes 3 blog drafts. Upgrade to keep generating.",
+      auditLimit: "Free plan includes 1 website audit. Upgrade to run another.",
+      assistantLocked: "AI Assistant is available on paid plans only. Upgrade to unlock it.",
+    },
     planBodies: {
-      free: "5 blogs, 3 website audits, basic features, and limited export.",
+      free: "3 blogs, 1 website audit, basic features, and limited export.",
       starter: "50 blogs, 20 audits, faster generation, and no watermark.",
       pro: "200 blogs, 100 audits, priority AI, history, export, and advanced SEO suggestions.",
       agency: "Fair-usage scale, team access, API access, and automation features.",
@@ -147,8 +157,13 @@ const billingUiCopy: Record<
     alreadyActive: "Already Active",
     freePlanName: "Free",
     paidPlanName: "Paid",
+    notices: {
+      blogLimit: "Free plan me 3 blog drafts included hain. Aur generate karne ke liye upgrade karo.",
+      auditLimit: "Free plan me 1 website audit included hai. Agla audit chalane ke liye upgrade karo.",
+      assistantLocked: "AI Assistant sirf paid plans me available hai. Unlock karne ke liye upgrade karo.",
+    },
     planBodies: {
-      free: "5 blogs, 3 website audits, basic features aur limited export.",
+      free: "3 blogs, 1 website audit, basic features aur limited export.",
       starter: "50 blogs, 20 audits, faster generation aur no watermark.",
       pro: "200 blogs, 100 audits, priority AI, history, export aur advanced SEO suggestions.",
       agency: "Fair-usage scale, team access, API access aur automation features.",
@@ -183,8 +198,13 @@ const billingUiCopy: Record<
     alreadyActive: "Deja actif",
     freePlanName: "Free",
     paidPlanName: "Paid",
+    notices: {
+      blogLimit: "Le plan Free inclut 3 brouillons de blog. Passez a une offre payante pour continuer.",
+      auditLimit: "Le plan Free inclut 1 audit de site. Passez a une offre payante pour en lancer un autre.",
+      assistantLocked: "L'assistant IA est reserve aux offres payantes. Passez a une offre superieure pour le debloquer.",
+    },
     planBodies: {
-      free: "5 blogs, 3 audits de site, fonctions de base et export limite.",
+      free: "3 blogs, 1 audit de site, fonctions de base et export limite.",
       starter: "50 blogs, 20 audits, generation plus rapide et aucun watermark.",
       pro: "200 blogs, 100 audits, priority AI, historique, export et suggestions SEO avancees.",
       agency: "Usage raisonnable, acces equipe, acces API et fonctions d'automatisation.",
@@ -218,8 +238,13 @@ const billingUiCopy: Record<
     alreadyActive: "Bereits aktiv",
     freePlanName: "Free",
     paidPlanName: "Paid",
+    notices: {
+      blogLimit: "Der Free-Plan enthaelt 3 Blog-Entwuerfe. Upgrade, um weiter zu generieren.",
+      auditLimit: "Der Free-Plan enthaelt 1 Website-Audit. Upgrade fuer ein weiteres Audit.",
+      assistantLocked: "Der AI Assistant ist nur in bezahlten Plaenen verfuegbar. Upgrade zum Freischalten.",
+    },
     planBodies: {
-      free: "5 Blogs, 3 Website-Audits, Basisfunktionen und limitierter Export.",
+      free: "3 Blogs, 1 Website-Audit, Basisfunktionen und limitierter Export.",
       starter: "50 Blogs, 20 Audits, schnellere Generierung und kein Wasserzeichen.",
       pro: "200 Blogs, 100 Audits, Priority AI, Verlauf, Export und erweiterte SEO-Hinweise.",
       agency: "Fair Usage, Teamzugang, API-Zugang und Automatisierungsfunktionen.",
@@ -251,8 +276,13 @@ const billingUiCopy: Record<
     alreadyActive: "利用中",
     freePlanName: "Free",
     paidPlanName: "Paid",
+    notices: {
+      blogLimit: "Free プランではブログ下書きは 3 件までです。続けるにはアップグレードしてください。",
+      auditLimit: "Free プランではサイト監査は 1 回までです。次の監査にはアップグレードしてください。",
+      assistantLocked: "AI アシスタントは有料プランで利用できます。使うにはアップグレードしてください。",
+    },
     planBodies: {
-      free: "5 件のブログ、3 件のサイト監査、基本機能、制限付きエクスポート。",
+      free: "3 件のブログ、1 件のサイト監査、基本機能、制限付きエクスポート。",
       starter: "50 件のブログ、20 件の監査、高速生成、透かしなし。",
       pro: "200 件のブログ、100 件の監査、Priority AI、履歴、エクスポート、高度な SEO 提案。",
       agency: "フェアユース、チーム利用、API 利用、自動化機能。",
@@ -285,8 +315,13 @@ const billingUiCopy: Record<
     alreadyActive: "이미 활성",
     freePlanName: "Free",
     paidPlanName: "Paid",
+    notices: {
+      blogLimit: "Free 플랜에는 블로그 초안 3개가 포함됩니다. 계속하려면 업그레이드하세요.",
+      auditLimit: "Free 플랜에는 웹사이트 감사 1회가 포함됩니다. 다음 감사를 실행하려면 업그레이드하세요.",
+      assistantLocked: "AI 도우미는 유료 플랜에서만 사용할 수 있습니다. 사용하려면 업그레이드하세요.",
+    },
     planBodies: {
-      free: "블로그 5개, 웹사이트 감사 3개, 기본 기능, 제한된 내보내기.",
+      free: "블로그 3개, 웹사이트 감사 1개, 기본 기능, 제한된 내보내기.",
       starter: "블로그 50개, 감사 20개, 더 빠른 생성, 워터마크 없음.",
       pro: "블로그 200개, 감사 100개, Priority AI, 기록, 내보내기, 고급 SEO 제안.",
       agency: "공정 사용, 팀 접근, API 접근, 자동화 기능.",
@@ -300,8 +335,29 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>("usd");
+  const [upgradeReason, setUpgradeReason] = useState<keyof typeof billingUiCopy.en.notices | "">("");
   const activeLanguage = resolveAppUiLanguage(language, uiLanguage);
   const ui = billingUiCopy[activeLanguage];
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const reason = new URLSearchParams(window.location.search).get("upgrade");
+    if (reason === "blog-limit" || reason === "audit-limit" || reason === "assistant-locked") {
+      setUpgradeReason(
+        reason === "blog-limit"
+          ? "blogLimit"
+          : reason === "audit-limit"
+            ? "auditLimit"
+            : "assistantLocked",
+      );
+      return;
+    }
+
+    setUpgradeReason("");
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -337,6 +393,11 @@ export default function BillingPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold">{ui.title}</h1>
+      {upgradeReason ? (
+        <div className="site-panel rounded-2xl border p-4 text-sm">
+          {ui.notices[upgradeReason]}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="site-muted text-sm">{ui.intro}</p>
         <div className="site-pref-bar inline-flex items-center gap-2 rounded-full p-1.5">

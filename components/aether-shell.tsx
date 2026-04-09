@@ -155,10 +155,19 @@ export default function AetherShell({ children }: { children: ReactNode }) {
       : shellCopy[uiLanguage];
   const signOutLabel =
     "signOut" in copy ? copy.signOut : signOutLabelByLanguage[uiLanguage] ?? "Sign out";
+  const canUseAssistant = billingPlan === "paid";
+  const navItems = useMemo(
+    () => baseNavItems.filter((item) => canUseAssistant || item.key !== "aiAssistant"),
+    [canUseAssistant],
+  );
+  const availableSearchEntries = useMemo(
+    () => searchEntries.filter((entry) => canUseAssistant || entry.key !== "aiAssistant"),
+    [canUseAssistant],
+  );
   const searchResults = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
 
-    return searchEntries
+    return availableSearchEntries
       .filter((entry) => {
         if (!query) {
           return true;
@@ -173,7 +182,7 @@ export default function AetherShell({ children }: { children: ReactNode }) {
         );
       })
       .slice(0, 6);
-  }, [copy.nav, searchTerm]);
+  }, [availableSearchEntries, copy.nav, searchTerm]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
@@ -286,7 +295,7 @@ export default function AetherShell({ children }: { children: ReactNode }) {
             </div>
           </div>
           <nav className="mt-8 space-y-2">
-            {baseNavItems.map((item) => {
+            {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
@@ -411,9 +420,15 @@ export default function AetherShell({ children }: { children: ReactNode }) {
               >
                 {copy.newAction}
               </button>
-              <Link href="/ai-assistant" className="site-button-secondary rounded-full px-3 py-1">
-                {copy.aiAssistant}
-              </Link>
+              {canUseAssistant ? (
+                <Link href="/ai-assistant" className="site-button-secondary rounded-full px-3 py-1">
+                  {copy.aiAssistant}
+                </Link>
+              ) : (
+                <Link href="/billing?upgrade=assistant-locked" className="site-button-secondary rounded-full px-3 py-1">
+                  {copy.upgradeToPro}
+                </Link>
+              )}
             </div>
           </footer>
         </div>

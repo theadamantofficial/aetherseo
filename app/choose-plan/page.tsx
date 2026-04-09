@@ -152,7 +152,7 @@ const pageCopy = {
   },
 } as const;
 
-function formatFirebaseMessage(error: unknown, fallback: string): string {
+function formatAuthErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null) {
     const maybeCode = "code" in error && typeof error.code === "string" ? error.code : null;
     const maybeMessage = "message" in error && typeof error.message === "string" ? error.message : null;
@@ -249,7 +249,7 @@ function ChoosePlanPageContent() {
       setStatus(copy.ready);
       router.replace("/dashboard");
     } catch (error) {
-      setStatus(formatFirebaseMessage(error, copy.failed));
+      setStatus(formatAuthErrorMessage(error, copy.failed));
       setBusy(false);
     }
   }

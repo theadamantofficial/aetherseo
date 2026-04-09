@@ -11,6 +11,7 @@ import {
   saveAssistantRunForUser,
   type AssistantActionType,
   type AssistantRun,
+  type BillingPlan,
 } from "@/lib/firebase-data";
 
 type ActionConfig = {
@@ -488,6 +489,7 @@ function AiAssistantPageContent() {
   const { language, uiLanguage } = useLanguage();
   const resultRef = useRef<HTMLDivElement | null>(null);
   const [uid, setUid] = useState("");
+  const [plan, setPlan] = useState<BillingPlan | null>(null);
   const [action, setAction] = useState<AssistantActionType>("blog-brief");
   const [input, setInput] = useState("");
   const [url, setUrl] = useState("");
@@ -497,6 +499,7 @@ function AiAssistantPageContent() {
   const activeLanguage = resolveAppUiLanguage(language, uiLanguage);
   const ui = assistantUiCopy[activeLanguage];
   const activeAction = useMemo(() => ui.actions[action], [action, ui.actions]);
+  const isAssistantUnlocked = plan === "paid";
 
   useEffect(() => {
     const queryAction = searchParams.get("action");
@@ -526,6 +529,11 @@ function AiAssistantPageContent() {
       setUid(currentUser.uid);
       try {
         const dashboard = await getDashboardForUser(currentUser.uid);
+        setPlan(dashboard.plan);
+        if (dashboard.plan === "free") {
+          router.replace("/billing?upgrade=assistant-locked");
+          return;
+        }
         if (dashboard.assistantRuns[0]) {
           setResult(dashboard.assistantRuns[0]);
         }
@@ -542,6 +550,11 @@ function AiAssistantPageContent() {
   async function handleGenerate() {
     if (!uid) {
       setStatus({ tone: "error", text: ui.authRequired });
+      return;
+    }
+
+    if (!isAssistantUnlocked) {
+      router.replace("/billing?upgrade=assistant-locked");
       return;
     }
 
@@ -585,12 +598,17 @@ function AiAssistantPageContent() {
 
       const assistantRun = payload.assistantRun;
       setResult(assistantRun);
-      await saveAssistantRunForUser(uid, assistantRun);
+      const nextDashboard = await saveAssistantRunForUser(uid, assistantRun);
+      setPlan(nextDashboard.plan);
       setStatus({ tone: "muted", text: ui.saved });
       requestAnimationFrame(() => {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     } catch (error) {
+      if (error instanceof Error && error.message === "AI assistant is available on paid plans only. Upgrade to continue.") {
+        router.replace("/billing?upgrade=assistant-locked");
+        return;
+      }
       setStatus({
         tone: "error",
         text: error instanceof Error ? error.message : "Could not generate the AI assistant result.",
@@ -700,13 +718,13 @@ function AiAssistantPageContent() {
             <button
               type="button"
               onClick={handleGenerate}
-              disabled={isBusy}
+              disabled={isBusy || !isAssistantUnlocked}
               className="site-button-primary w-full rounded-xl px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isBusy ? ui.generating : `${ui.runPrefix} ${activeAction.label}`}
             </button>
             <p className={`text-xs ${status?.tone === "error" ? "text-red-500" : "site-muted"}`}>
-              {status?.text ?? ui.idleStatus}
+              {status?.text ?? (isAssistantUnlocked ? ui.idleStatus : "AI assistant unlocks on paid plans. Upgrade to continue.")}
             </p>
           </div>
         </section>

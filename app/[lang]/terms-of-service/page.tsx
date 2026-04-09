@@ -22,10 +22,11 @@ export async function generateMetadata({
 
   const lang = resolveSiteLanguage(rawLang);
   const copy = termsCopy[lang];
+  const tagline = "AI MEETS SEO";
 
   return {
-    title: copy.title,
-    description: copy.intro,
+    title: `${copy.title} | ${tagline}`,
+    description: `${copy.intro} ${tagline}.`,
     alternates: {
       canonical: `/${lang}/terms-of-service`,
       languages: buildLanguageAlternates((language) => `/${language}/terms-of-service`),

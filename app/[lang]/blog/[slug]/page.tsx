@@ -1,62 +1,44 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import PublicBlogArticle from "@/components/public-blog-article";
-import {
-  getPublicBlogPost,
-  getPublicBlogPosts,
-  isSiteLanguage,
-  siteLanguages,
-} from "@/lib/site-language";
-import { getSiteUrl, localeCodes, resolveSiteLanguage } from "@/lib/site-routing";
+import { getPublishedBlogPost } from "@/lib/public-blog-posts";
+import type { SiteLanguage } from "@/lib/site-language";
 
-export function generateStaticParams() {
-  return siteLanguages.flatMap((lang) =>
-    getPublicBlogPosts(lang).map((post) => ({
-      lang,
-      slug: post.slug,
-    })),
-  );
-}
+export const dynamic = "force-dynamic";
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ lang: string; slug: string }>;
+  params: Promise<{ lang: SiteLanguage; slug: string }>;
 }): Promise<Metadata> {
-  const { lang: rawLang, slug } = await params;
-
-  if (!isSiteLanguage(rawLang)) {
-    notFound();
-  }
-
-  const lang = resolveSiteLanguage(rawLang);
-  const post = getPublicBlogPost(lang, slug);
+  const { lang, slug } = await params;
+  const post = await getPublishedBlogPost(lang, slug);
 
   if (!post) {
     return {
-      title: "Article not found",
-      alternates: {
-        canonical: `/${lang}/blog`,
-      },
+      title: "Article not found | Aether SEO",
+      description: "The requested article is not available.",
     };
   }
 
   return {
-    title: post.title,
-    description: post.excerpt,
+    title: `${post.seoTitle} | Aether SEO`,
+    description: post.seoDescription,
     alternates: {
       canonical: `/${lang}/blog/${post.slug}`,
     },
     openGraph: {
-      title: post.title,
-      description: post.excerpt,
+      title: `${post.seoTitle} | Aether SEO`,
+      description: post.seoDescription,
       type: "article",
-      locale: localeCodes[lang],
+      url: `${siteUrl}/${lang}/blog/${post.slug}`,
     },
     twitter: {
       card: "summary_large_image",
-      title: post.title,
-      description: post.excerpt,
+      title: `${post.seoTitle} | Aether SEO`,
+      description: post.seoDescription,
     },
   };
 }
@@ -64,17 +46,10 @@ export async function generateMetadata({
 export default async function LocalizedBlogArticlePage({
   params,
 }: {
-  params: Promise<{ lang: string; slug: string }>;
+  params: Promise<{ lang: SiteLanguage; slug: string }>;
 }) {
-  const { lang: rawLang, slug } = await params;
-
-  if (!isSiteLanguage(rawLang)) {
-    notFound();
-  }
-
-  const lang = resolveSiteLanguage(rawLang);
-  const post = getPublicBlogPost(lang, slug);
-  const siteUrl = getSiteUrl();
+  const { lang, slug } = await params;
+  const post = await getPublishedBlogPost(lang, slug);
 
   if (!post) {
     notFound();
@@ -82,22 +57,29 @@ export default async function LocalizedBlogArticlePage({
 
   const articleSchema = {
     "@context": "https://schema.org",
-    "@type": "BlogPosting",
+    "@type": "Article",
     headline: post.title,
-    description: post.excerpt,
-    datePublished: new Date(post.date).toISOString(),
-    articleSection: post.category,
-    inLanguage: localeCodes[lang],
+    description: post.seoDescription,
+    datePublished: post.publishedAt,
+    dateModified: post.updatedAt,
+    author: {
+      "@type": "Organization",
+      name: post.authorName,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Aether SEO",
+    },
     mainEntityOfPage: `${siteUrl}/${lang}/blog/${post.slug}`,
   };
 
   return (
     <>
-      <PublicBlogArticle slug={slug} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
       />
+      <PublicBlogArticle language={lang} post={post} />
     </>
   );
 }

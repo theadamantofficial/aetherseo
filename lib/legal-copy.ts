@@ -198,28 +198,28 @@ export const termsCopy: Record<SiteLanguage, LegalDocumentCopy> = {
 
 export const footerCopy: Record<SiteLanguage, FooterCopy> = {
   en: {
-    product: "Aether AI",
+    product: "Aether SEO",
     parent: "TheAdamant",
     rights: "All rights reserved.",
     privacy: "Privacy Policy",
     terms: "Terms of Service",
   },
   es: {
-    product: "Aether AI",
+    product: "Aether SEO",
     parent: "TheAdamant",
     rights: "Todos los derechos reservados.",
     privacy: "Politica de privacidad",
     terms: "Terminos del servicio",
   },
   fr: {
-    product: "Aether AI",
+    product: "Aether SEO",
     parent: "TheAdamant",
     rights: "Tous droits reserves.",
     privacy: "Politique de confidentialite",
     terms: "Conditions d'utilisation",
   },
   hi: {
-    product: "Aether AI",
+    product: "Aether SEO",
     parent: "TheAdamant",
     rights: "All rights reserved.",
     privacy: "Privacy Policy",

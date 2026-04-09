@@ -1,4 +1,5 @@
 export type SiteLanguage = "en" | "es" | "fr" | "hi";
+export type PreferredLanguageCode = string;
 
 export const defaultLanguage: SiteLanguage = "en";
 export const siteLanguages: SiteLanguage[] = ["en", "es", "fr", "hi"];
@@ -14,6 +15,30 @@ export const languageOptions: Array<{ code: SiteLanguage; label: string; nativeL
   { code: "fr", label: "French", nativeLabel: "Francais" },
   { code: "hi", label: "Hindi", nativeLabel: "Hindi" },
 ];
+
+export const globalLanguageOptions: Array<{
+  code: PreferredLanguageCode;
+  label: string;
+  nativeLabel: string;
+}> = [
+  { code: "en", label: "English", nativeLabel: "English" },
+  { code: "hi", label: "Hindi", nativeLabel: "Hindi" },
+  { code: "fr", label: "French", nativeLabel: "Francais" },
+  { code: "de", label: "German", nativeLabel: "Deutsch" },
+  { code: "ja", label: "Japanese", nativeLabel: "Nihongo" },
+  { code: "ko", label: "Korean", nativeLabel: "Hanguk-eo" },
+];
+
+export function isKnownPreferredLanguage(value: string): value is PreferredLanguageCode {
+  return globalLanguageOptions.some((option) => option.code === value);
+}
+
+export function resolveUiLanguage(
+  value: string | null | undefined,
+  fallback: SiteLanguage = defaultLanguage,
+): SiteLanguage {
+  return isSiteLanguage(value ?? "") ? value : fallback;
+}
 
 export type LandingCopy = {
   nav: {
@@ -1059,6 +1084,7 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
     nav: {
       dashboard: "Dashboard",
       analytics: "Analytics",
+      aiAssistant: "AI Assistant",
       generateBlog: "Generate Blog",
       websiteAudit: "Website Audit",
       history: "History",
@@ -1076,12 +1102,13 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
     quickSearch: "Quick Search",
     newAction: "New Action",
     aiAssistant: "AI Assistant",
-    footer: "Aether AI. All rights reserved.",
+    footer: "Aether SEO. All rights reserved.",
   },
   es: {
     nav: {
       dashboard: "Dashboard",
       analytics: "Analitica",
+      aiAssistant: "Asistente IA",
       generateBlog: "Generar blog",
       websiteAudit: "Auditoria web",
       history: "Historial",
@@ -1099,12 +1126,13 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
     quickSearch: "Busqueda rapida",
     newAction: "Nueva accion",
     aiAssistant: "Asistente IA",
-    footer: "Aether AI. Todos los derechos reservados.",
+    footer: "Aether SEO. Todos los derechos reservados.",
   },
   fr: {
     nav: {
       dashboard: "Dashboard",
       analytics: "Analytique",
+      aiAssistant: "Assistant IA",
       generateBlog: "Generer un blog",
       websiteAudit: "Audit web",
       history: "Historique",
@@ -1122,12 +1150,13 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
     quickSearch: "Recherche rapide",
     newAction: "Nouvelle action",
     aiAssistant: "Assistant IA",
-    footer: "Aether AI. Tous droits reserves.",
+    footer: "Aether SEO. Tous droits reserves.",
   },
   hi: {
     nav: {
       dashboard: "Dashboard",
       analytics: "Analytics",
+      aiAssistant: "AI assistant",
       generateBlog: "Blog generate karo",
       websiteAudit: "Website audit",
       history: "History",
@@ -1145,7 +1174,7 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
     quickSearch: "Quick search",
     newAction: "New action",
     aiAssistant: "AI assistant",
-    footer: "Aether AI. Sabhi adhikar surakshit.",
+    footer: "Aether SEO. Sabhi adhikar surakshit.",
   },
 };
 

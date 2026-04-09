@@ -66,7 +66,7 @@ export default function PublicBlogArticle({ language, post }: PublicBlogArticleP
 
             <article className="site-panel rounded-[2rem] px-6 py-6 sm:px-8">
               <div
-                className="prose prose-invert max-w-none prose-p:leading-8 prose-headings:tracking-[-0.04em] prose-h2:mt-12 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mt-8 prose-h3:text-2xl prose-h3:font-semibold prose-h4:mt-6 prose-h4:text-xl prose-ul:space-y-2 prose-ol:space-y-2 prose-li:leading-7"
+                className="site-article-body mx-auto max-w-3xl"
                 dangerouslySetInnerHTML={{ __html: post.body }}
               />
             </article>

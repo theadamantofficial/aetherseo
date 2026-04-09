@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import HomePage from "@/components/home-page";
 import { isSiteLanguage, landingCopy, siteLanguages } from "@/lib/site-language";
-import { buildLanguageAlternates, getSiteUrl, localeCodes, resolveSiteLanguage } from "@/lib/site-routing";
+import {
+  buildLanguageAlternates,
+  getSiteUrl,
+  localeCodes,
+  resolveSiteLanguage,
+} from "@/lib/site-routing";
 
 export function generateStaticParams() {
   return siteLanguages.map((lang) => ({ lang }));
@@ -21,25 +26,28 @@ export async function generateMetadata({
 
   const lang = resolveSiteLanguage(rawLang);
   const copy = landingCopy[lang];
+  const tagline = "AI MEETS SEO";
+  const previewTitle = `${copy.hero.title} | ${tagline}`;
+  const previewDescription = `${copy.hero.body} ${tagline}.`;
 
   return {
-    title: copy.hero.title,
-    description: copy.hero.body,
+    title: previewTitle,
+    description: previewDescription,
     keywords: copy.trustBar,
     alternates: {
       canonical: `/${lang}`,
       languages: buildLanguageAlternates((language) => `/${language}`),
     },
     openGraph: {
-      title: copy.hero.title,
-      description: copy.hero.body,
+      title: previewTitle,
+      description: previewDescription,
       type: "website",
       locale: localeCodes[lang],
     },
     twitter: {
       card: "summary_large_image",
-      title: copy.hero.title,
-      description: copy.hero.body,
+      title: previewTitle,
+      description: previewDescription,
     },
   };
 }
@@ -75,7 +83,7 @@ export default async function LocalizedHomePage({
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     applicationCategory: "BusinessApplication",
-    name: "Aether AI",
+    name: "Aether SEO",
     operatingSystem: "Web",
     description: copy.hero.body,
     inLanguage: localeCodes[lang],

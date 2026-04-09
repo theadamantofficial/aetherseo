@@ -1,56 +1,184 @@
 "use client";
 
 import Link from "next/link";
-import LanguageSwitcher from "@/components/language-switcher";
+import { useRouter, useSearchParams } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
-import { blogWorkspaceCopy, languageOptions } from "@/lib/site-language";
+import { auth } from "@/lib/firebase";
+import {
+  getDashboardForUser,
+  saveGeneratedBlogForUser,
+  type GeneratedBlog,
+} from "@/lib/firebase-data";
+import { blogWorkspaceCopy, globalLanguageOptions } from "@/lib/site-language";
+import { useTranslatedCopy } from "@/lib/use-translated-copy";
 
 export default function GenerateBlogPage() {
-  const { language } = useLanguage();
-  const copy = blogWorkspaceCopy[language];
-  const currentLanguage = languageOptions.find((item) => item.code === language);
-  const notesHeading =
-    language === "es"
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { language, uiLanguage } = useLanguage();
+  const copy = useTranslatedCopy(
+    blogWorkspaceCopy[uiLanguage],
+    language,
+    `generate-blog-copy-${uiLanguage}`,
+  );
+  const notesHeading = useTranslatedCopy(
+    uiLanguage === "es"
       ? "Notas editoriales"
-      : language === "fr"
+      : uiLanguage === "fr"
         ? "Notes editoriales"
-        : language === "hi"
+        : uiLanguage === "hi"
           ? "Editorial notes"
-          : "Editorial Notes";
+          : "Editorial Notes",
+    language,
+    `generate-blog-notes-heading-${uiLanguage}`,
+  );
+  const toneOptions = useMemo(
+    () => ["Professional & Authoritative", "Friendly & Practical", "Technical & Strategic"],
+    [],
+  );
+  const [uid, setUid] = useState("");
+  const [keyword, setKeyword] = useState(searchParams.get("keyword") || "");
+  const [tone, setTone] = useState(toneOptions[0]);
+  const [length, setLength] = useState(copy.lengths[1] ?? copy.lengths[0]);
+  const [outputLanguage, setOutputLanguage] = useState(language);
+  const [blog, setBlog] = useState<GeneratedBlog | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [isBusy, setBusy] = useState(false);
+  const hasGeneratedBlog = Boolean(blog);
+  const currentLanguage = globalLanguageOptions.find((item) => item.code === outputLanguage) ?? globalLanguageOptions[0];
+
+  useEffect(() => {
+    const queryKeyword = searchParams.get("keyword");
+    if (queryKeyword) {
+      setKeyword(queryKeyword);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    setOutputLanguage(language);
+  }, [language]);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) {
+        router.replace("/auth");
+        return;
+      }
+
+      setUid(currentUser.uid);
+      try {
+        const dashboard = await getDashboardForUser(currentUser.uid);
+        if (dashboard.generatedBlogs[0]) {
+          setBlog(dashboard.generatedBlogs[0]);
+          setKeyword((currentKeyword) =>
+            queryKeywordOrValue(currentKeyword) ? currentKeyword : dashboard.generatedBlogs[0].keyword,
+          );
+        }
+      } catch {
+        setStatus("Could not load your last generated draft.");
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [router]);
+
+  async function handleGenerate() {
+    if (!uid) {
+      setStatus("You must be signed in to generate a blog.");
+      return;
+    }
+
+    if (!keyword.trim()) {
+      setStatus("Enter a target keyword first.");
+      return;
+    }
+
+    setBusy(true);
+    setStatus("Generating blog draft...");
+
+    try {
+      const response = await fetch("/api/generate-blog", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          keyword,
+          tone,
+          length,
+          language: outputLanguage,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "Could not generate the blog.");
+      }
+
+      const generatedBlog = payload.blog as GeneratedBlog;
+      setBlog(generatedBlog);
+      await saveGeneratedBlogForUser(uid, generatedBlog);
+      setStatus("Blog generated and saved to your workspace.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not generate the blog.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[360px,1fr]">
-      <section className="rounded-2xl border border-white/10 bg-[#0f1738] p-6">
+      <section className="site-panel site-animate-rise rounded-2xl border p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
+            <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
+              Internal workspace
+            </p>
             <h1 className="text-3xl font-semibold">{copy.title}</h1>
-            <p className="mt-2 text-sm text-white/60">{copy.body}</p>
+            <p className="site-muted mt-2 text-sm">{copy.body}</p>
           </div>
-          <LanguageSwitcher />
         </div>
 
         <div className="mt-6 space-y-4 text-sm">
           <div>
-            <p className="mb-2 text-xs uppercase tracking-[0.2em] text-white/40">{copy.keywordLabel}</p>
-            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
-              Sustainable Fashion Trends 2026
+            <p className="site-muted mb-2 text-xs uppercase tracking-[0.2em]">{copy.keywordLabel}</p>
+            <input
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="AI SEO workflow for startups"
+              className="site-input w-full rounded-xl px-4 py-3 outline-none"
+            />
+          </div>
+          <div>
+            <p className="site-muted mb-2 text-xs uppercase tracking-[0.2em]">{copy.toneLabel}</p>
+            <div className="grid gap-2">
+              {toneOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setTone(option)}
+                  className={`rounded-xl px-4 py-3 text-left ${
+                    tone === option ? "site-button-primary" : "site-panel-soft border"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
             </div>
           </div>
           <div>
-            <p className="mb-2 text-xs uppercase tracking-[0.2em] text-white/40">{copy.toneLabel}</p>
-            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
-              Professional & Authoritative
-            </div>
-          </div>
-          <div>
-            <p className="mb-2 text-xs uppercase tracking-[0.2em] text-white/40">{copy.lengthLabel}</p>
+            <p className="site-muted mb-2 text-xs uppercase tracking-[0.2em]">{copy.lengthLabel}</p>
             <div className="flex gap-2">
-              {copy.lengths.map((opt, index) => (
+              {copy.lengths.map((opt) => (
                 <button
                   key={opt}
                   type="button"
+                  onClick={() => setLength(opt)}
                   className={`rounded-lg px-3 py-2 ${
-                    index === 1 ? "bg-[#5d50f2]" : "bg-white/10"
+                    length === opt ? "site-button-primary" : "site-panel-soft"
                   }`}
                 >
                   {opt}
@@ -59,45 +187,94 @@ export default function GenerateBlogPage() {
             </div>
           </div>
           <div>
-            <p className="mb-2 text-xs uppercase tracking-[0.2em] text-white/40">{copy.languageLabel}</p>
-            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
-              {currentLanguage?.nativeLabel}
-            </div>
-            <p className="mt-2 text-xs leading-6 text-white/48">{copy.languageHelper}</p>
+            <p className="site-muted mb-2 text-xs uppercase tracking-[0.2em]">{copy.languageLabel}</p>
+            <label className="site-select-wrap block">
+              <select
+                value={outputLanguage}
+                onChange={(event) => setOutputLanguage(event.target.value)}
+                className="site-input site-select h-12 w-full rounded-xl px-4 pr-10 outline-none"
+              >
+                {globalLanguageOptions.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.nativeLabel}
+                  </option>
+                ))}
+              </select>
+              <span className="site-select-caret" aria-hidden="true">
+                ▾
+              </span>
+            </label>
+            <p className="site-muted mt-2 text-xs leading-6">
+              {copy.languageHelper} Current selection: {currentLanguage.nativeLabel}.
+            </p>
           </div>
-          <button type="button" className="w-full rounded-xl bg-[#5d50f2] px-4 py-3 font-semibold">
-            {copy.generateButton} ✦
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={isBusy}
+            className="site-button-primary w-full rounded-xl px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isBusy ? "Generating..." : `${copy.generateButton} ✦`}
           </button>
+          <p className="site-muted text-xs">{status ?? "Generate a new draft and it will be saved to your workspace history."}</p>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-[#9f97ff]">{copy.companyBlogLink}</p>
-            <p className="mt-3 text-sm leading-6 text-white/65">{copy.companyBlogBody}</p>
-            <Link href={`/${language}/blog`} className="mt-4 inline-flex text-sm font-semibold text-[#9ea7ff]">
+          <div className="site-panel-soft rounded-2xl border p-4">
+            <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.companyBlogLink}</p>
+            <p className="site-muted mt-3 text-sm leading-6">{copy.companyBlogBody}</p>
+            <Link href={`/${language}/blog`} className="site-link-accent mt-4 inline-flex text-sm font-semibold">
               {copy.companyBlogLink}
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-[#0f1738] p-8">
-        <p className="text-xs uppercase tracking-[0.18em] text-[#9f97ff]">{copy.previewEyebrow}</p>
-        <h2 className="mt-4 max-w-3xl text-5xl font-semibold leading-tight">{copy.titlePreview}</h2>
-        <p className="mt-4 text-sm text-white/60">{copy.previewMeta}</p>
-        <div className="mt-8 space-y-5 text-white/85">
-          {copy.paragraphs.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
-          <h3 className="text-3xl font-semibold">{copy.sectionTitle}</h3>
-          <p>{copy.sectionBody}</p>
-          <div className="h-56 rounded-2xl border border-white/10 bg-gradient-to-r from-[#10214f] to-[#17376f]" />
-          <h3 className="text-3xl font-semibold">{notesHeading}</h3>
-          <ul className="space-y-2 text-sm text-white/80">
-            {copy.bullets.map((bullet) => (
-              <li key={bullet}>• {bullet}</li>
-            ))}
-          </ul>
+      <section className="site-panel-hero site-animate-rise rounded-2xl border p-8" style={{ ["--site-delay" as string]: "80ms" }}>
+        <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
+          {copy.previewEyebrow}
+        </p>
+        <h2 className="mt-4 max-w-3xl text-5xl font-semibold leading-tight">
+          {blog?.title || "No generated draft yet"}
+        </h2>
+        <p className="site-muted mt-4 text-sm">
+          {blog?.previewMeta || "Generate a real blog draft and it will appear here immediately after saving."}
+        </p>
+        <div className="mt-8 space-y-5">
+          {hasGeneratedBlog ? (
+            <>
+              {blog.paragraphs.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+              <h3 className="text-3xl font-semibold">{blog.sectionTitle}</h3>
+              <p>{blog.sectionBody}</p>
+              <div className="site-panel-soft site-animate-glow h-56 rounded-2xl border" />
+              <h3 className="text-3xl font-semibold">{notesHeading}</h3>
+              <ul className="site-muted space-y-2 text-sm">
+                {blog.bullets.map((bullet) => (
+                  <li key={bullet}>• {bullet}</li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <div className="site-panel-soft rounded-2xl border p-6">
+              <p className="text-lg font-semibold">No preview available yet</p>
+              <p className="site-muted mt-3 text-sm leading-7">
+                Use the controls on the left to generate a blog draft. Once the AI response is saved,
+                this preview will show the actual title, body, bullets, and meta description from your workspace.
+              </p>
+            </div>
+          )}
+          {blog ? (
+            <div className="site-panel-soft rounded-2xl border p-4">
+              <p className="site-accent-text text-xs uppercase tracking-[0.18em]">Meta description</p>
+              <p className="mt-3 text-sm">{blog.metaDescription}</p>
+            </div>
+          ) : null}
         </div>
       </section>
     </div>
   );
+}
+
+function queryKeywordOrValue(value: string) {
+  return value.trim().length > 0;
 }

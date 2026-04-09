@@ -2,13 +2,22 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { defaultLanguage, siteLanguageCookieName, type SiteLanguage } from "@/lib/site-language";
+import { useCookieConsent } from "@/components/cookie-consent-provider";
+import {
+  defaultLanguage,
+  isKnownPreferredLanguage,
+  resolveUiLanguage,
+  siteLanguageCookieName,
+  type PreferredLanguageCode,
+  type SiteLanguage,
+} from "@/lib/site-language";
 
 const STORAGE_KEY = siteLanguageCookieName;
 
 type LanguageContextValue = {
-  language: SiteLanguage;
-  setLanguage: (language: SiteLanguage) => void;
+  language: PreferredLanguageCode;
+  uiLanguage: SiteLanguage;
+  setLanguage: (language: PreferredLanguageCode) => void;
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -20,29 +29,43 @@ export function LanguageProvider({
   children: ReactNode;
   initialLanguage?: SiteLanguage;
 }) {
-  const [language, setLanguage] = useState<SiteLanguage>(initialLanguage ?? defaultLanguage);
+  const { canStorePreferences } = useCookieConsent();
+  const [language, setLanguage] = useState<PreferredLanguageCode>(initialLanguage ?? defaultLanguage);
+  const uiLanguage = resolveUiLanguage(language, defaultLanguage);
 
   useEffect(() => {
-    if (initialLanguage) {
-      setLanguage(initialLanguage);
+    if (!canStorePreferences) {
+      if (initialLanguage) {
+        setLanguage(initialLanguage);
+      }
       return;
     }
 
     const stored = window.localStorage.getItem(STORAGE_KEY);
 
-    if (stored === "en" || stored === "es" || stored === "fr" || stored === "hi") {
+    if (stored && isKnownPreferredLanguage(stored)) {
       setLanguage(stored);
+      return;
     }
-  }, [initialLanguage]);
+
+    if (initialLanguage) {
+      setLanguage(initialLanguage);
+    }
+  }, [canStorePreferences, initialLanguage]);
 
   useEffect(() => {
+    document.documentElement.lang = uiLanguage;
+
+    if (!canStorePreferences) {
+      return;
+    }
+
     window.localStorage.setItem(STORAGE_KEY, language);
-    document.cookie = `${siteLanguageCookieName}=${language}; path=/; max-age=31536000; samesite=lax`;
-    document.documentElement.lang = language;
-  }, [language]);
+    document.cookie = `${siteLanguageCookieName}=${uiLanguage}; path=/; max-age=31536000; samesite=lax`;
+  }, [canStorePreferences, language, uiLanguage]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage }}>
+    <LanguageContext.Provider value={{ language, uiLanguage, setLanguage }}>
       {children}
     </LanguageContext.Provider>
   );

@@ -1,24 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useState } from "react";
-import LanguageSwitcher from "@/components/language-switcher";
+import { type FormEvent, useEffect, useState } from "react";
 import PublicFooter from "@/components/public-footer";
-import ThemeToggle from "@/components/theme-toggle";
+import PublicHeader from "@/components/public-header";
 import { useLanguage } from "@/components/language-provider";
-import { getPublicBlogPosts, landingCopy } from "@/lib/site-language";
+import { type PublishedBlogPost } from "@/lib/blog-post-utils";
+import { landingCopy } from "@/lib/site-language";
+import { useTranslatedCopy } from "@/lib/use-translated-copy";
 
 function SparkDot() {
   return <span className="h-2 w-2 rounded-full bg-[#83f6d7] shadow-[0_0_16px_rgba(131,246,215,0.6)]" />;
 }
 
 export default function HomePage() {
-  const { language } = useLanguage();
-  const copy = landingCopy[language];
-  const posts = getPublicBlogPosts(language).slice(0, 3);
+  const { language, uiLanguage } = useLanguage();
+  const copy = useTranslatedCopy(landingCopy[uiLanguage], language, `home-page-copy-${uiLanguage}`);
+  const [posts, setPosts] = useState<PublishedBlogPost[]>([]);
   const [contactState, setContactState] = useState<"idle" | "sending" | "success" | "error">("idle");
 
-  const ui = {
+  const ui = useTranslatedCopy({
     en: {
       live: "Live command center",
       readiness: "Readiness",
@@ -111,7 +112,7 @@ export default function HomePage() {
       readArticle: "Article padho",
       sending: "Sending",
     },
-  }[language];
+  }[uiLanguage], language, `home-page-ui-${uiLanguage}`);
 
   const contactStatus =
     contactState === "success"
@@ -119,6 +120,34 @@ export default function HomePage() {
       : contactState === "error"
         ? copy.contact.error
         : copy.contact.helper;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPosts() {
+      try {
+        const response = await fetch(`/api/public-blog-posts?language=${uiLanguage}&limit=3`, {
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as { posts?: PublishedBlogPost[] };
+        const nextPosts = payload.posts || [];
+
+        if (isMounted) {
+          setPosts(nextPosts);
+        }
+      } catch {
+        if (isMounted) {
+          setPosts([]);
+        }
+      }
+    }
+
+    void loadPosts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [uiLanguage]);
 
   async function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -156,58 +185,19 @@ export default function HomePage() {
   }
 
   return (
-    <div className="site-page min-h-screen overflow-hidden bg-[#050b21] text-[#edf1ff]">
+    <div className="site-page min-h-screen overflow-x-hidden text-[#edf1ff]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(circle_at_top_left,rgba(116,96,255,0.24),transparent_32%),radial-gradient(circle_at_top_right,rgba(62,165,255,0.16),transparent_28%)]" />
       <div className="pointer-events-none absolute left-1/2 top-[420px] h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#3d6dff]/10 blur-3xl" />
 
-      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-6">
-        <div>
-          <h1 className="text-xl font-semibold">Aether AI</h1>
-          <p className="text-xs uppercase tracking-[0.24em] text-white/45">SEO Intelligence</p>
-        </div>
+      <div className="relative z-10 px-3 pt-4">
+        <PublicHeader language={uiLanguage} buildLanguagePath={(nextLanguage) => `/${nextLanguage}`} />
 
-        <nav className="site-panel-soft hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1 md:flex">
-          <a href="#platform" className="rounded-full px-4 py-2 text-sm text-white/72 transition hover:bg-white/8 hover:text-white">
-            {copy.nav.platform}
-          </a>
-          <a href="#workflow" className="rounded-full px-4 py-2 text-sm text-white/72 transition hover:bg-white/8 hover:text-white">
-            {copy.nav.workflow}
-          </a>
-          <Link href={`/${language}/blog`} className="rounded-full px-4 py-2 text-sm text-white/72 transition hover:bg-white/8 hover:text-white">
-            {copy.nav.blog}
-          </Link>
-          <a href="#plans" className="rounded-full px-4 py-2 text-sm text-white/72 transition hover:bg-white/8 hover:text-white">
-            {copy.nav.plans}
-          </a>
-          <a href="#faq" className="rounded-full px-4 py-2 text-sm text-white/72 transition hover:bg-white/8 hover:text-white">
-            {copy.nav.faq}
-          </a>
-        </nav>
+        <main className="mx-auto w-full max-w-7xl px-3 pb-16 pt-4 sm:px-6 md:pb-24">
+        <section className="site-panel-hero site-animate-rise relative overflow-hidden rounded-[2.25rem] border border-white/10 px-6 py-8 shadow-[0_36px_120px_rgba(6,10,34,0.65)] sm:px-7 md:px-10 md:py-12 xl:px-14">
+          <div className="site-animate-float pointer-events-none absolute -left-24 top-6 h-52 w-52 rounded-full bg-[#705dff]/20 blur-3xl" />
+          <div className="site-animate-float pointer-events-none absolute bottom-0 right-0 h-72 w-72 rounded-full bg-[#3d8dff]/14 blur-3xl" />
 
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <LanguageSwitcher hrefBuilder={(nextLanguage) => `/${nextLanguage}`} />
-          <Link
-            href="/auth"
-            className="site-button-secondary rounded-full border border-white/20 px-5 py-2 text-sm transition hover:opacity-90"
-          >
-            {copy.nav.signIn}
-          </Link>
-          <a
-            href="#plans"
-            className="site-button-primary rounded-full px-5 py-2 text-sm font-semibold transition hover:-translate-y-0.5"
-          >
-            {copy.nav.explorePlans}
-          </a>
-        </div>
-      </header>
-
-      <main className="relative z-10 mx-auto w-full max-w-7xl px-6 pb-20 pt-6">
-        <section className="site-panel-hero relative overflow-hidden rounded-[2.25rem] border border-white/10 px-7 py-8 shadow-[0_36px_120px_rgba(6,10,34,0.65)] md:px-10 md:py-12 xl:px-14">
-          <div className="pointer-events-none absolute -left-24 top-6 h-52 w-52 rounded-full bg-[#705dff]/20 blur-3xl" />
-          <div className="pointer-events-none absolute bottom-0 right-0 h-72 w-72 rounded-full bg-[#3d8dff]/14 blur-3xl" />
-
-          <div className="grid items-center gap-10 xl:grid-cols-[1.05fr,0.95fr]">
+          <div className="grid items-center gap-10">
             <div>
               <div className="site-chip inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs uppercase tracking-[0.18em]">
                 <SparkDot />
@@ -241,12 +231,9 @@ export default function HomePage() {
                 </a>
               </div>
 
-              <div className="mt-10 grid gap-3 sm:grid-cols-3">
+              <div className="mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {copy.heroSignals.map((signal) => (
-                  <article
-                    key={signal.title}
-                    className="site-panel-soft group rounded-2xl border p-4 transition duration-300 hover:-translate-y-1 hover:border-[#877cff]/40"
-                  >
+                  <article key={signal.title} className="site-panel-soft site-hover-lift site-animate-rise group rounded-2xl border p-4 transition duration-300 hover:border-[#877cff]/40">
                     <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{signal.title}</p>
                     <p className="site-muted mt-3 text-sm leading-6 group-hover:opacity-90">{signal.body}</p>
                   </article>
@@ -254,80 +241,18 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="relative">
-              <div className="absolute inset-0 translate-x-3 translate-y-4 rounded-[2rem] bg-[#25336f]/40 blur-2xl" />
-              <div className="site-panel relative overflow-hidden rounded-[2rem] border border-white/12 p-5">
-                <div className="site-panel-soft flex items-center justify-between rounded-2xl border px-4 py-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-white/42">{ui.live}</p>
-                    <p className="mt-1 text-lg font-semibold">{ui.workspaceHealth}</p>
-                  </div>
-                  <div className="rounded-full border border-[#82f0d6]/30 bg-[#82f0d6]/10 px-3 py-1 text-xs uppercase tracking-[0.16em] text-[#82f0d6]">
-                    {ui.active}
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-4 lg:grid-cols-[0.78fr,1fr]">
-                  <article className="site-panel-soft rounded-[1.5rem] border p-5">
-                    <p className="site-accent-text text-xs uppercase tracking-[0.16em]">{ui.workspaceHealth}</p>
-                    <div className="mx-auto mt-6 flex h-40 w-40 items-center justify-center rounded-full border-[14px] border-[#7c6fff]/45 bg-[#0b1232]">
-                      <div className="text-center">
-                        <p className="text-5xl font-semibold">92</p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/45">{ui.readiness}</p>
-                      </div>
-                    </div>
-                    <p className="site-muted mt-5 text-sm leading-6">{copy.workflow.body}</p>
-                  </article>
-
-                  <div className="space-y-4">
-                    {[
-                      [ui.contentCluster, ui.contentClusterBody, "#82f0d6", "74%"],
-                      [ui.domainAudit, ui.domainAuditBody, "#ffb56a", "49%"],
-                      [ui.historyFeed, ui.historyFeedBody, "#9ba8ff", "88%"],
-                    ].map(([title, body, tone, width]) => (
-                      <article
-                        key={title}
-                        className="site-panel-soft group rounded-[1.4rem] border p-4 transition duration-300 hover:-translate-y-1 hover:border-white/20"
-                      >
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-semibold">{title}</p>
-                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: tone as string }} />
-                        </div>
-                        <p className="site-muted mt-3 text-sm group-hover:opacity-90">{body}</p>
-                        <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/8">
-                          <div className="h-full rounded-full" style={{ width: width as string, backgroundColor: tone as string }} />
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  {[
-                    [ui.oneWorkspace, ui.oneWorkspaceBody],
-                    [ui.fastHandoff, ui.fastHandoffBody],
-                    [ui.planAware, ui.planAwareBody],
-                  ].map(([title, body]) => (
-                    <article key={title} className="site-panel-soft rounded-2xl border p-4 text-sm">
-                      <p className="font-semibold text-white">{title}</p>
-                      <p className="site-muted mt-2 leading-6">{body}</p>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 
-        <section className="mt-8 grid gap-3 md:grid-cols-4">
+        <section className="site-animate-rise mt-8 grid gap-3 md:grid-cols-4">
           {copy.trustBar.map((item) => (
-            <div key={item} className="site-chip rounded-full border px-5 py-4 text-center text-sm backdrop-blur">
+            <div key={item} className="site-chip site-hover-lift rounded-full border px-5 py-4 text-center text-sm backdrop-blur">
               {item}
             </div>
           ))}
         </section>
 
-        <section id="platform" className="mt-16">
+        <section id="platform" className="site-animate-rise scroll-mt-28 mt-16">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <p className="site-accent-text text-xs uppercase tracking-[0.2em]">{copy.platform.eyebrow}</p>
@@ -340,7 +265,7 @@ export default function HomePage() {
             {copy.platform.modules.map((module) => (
               <article
                 key={module.title}
-                className="site-panel group relative overflow-hidden rounded-[1.75rem] border p-6 transition duration-300 hover:-translate-y-1 hover:border-[#8b82ff]/35"
+                className="site-panel site-hover-lift group relative overflow-hidden rounded-[1.75rem] border p-6 transition duration-300 hover:border-[#8b82ff]/35"
               >
                 <div className="absolute -right-10 top-4 h-24 w-24 rounded-full bg-[#6c5cff]/10 blur-2xl transition duration-300 group-hover:bg-[#6c5cff]/18" />
                 <p className="site-accent-text relative text-xs uppercase tracking-[0.18em]">{module.eyebrow}</p>
@@ -355,7 +280,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="workflow" className="site-panel-hero mt-16 grid gap-6 rounded-[2rem] border p-6 md:p-8 xl:grid-cols-[0.9fr,1.1fr]">
+        <section id="workflow" className="site-panel-hero site-animate-rise scroll-mt-28 mt-16 grid gap-6 rounded-[2rem] border p-6 md:p-8 xl:grid-cols-[0.9fr,1.1fr]">
           <article className="site-panel-soft rounded-[1.75rem] border p-6">
             <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.workflow.eyebrow}</p>
             <h3 className="mt-3 text-4xl font-semibold">{copy.workflow.title}</h3>
@@ -375,7 +300,7 @@ export default function HomePage() {
             {copy.workflow.steps.map((item) => (
               <article
                 key={item.step}
-                className="site-panel-soft group rounded-[1.6rem] border p-5 transition duration-300 hover:-translate-y-1 hover:border-[#8a80ff]/35"
+                className="site-panel-soft site-hover-lift group rounded-[1.6rem] border p-5 transition duration-300 hover:border-[#8a80ff]/35"
               >
                 <div className="flex items-center justify-between">
                   <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{item.step}</p>
@@ -388,7 +313,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="mt-16">
+        <section className="site-animate-rise mt-16">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.blog.eyebrow}</p>
@@ -396,35 +321,49 @@ export default function HomePage() {
             </div>
             <div className="max-w-xl">
               <p className="site-muted text-sm leading-7">{copy.blog.body}</p>
-              <Link href={`/${language}/blog`} className="site-link-accent mt-4 inline-flex text-sm font-semibold">
+              <Link href={`/${uiLanguage}/blog`} className="site-link-accent mt-4 inline-flex text-sm font-semibold">
                 {copy.blog.cta}
               </Link>
             </div>
           </div>
 
           <div className="mt-8 grid gap-4 lg:grid-cols-3">
-            {posts.map((post) => (
-              <article
-                key={post.slug}
-                className="site-panel rounded-[1.75rem] border p-6"
-              >
-                <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-white/45">
-                  <span>{post.category}</span>
-                  <span>{post.readTime}</span>
-                </div>
-                <h4 className="mt-4 text-2xl font-semibold leading-tight">{post.title}</h4>
-                <p className="site-muted mt-4 text-sm leading-7">{post.excerpt}</p>
-                <p className="site-muted mt-6 text-xs">{post.date}</p>
-                <Link href={`/${language}/blog/${post.slug}`} className="site-link-accent mt-6 inline-flex text-sm font-semibold">
-                  {ui.readArticle}
+            {posts.length === 0 ? (
+              <article className="site-panel rounded-[1.75rem] border p-6 lg:col-span-3">
+                <h4 className="text-2xl font-semibold leading-tight">No live articles yet</h4>
+                <p className="site-muted mt-4 max-w-2xl text-sm leading-7">
+                  The public blog feed is now live-data only. Publish the first article from the blog admin console and it will appear here.
+                </p>
+                <Link href="/aether-lab-ops" className="site-link-accent mt-6 inline-flex text-sm font-semibold">
+                  Open publishing console
                 </Link>
               </article>
-            ))}
+            ) : (
+              posts.map((post) => (
+                <article
+                  key={post.slug}
+                  className="site-panel site-hover-lift rounded-[1.75rem] border p-6"
+                >
+                  <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-white/45">
+                    <span>{post.category}</span>
+                    <span>{post.readTime}</span>
+                  </div>
+                  <h4 className="mt-4 text-2xl font-semibold leading-tight">{post.title}</h4>
+                  <p className="site-muted mt-4 text-sm leading-7">{post.excerpt}</p>
+                  <p className="site-muted mt-6 text-xs">
+                    {new Date(post.publishedAt).toLocaleDateString()}
+                  </p>
+                  <Link href={`/${uiLanguage}/blog/${post.slug}`} className="site-link-accent mt-6 inline-flex text-sm font-semibold">
+                    {ui.readArticle}
+                  </Link>
+                </article>
+              ))
+            )}
           </div>
         </section>
 
-        <section id="plans" className="mt-16 grid gap-4 xl:grid-cols-2">
-          <article className="site-panel rounded-[1.9rem] border p-7">
+        <section id="plans" className="site-animate-rise scroll-mt-28 mt-16 grid gap-4 xl:grid-cols-2">
+          <article className="site-panel site-hover-lift rounded-[1.9rem] border p-7">
             <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.plans.free.eyebrow}</p>
             <h3 className="mt-3 text-4xl font-semibold">{copy.plans.free.title}</h3>
             <p className="site-muted mt-4 max-w-xl text-sm leading-7">{copy.plans.free.body}</p>
@@ -435,12 +374,12 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-            <Link href="/auth" className="site-button-secondary mt-8 inline-flex rounded-2xl border px-5 py-3 text-sm font-semibold transition hover:opacity-90">
+            <Link href="/auth?plan=free" className="site-button-secondary mt-8 inline-flex rounded-2xl border px-5 py-3 text-sm font-semibold transition hover:opacity-90">
               {copy.plans.free.cta}
             </Link>
           </article>
 
-          <article className="site-panel-vibrant relative overflow-hidden rounded-[1.9rem] border p-7">
+          <article className="site-panel-vibrant site-hover-lift relative overflow-hidden rounded-[1.9rem] border p-7">
             <div className="absolute -right-10 top-0 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
             <p className="relative text-xs uppercase tracking-[0.18em] text-white/88">{copy.plans.paid.eyebrow}</p>
             <h3 className="relative mt-3 text-4xl font-semibold">{copy.plans.paid.title}</h3>
@@ -453,7 +392,7 @@ export default function HomePage() {
               ))}
             </div>
             <Link
-              href="/auth"
+              href="/choose-plan"
               className="site-button-secondary relative mt-8 inline-flex rounded-2xl border px-5 py-3 text-sm font-black uppercase tracking-[0.02em] transition hover:opacity-95 active:opacity-90"
               style={{ backgroundColor: "#ffffff", color: "#000000" }}
             >
@@ -462,7 +401,7 @@ export default function HomePage() {
           </article>
         </section>
 
-        <section id="faq" className="mt-16 grid gap-6 xl:grid-cols-[0.75fr,1.25fr]">
+        <section id="faq" className="site-animate-rise scroll-mt-28 mt-16 grid gap-6 xl:grid-cols-[0.75fr,1.25fr]">
           <article>
             <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.faq.eyebrow}</p>
             <h3 className="mt-3 text-4xl font-semibold">{copy.faq.title}</h3>
@@ -471,7 +410,7 @@ export default function HomePage() {
 
           <div className="space-y-4">
             {copy.faq.items.map((item) => (
-              <details key={item.question} className="site-panel-soft group rounded-[1.6rem] border p-5 transition">
+              <details key={item.question} className="site-panel-soft site-hover-lift group rounded-[1.6rem] border p-5 transition">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">
                   <span>{item.question}</span>
                   <span className="site-chip rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">{ui.open}</span>
@@ -482,8 +421,8 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="mt-16 grid gap-6 xl:grid-cols-[0.88fr,1.12fr]">
-          <article className="site-panel rounded-[2rem] border p-7">
+        <section className="site-animate-rise mt-16 grid gap-6 xl:grid-cols-[0.88fr,1.12fr]">
+          <article className="site-panel site-hover-lift rounded-[2rem] border p-7">
             <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.contact.eyebrow}</p>
             <h3 className="mt-3 text-4xl font-semibold md:text-5xl">{copy.contact.title}</h3>
             <p className="site-muted mt-4 max-w-xl text-sm leading-7">{copy.contact.body}</p>
@@ -507,10 +446,7 @@ export default function HomePage() {
             </div>
           </article>
 
-          <form
-            onSubmit={handleContactSubmit}
-            className="site-panel rounded-[2rem] border p-7 shadow-[0_26px_80px_rgba(10,18,52,0.34)]"
-          >
+          <form onSubmit={handleContactSubmit} className="site-panel site-hover-lift rounded-[2rem] border p-7 shadow-[0_26px_80px_rgba(10,18,52,0.34)]">
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-white/82">{copy.contact.fields.name}</span>
@@ -593,7 +529,7 @@ export default function HomePage() {
           </form>
         </section>
 
-        <section className="site-panel-vibrant mt-16 overflow-hidden rounded-[2rem] border px-7 py-10 text-center shadow-[0_26px_80px_rgba(10,18,52,0.48)] md:px-10">
+        <section className="site-panel-vibrant site-animate-rise mt-16 overflow-hidden rounded-[2rem] border px-7 py-10 text-center shadow-[0_26px_80px_rgba(10,18,52,0.48)] md:px-10">
           <p className="text-xs uppercase tracking-[0.18em] text-white/78">{copy.cta.eyebrow}</p>
           <h3 className="mt-4 text-4xl font-semibold md:text-5xl">{copy.cta.title}</h3>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-white/76">{copy.cta.body}</p>
@@ -611,8 +547,11 @@ export default function HomePage() {
           </div>
         </section>
 
-        <PublicFooter language={language} />
-      </main>
+        <div className="site-animate-rise">
+          <PublicFooter language={uiLanguage} />
+        </div>
+        </main>
+      </div>
     </div>
   );
 }

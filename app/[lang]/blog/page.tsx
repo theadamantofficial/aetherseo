@@ -1,94 +1,75 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import PublicBlogIndex from "@/components/public-blog-index";
-import {
-  blogIndexCopy,
-  getPublicBlogPosts,
-  isSiteLanguage,
-  siteLanguages,
-} from "@/lib/site-language";
-import {
-  buildLanguageAlternates,
-  getSiteUrl,
-  localeCodes,
-  resolveSiteLanguage,
-} from "@/lib/site-routing";
+import { blogUiCopy } from "@/lib/blog-post-utils";
+import { listPublishedBlogPosts } from "@/lib/public-blog-posts";
+import type { SiteLanguage } from "@/lib/site-language";
 
-export function generateStaticParams() {
-  return siteLanguages.map((lang) => ({ lang }));
-}
+export const dynamic = "force-dynamic";
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ lang: string }>;
+  params: Promise<{ lang: SiteLanguage }>;
 }): Promise<Metadata> {
-  const { lang: rawLang } = await params;
-
-  if (!isSiteLanguage(rawLang)) {
-    notFound();
-  }
-
-  const lang = resolveSiteLanguage(rawLang);
-  const copy = blogIndexCopy[lang];
+  const { lang } = await params;
+  const copy = blogUiCopy[lang];
+  const canonical = `/${lang}/blog`;
 
   return {
-    title: copy.title,
-    description: copy.body,
+    title: `Aether SEO Blog | AI MEETS SEO`,
+    description: copy.description,
     alternates: {
-      canonical: `/${lang}/blog`,
-      languages: buildLanguageAlternates((language) => `/${language}/blog`),
+      canonical,
     },
     openGraph: {
-      title: copy.title,
-      description: copy.body,
+      title: `Aether SEO Blog | AI MEETS SEO`,
+      description: copy.description,
       type: "website",
-      locale: localeCodes[lang],
+      url: `${siteUrl}${canonical}`,
     },
     twitter: {
       card: "summary_large_image",
-      title: copy.title,
-      description: copy.body,
+      title: `Aether SEO Blog | AI MEETS SEO`,
+      description: copy.description,
     },
   };
 }
 
-export default async function LocalizedBlogPage({
+export default async function LocalizedBlogIndexPage({
   params,
 }: {
-  params: Promise<{ lang: string }>;
+  params: Promise<{ lang: SiteLanguage }>;
 }) {
-  const { lang: rawLang } = await params;
-
-  if (!isSiteLanguage(rawLang)) {
-    notFound();
-  }
-
-  const lang = resolveSiteLanguage(rawLang);
-  const posts = getPublicBlogPosts(lang);
-  const siteUrl = getSiteUrl();
+  const { lang } = await params;
+  const posts = await listPublishedBlogPosts(lang);
   const blogSchema = {
     "@context": "https://schema.org",
     "@type": "Blog",
-    name: "Aether AI Blog",
-    inLanguage: localeCodes[lang],
+    name: "Aether SEO Blog",
+    description: blogUiCopy[lang].description,
+    url: `${siteUrl}/${lang}/blog`,
     blogPost: posts.map((post) => ({
       "@type": "BlogPosting",
       headline: post.title,
       description: post.excerpt,
-      datePublished: new Date(post.date).toISOString(),
-      articleSection: post.category,
+      datePublished: post.publishedAt,
+      author: {
+        "@type": "Organization",
+        name: post.authorName,
+      },
       url: `${siteUrl}/${lang}/blog/${post.slug}`,
     })),
   };
 
   return (
     <>
-      <PublicBlogIndex />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(blogSchema) }}
       />
+      <PublicBlogIndex language={lang} posts={posts} />
     </>
   );
 }

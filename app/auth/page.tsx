@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   User,
@@ -12,21 +13,61 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { useLanguage } from "@/components/language-provider";
-import LanguageSwitcher from "@/components/language-switcher";
+import SitePreferences from "@/components/site-preferences";
 import { appleProvider, auth, googleProvider } from "@/lib/firebase";
-import { setUserPlan, upsertUserProfile } from "@/lib/firebase-data";
+import {
+  isSupportedPaidTier,
+  setUserPaidTier,
+  setUserPlan,
+  upsertUserProfile,
+  type PaidPlanTier,
+} from "@/lib/firebase-data";
+import { footerCopy } from "@/lib/legal-copy";
 import { authCopy } from "@/lib/site-language";
 import type { BillingPlan } from "@/lib/firebase-data";
 
 const EMAIL_LINK_STORAGE = "rankly-email-for-link";
 const PHONE_STORAGE = "rankly-phone-draft";
 const PLAN_STORAGE = "rankly-plan-choice";
+const PAID_TIER_STORAGE = "rankly-paid-tier-choice";
 const DEFAULT_PLAN: BillingPlan = "free";
 
 const planCards: Array<{ id: BillingPlan; accent: string }> = [
   { id: "free", accent: "#82f0d6" },
   { id: "paid", accent: "#9fa6ff" },
 ];
+
+function getPaidTierPresentation(tier: PaidPlanTier | null) {
+  if (tier === "starter") {
+    return {
+      label: "Starter",
+      title: "Starter paid workspace",
+      body: "50 blogs per month, 20 audits, faster generation, and no watermark.",
+    };
+  }
+
+  if (tier === "pro") {
+    return {
+      label: "Pro",
+      title: "Pro paid workspace",
+      body: "200 blogs, 100 audits, priority AI, advanced SEO suggestions, history, and export.",
+    };
+  }
+
+  if (tier === "agency") {
+    return {
+      label: "Agency",
+      title: "Agency paid workspace",
+      body: "Fair-usage publishing, team access, API access, and automation features.",
+    };
+  }
+
+  return {
+    label: null,
+    title: null,
+    body: null,
+  };
+}
 
 function GoogleIcon() {
   return (
@@ -112,6 +153,23 @@ function getProviderLabel(currentUser: User | null): string | null {
   return "email";
 }
 
+function formatFirebaseMessage(error: unknown, fallback: string): string {
+  if (typeof error === "object" && error !== null) {
+    const maybeCode = "code" in error && typeof error.code === "string" ? error.code : null;
+    const maybeMessage = "message" in error && typeof error.message === "string" ? error.message : null;
+
+    if (maybeCode && maybeMessage) {
+      return `${fallback} (${maybeCode}: ${maybeMessage})`;
+    }
+
+    if (maybeMessage) {
+      return `${fallback} (${maybeMessage})`;
+    }
+  }
+
+  return fallback;
+}
+
 function readStoredPhone(): string {
   if (typeof window === "undefined") {
     return "";
@@ -128,7 +186,16 @@ function readStoredPlan(): BillingPlan {
   return window.localStorage.getItem(PLAN_STORAGE) === "paid" ? "paid" : DEFAULT_PLAN;
 }
 
-function persistDraftState(phone: string, plan: BillingPlan) {
+function readStoredPaidTier(): PaidPlanTier | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const value = window.localStorage.getItem(PAID_TIER_STORAGE);
+  return value && isSupportedPaidTier(value) ? value : null;
+}
+
+function persistDraftState(phone: string, plan: BillingPlan, paidTier: PaidPlanTier | null = null) {
   if (typeof window === "undefined") {
     return;
   }
@@ -140,6 +207,12 @@ function persistDraftState(phone: string, plan: BillingPlan) {
   }
 
   window.localStorage.setItem(PLAN_STORAGE, plan);
+
+  if (paidTier && plan === "paid") {
+    window.localStorage.setItem(PAID_TIER_STORAGE, paidTier);
+  } else {
+    window.localStorage.removeItem(PAID_TIER_STORAGE);
+  }
 }
 
 function clearAuthDraftState() {
@@ -150,35 +223,52 @@ function clearAuthDraftState() {
   window.localStorage.removeItem(EMAIL_LINK_STORAGE);
   window.localStorage.removeItem(PHONE_STORAGE);
   window.localStorage.removeItem(PLAN_STORAGE);
+  window.localStorage.removeItem(PAID_TIER_STORAGE);
 }
 
 export default function AuthPage() {
   const router = useRouter();
-  const { language } = useLanguage();
+  const searchParams = useSearchParams();
+  const { uiLanguage } = useLanguage();
   const handledUidRef = useRef<string | null>(null);
   const phoneRef = useRef("");
   const planRef = useRef<BillingPlan>(DEFAULT_PLAN);
-  const copy = authCopy[language];
+  const paidTierRef = useRef<PaidPlanTier | null>(null);
+  const copy = authCopy[uiLanguage];
+  const footer = footerCopy[uiLanguage];
 
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [selectedPlan, setSelectedPlan] = useState<BillingPlan>(DEFAULT_PLAN);
+  const [selectedPaidTier, setSelectedPaidTier] = useState<PaidPlanTier | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isBusy, setBusy] = useState(false);
   const [userUid, setUserUid] = useState("");
+  const paidTierPresentation = getPaidTierPresentation(selectedPaidTier);
 
   useEffect(() => {
     const storedPhone = readStoredPhone();
-    const storedPlan = readStoredPlan();
+    const requestedPlan = searchParams.get("plan");
+    const requestedTier = searchParams.get("tier");
+    const storedPlan = requestedPlan === "paid" || requestedPlan === "free"
+      ? requestedPlan
+      : readStoredPlan();
+    const storedPaidTier =
+      requestedTier && isSupportedPaidTier(requestedTier)
+        ? requestedTier
+        : readStoredPaidTier();
     setPhone(storedPhone);
     setSelectedPlan(storedPlan);
+    setSelectedPaidTier(storedPaidTier);
     phoneRef.current = storedPhone;
     planRef.current = storedPlan;
-  }, []);
+    paidTierRef.current = storedPaidTier;
+    persistDraftState(storedPhone, storedPlan, storedPaidTier);
+  }, [searchParams]);
 
   useEffect(() => {
     phoneRef.current = phone;
-    persistDraftState(phone, selectedPlan);
+    persistDraftState(phone, selectedPlan, paidTierRef.current);
   }, [phone, selectedPlan]);
 
   useEffect(() => {
@@ -191,6 +281,7 @@ export default function AuthPage() {
     try {
       const resolvedPhone = phoneRef.current || readStoredPhone();
       const chosenPlan = planRef.current || readStoredPlan();
+      const chosenPaidTier = paidTierRef.current || readStoredPaidTier();
 
       const profile = await upsertUserProfile({
         user,
@@ -202,20 +293,46 @@ export default function AuthPage() {
 
       if (profile.plan) {
         setSelectedPlan(profile.plan);
+        setSelectedPaidTier(profile.paidPlanTier);
+
+        if (profile.plan === "paid" && !profile.paidPlanTier && chosenPaidTier) {
+          setStatus(copy.status.creatingWorkspace("paid"));
+          await setUserPaidTier(user.uid, chosenPaidTier, resolvedPhone);
+          setSelectedPaidTier(chosenPaidTier);
+          clearAuthDraftState();
+          router.replace("/dashboard");
+          return;
+        }
+
         setStatus(copy.status.welcomeBack);
         clearAuthDraftState();
-        router.replace("/dashboard");
+        router.replace(profile.plan === "paid" && !profile.paidPlanTier ? "/choose-plan" : "/dashboard");
         return;
       }
 
       setStatus(copy.status.creatingWorkspace(chosenPlan));
+      if (chosenPlan === "paid" && chosenPaidTier) {
+        await setUserPaidTier(user.uid, chosenPaidTier, resolvedPhone);
+        setSelectedPaidTier(chosenPaidTier);
+        clearAuthDraftState();
+        setStatus(copy.status.workspaceReady);
+        router.replace("/dashboard");
+        return;
+      }
+
+      if (chosenPlan === "paid") {
+        setStatus(copy.status.workspaceReady);
+        router.replace("/choose-plan");
+        return;
+      }
+
       await setUserPlan(user.uid, chosenPlan, resolvedPhone);
       clearAuthDraftState();
       setStatus(copy.status.workspaceReady);
       router.replace("/dashboard");
-    } catch {
+    } catch (error) {
       handledUidRef.current = null;
-      setStatus(copy.status.signInFinishFailed);
+      setStatus(formatFirebaseMessage(error, copy.status.signInFinishFailed));
     } finally {
       setBusy(false);
     }
@@ -241,10 +358,10 @@ export default function AuthPage() {
         const result = await signInWithEmailLink(auth, resolvedEmail, window.location.href);
         handledUidRef.current = result.user.uid;
         await finalizeSession(result.user, "email");
-      } catch {
+      } catch (error) {
         handledUidRef.current = null;
         setBusy(false);
-        setStatus(copy.status.linkExpired);
+        setStatus(formatFirebaseMessage(error, copy.status.linkExpired));
       }
     };
 
@@ -293,8 +410,8 @@ export default function AuthPage() {
       }
 
       setStatus(copy.status.linkSent);
-    } catch {
-      setStatus(copy.status.linkFailed);
+    } catch (error) {
+      setStatus(formatFirebaseMessage(error, copy.status.linkFailed));
     } finally {
       setBusy(false);
     }
@@ -312,16 +429,32 @@ export default function AuthPage() {
       const result = await signInWithPopup(auth, provider);
       handledUidRef.current = result.user.uid;
       await finalizeSession(result.user, providerLabel);
-    } catch {
+    } catch (error) {
       handledUidRef.current = null;
       setBusy(false);
-      setStatus(providerLabel === "apple" ? copy.status.appleFailed : copy.status.googleFailed);
+      setStatus(
+        formatFirebaseMessage(
+          error,
+          providerLabel === "apple" ? copy.status.appleFailed : copy.status.googleFailed,
+        ),
+      );
     }
   };
 
   const handlePlanSelection = async (plan: BillingPlan) => {
     setSelectedPlan(plan);
-    persistDraftState(phoneRef.current, plan);
+
+    if (plan === "free") {
+      setSelectedPaidTier(null);
+      paidTierRef.current = null;
+    }
+
+    persistDraftState(phoneRef.current, plan, paidTierRef.current);
+
+    if (plan === "paid") {
+      router.push("/choose-plan");
+      return;
+    }
 
     if (!userUid) {
       setStatus(copy.status.workspaceSelected(plan === "paid" ? copy.paidWorkspace : copy.freeWorkspace));
@@ -335,22 +468,46 @@ export default function AuthPage() {
       await setUserPlan(userUid, plan, phoneRef.current || readStoredPhone());
       clearAuthDraftState();
       router.replace("/dashboard");
-    } catch {
-      setStatus(copy.status.workspaceSaveFailed);
+    } catch (error) {
+      setStatus(formatFirebaseMessage(error, copy.status.workspaceSaveFailed));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#050b21] px-4 py-10 text-[#edf1ff]">
+    <div className="site-page relative min-h-screen overflow-hidden px-4 py-10 text-[#edf1ff]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_top_left,rgba(98,88,255,0.3),transparent_35%),radial-gradient(circle_at_top_right,rgba(64,170,255,0.16),transparent_28%)]" />
       <div className="pointer-events-none absolute left-10 top-20 h-56 w-56 rounded-full bg-[#5e50f3]/18 blur-3xl" />
       <div className="pointer-events-none absolute bottom-10 right-10 h-64 w-64 rounded-full bg-[#2294ff]/10 blur-3xl" />
 
-      <div className="relative mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[0.95fr,1.05fr]">
-        <section className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(15,22,54,0.96),rgba(8,12,30,0.98))] p-7 shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:p-8">
-          <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-white/58">
+      <div className="relative mx-auto max-w-6xl">
+        <header className="site-header-shell site-animate-header mb-8 flex items-center justify-between gap-4 rounded-[2rem] px-3 py-3">
+          <Link href={`/${uiLanguage}`} className="flex items-center gap-3 rounded-full px-2 py-1.5">
+            <Image
+              src="/aether-logo-mark.png"
+              alt="Aether SEO"
+              width={44}
+              height={44}
+              priority
+              className="h-11 w-11 rounded-full object-cover"
+            />
+            <span>
+              <p className="text-base font-semibold md:text-lg">Aether SEO</p>
+              <p className="site-muted text-[11px] uppercase tracking-[0.22em]">AI MEETS SEO</p>
+            </span>
+          </Link>
+          <div className="flex items-center gap-3">
+            <SitePreferences className="shrink-0" />
+            <Link href={`/${uiLanguage}`} className="site-button-secondary rounded-full px-4 py-2.5 text-sm font-medium">
+              {copy.backHome}
+            </Link>
+          </div>
+        </header>
+
+        <div className="grid w-full gap-6 lg:grid-cols-[0.95fr,1.05fr]">
+        <section className="site-panel-hero site-animate-rise site-animate-glow rounded-[2rem] border p-7 shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:p-8">
+          <div className="site-chip inline-flex items-center gap-3 rounded-full border px-4 py-2 text-xs uppercase tracking-[0.18em]">
             <span className="rounded-full bg-[#82f0d6]/12 p-1.5 text-[#82f0d6]">
               <SparkIcon />
             </span>
@@ -359,13 +516,13 @@ export default function AuthPage() {
 
           <h1 className="mt-6 text-4xl font-semibold leading-tight md:text-5xl">{copy.title}</h1>
 
-          <p className="mt-5 max-w-xl text-sm leading-7 text-white/66 md:text-base">{copy.body}</p>
+          <p className="site-muted mt-5 max-w-xl text-sm leading-7 md:text-base">{copy.body}</p>
 
           <div className="mt-8 space-y-3">
             {copy.bullets.map((item) => (
               <div
                 key={item}
-                className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/72"
+                className="site-panel-soft flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm"
               >
                 <span className="mt-1 h-2.5 w-2.5 rounded-full bg-[#82f0d6]" />
                 <span>{item}</span>
@@ -373,42 +530,45 @@ export default function AuthPage() {
             ))}
           </div>
 
-          <div className="mt-8 rounded-[1.6rem] border border-[#776cff]/28 bg-[linear-gradient(180deg,rgba(72,60,166,0.2),rgba(10,14,36,0.96))] p-5">
-            <p className="text-xs uppercase tracking-[0.18em] text-[#c0bbff]">{copy.selectedWorkspace}</p>
+          <div className="site-panel-soft mt-8 rounded-[1.6rem] border p-5">
+            <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.selectedWorkspace}</p>
             <div className="mt-4 flex items-center justify-between">
               <div>
                 <p className="text-2xl font-semibold">
-                  {selectedPlan === "paid" ? copy.paidWorkspace : copy.freeWorkspace}
-                </p>
-                <p className="mt-2 max-w-xs text-sm text-white/64">
                   {selectedPlan === "paid"
-                    ? copy.paidWorkspaceBody
+                    ? paidTierPresentation.title ?? copy.paidWorkspace
+                    : copy.freeWorkspace}
+                </p>
+                <p className="site-muted mt-2 max-w-xs text-sm">
+                  {selectedPlan === "paid"
+                    ? paidTierPresentation.body ?? copy.paidWorkspaceBody
                     : copy.freeWorkspaceBody}
                 </p>
               </div>
               <div className="rounded-full border border-[#82f0d6]/25 bg-[#82f0d6]/10 px-3 py-1 text-xs uppercase tracking-[0.16em] text-[#82f0d6]">
-                {copy.activeChoice}
+                {selectedPlan === "paid" && paidTierPresentation.label
+                  ? paidTierPresentation.label
+                  : copy.activeChoice}
               </div>
             </div>
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(12,19,46,0.97),rgba(7,11,28,0.98))] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:p-7">
+        <section className="site-panel site-animate-rise rounded-[2rem] border p-6 shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:p-7" style={{ ["--site-delay" as string]: "100ms" }}>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-[#9f97ff]">{copy.welcomeEyebrow}</p>
+              <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.welcomeEyebrow}</p>
               <h2 className="mt-2 text-3xl font-semibold">{copy.welcomeTitle}</h2>
             </div>
             <div className="flex items-center gap-3">
-              <LanguageSwitcher />
-              <div className="hidden gap-2 text-white/56 md:flex">
-                <span className="rounded-full border border-white/10 bg-white/5 p-2">
+              <div className="hidden gap-2 md:flex">
+                <span className="site-chip flex h-10 w-10 items-center justify-center rounded-full border">
                   <GoogleIcon />
                 </span>
-                <span className="rounded-full border border-white/10 bg-white/5 p-2">
+                <span className="site-chip flex h-10 w-10 items-center justify-center rounded-full border">
                   <AppleIcon />
                 </span>
-                <span className="rounded-full border border-white/10 bg-white/5 p-2">
+                <span className="site-chip flex h-10 w-10 items-center justify-center rounded-full border">
                   <MailIcon />
                 </span>
               </div>
@@ -422,7 +582,7 @@ export default function AuthPage() {
               }
             type="button"
             disabled={isBusy}
-            className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/6 px-4 py-4 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-70"
+            className="site-button-secondary flex items-center justify-center gap-3 rounded-2xl border px-4 py-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70"
           >
             <GoogleIcon />
             {copy.googleButton}
@@ -431,22 +591,22 @@ export default function AuthPage() {
             onClick={() => continueWithSocial(appleProvider, "apple", copy.status.connectingApple)}
             type="button"
             disabled={isBusy}
-            className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/6 px-4 py-4 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-70"
+            className="site-button-secondary flex items-center justify-center gap-3 rounded-2xl border px-4 py-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70"
           >
             <AppleIcon />
             {copy.appleButton}
           </button>
         </div>
 
-          <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-white/38">
-            <span className="h-px flex-1 bg-white/10" />
+          <div className="site-muted my-6 flex items-center gap-3 text-xs uppercase tracking-[0.18em]">
+            <span className="h-px flex-1 bg-[var(--site-border)]" />
             {copy.emailDivider}
-            <span className="h-px flex-1 bg-white/10" />
+            <span className="h-px flex-1 bg-[var(--site-border)]" />
           </div>
 
           <div className="grid gap-4">
-            <label className="rounded-[1.4rem] border border-white/10 bg-white/[0.05] p-4">
-              <span className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-white/45">
+            <label className="site-panel-soft rounded-[1.4rem] border p-4">
+              <span className="site-muted mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.16em]">
                 <MailIcon />
                 {copy.emailLabel}
               </span>
@@ -455,12 +615,12 @@ export default function AuthPage() {
                 onChange={(event) => setEmail(event.target.value)}
                 type="email"
                 placeholder={copy.emailPlaceholder}
-                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/30"
+                className="site-input w-full bg-transparent text-sm outline-none"
               />
             </label>
 
-            <label className="rounded-[1.4rem] border border-white/10 bg-white/[0.05] p-4">
-              <span className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-white/45">
+            <label className="site-panel-soft rounded-[1.4rem] border p-4">
+              <span className="site-muted mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.16em]">
                 <PhoneIcon />
                 {copy.phoneLabel}
               </span>
@@ -469,7 +629,7 @@ export default function AuthPage() {
                 onChange={(event) => setPhone(event.target.value)}
                 type="tel"
                 placeholder={copy.phonePlaceholder}
-                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/30"
+                className="site-input w-full bg-transparent text-sm outline-none"
               />
             </label>
           </div>
@@ -478,7 +638,7 @@ export default function AuthPage() {
             onClick={sendEmailLink}
             type="button"
             disabled={isBusy}
-            className="mt-4 flex w-full items-center justify-center gap-3 rounded-2xl bg-[#6558ff] px-4 py-4 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(88,73,255,0.35)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
+            className="site-button-primary mt-4 flex w-full items-center justify-center gap-3 rounded-2xl px-4 py-4 text-sm font-semibold transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
           >
             <MailIcon />
             {isBusy ? "..." : copy.sendLinkButton}
@@ -486,8 +646,8 @@ export default function AuthPage() {
 
           <div className="mt-7">
             <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.18em] text-white/45">{copy.chooseWorkspace}</p>
-              <p className="text-xs text-white/42">{copy.selectableBeforeSignin}</p>
+              <p className="site-muted text-xs uppercase tracking-[0.18em]">{copy.chooseWorkspace}</p>
+              <p className="site-muted text-xs">{copy.selectableBeforeSignin}</p>
             </div>
 
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -500,29 +660,33 @@ export default function AuthPage() {
                     onClick={() => handlePlanSelection(plan.id)}
                     type="button"
                     disabled={isBusy}
-                    className={`rounded-[1.5rem] border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-70 ${
-                      isSelected
-                        ? "border-[#8c82ff] bg-[linear-gradient(180deg,rgba(93,82,242,0.18),rgba(13,20,48,0.98))] shadow-[0_18px_45px_rgba(65,52,185,0.22)]"
-                        : "border-white/10 bg-white/[0.04] hover:border-white/18 hover:bg-white/[0.06]"
-                    }`}
+                    className="site-option-card rounded-[1.5rem] border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-70"
+                    data-selected={isSelected ? "true" : "false"}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="text-lg font-semibold">
-                          {plan.id === "paid" ? copy.paidWorkspace : copy.freeWorkspace}
+                          {plan.id === "paid"
+                            ? paidTierPresentation.title ?? copy.paidWorkspace
+                            : copy.freeWorkspace}
                         </p>
-                        <p className="mt-3 text-sm leading-6 text-white/66">
-                          {plan.id === "paid" ? copy.paidWorkspaceBody : copy.freeWorkspaceBody}
+                        <p className="site-muted mt-3 text-sm leading-6">
+                          {plan.id === "paid"
+                            ? paidTierPresentation.body ?? copy.paidWorkspaceBody
+                            : copy.freeWorkspaceBody}
                         </p>
+                        {plan.id === "paid" && paidTierPresentation.label ? (
+                          <p className="site-accent-text mt-3 text-xs uppercase tracking-[0.16em]">
+                            Selected tier: {paidTierPresentation.label}
+                          </p>
+                        ) : null}
                       </div>
                       <span
-                        className={`mt-1 h-3 w-3 rounded-full border ${
-                          isSelected ? "border-transparent" : "border-white/22"
-                        }`}
+                        className="mt-1 h-3 w-3 rounded-full border"
                         style={{ backgroundColor: isSelected ? plan.accent : "transparent" }}
                       />
                     </div>
-                    <p className="mt-4 text-xs uppercase tracking-[0.16em] text-white/46">
+                    <p className="site-muted mt-4 text-xs uppercase tracking-[0.16em]">
                       {isSelected ? copy.selectedLabel : copy.chooseLabel}
                     </p>
                   </button>
@@ -532,19 +696,24 @@ export default function AuthPage() {
           </div>
 
           {status ? (
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/72">
+            <div className="site-panel-soft mt-5 rounded-2xl border px-4 py-3 text-sm">
               {status}
             </div>
           ) : (
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/72">
+            <div className="site-panel-soft mt-5 rounded-2xl border px-4 py-3 text-sm">
               {copy.status.initial}
             </div>
           )}
-
-          <Link href="/" className="mt-6 block text-center text-sm text-[#9f98ff]">
-            {copy.backHome}
-          </Link>
         </section>
+        </div>
+
+        <footer className="site-panel site-animate-rise mt-6 flex flex-wrap items-center justify-between gap-4 rounded-[1.8rem] border px-5 py-4 text-sm" style={{ ["--site-delay" as string]: "180ms" }}>
+          <p className="site-muted">Secure access for multilingual blog workflows, SEO planning, and content operations.</p>
+          <div className="text-right">
+            <p className="font-medium">{footer.parent}</p>
+            <p className="site-muted text-xs">{footer.rights}</p>
+          </div>
+        </footer>
       </div>
     </div>
   );

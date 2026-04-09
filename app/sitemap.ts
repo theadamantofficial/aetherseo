@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
-import { getPublicBlogPosts, siteLanguages } from "@/lib/site-language";
+import { listPublishedBlogPosts } from "@/lib/public-blog-posts";
 import { getSiteUrl, localeCodes } from "@/lib/site-routing";
+import { siteLanguages } from "@/lib/site-language";
 
 function buildLanguageMap(pathBuilder: (language: (typeof siteLanguages)[number]) => string) {
   const siteUrl = getSiteUrl();
@@ -10,10 +11,16 @@ function buildLanguageMap(pathBuilder: (language: (typeof siteLanguages)[number]
   );
 }
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();
   const lastModified = new Date();
   const entries: MetadataRoute.Sitemap = [];
+  const blogEntries = await Promise.all(
+    siteLanguages.map(async (language) => ({
+      language,
+      posts: await listPublishedBlogPosts(language),
+    })),
+  );
 
   entries.push(
     ...siteLanguages.flatMap((language) => [
@@ -53,12 +60,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
           languages: buildLanguageMap((lang) => `/${lang}/terms-of-service`),
         },
       },
-      ...getPublicBlogPosts(language).map((post) => ({
-        url: `${siteUrl}/${language}/blog/${post.slug}`,
-        lastModified,
-        changeFrequency: "monthly" as const,
-        priority: 0.7,
-      })),
+      ...(
+        blogEntries
+          .find((entry) => entry.language === language)
+          ?.posts.map((post) => ({
+            url: `${siteUrl}/${language}/blog/${post.slug}`,
+            lastModified,
+            changeFrequency: "monthly" as const,
+            priority: 0.7,
+          })) ?? []
+      ),
     ]),
   );
 

@@ -238,6 +238,124 @@ a {
   color: var(--site-primary) !important;
 }
 
+.site-article-body {
+  color: var(--site-muted);
+  font-size: 1.05rem;
+  line-height: 1.9;
+}
+
+.site-article-body > :first-child {
+  margin-top: 0;
+}
+
+.site-article-body h1,
+.site-article-body h2,
+.site-article-body h3,
+.site-article-body h4 {
+  color: var(--foreground);
+  font-weight: 700;
+  line-height: 1.16;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.site-article-body h1 {
+  margin-top: 0;
+  font-size: clamp(2.4rem, 4vw, 3.3rem);
+}
+
+.site-article-body h2 {
+  margin-top: 3.25rem;
+  font-size: clamp(1.95rem, 3vw, 2.5rem);
+}
+
+.site-article-body h3 {
+  margin-top: 2.5rem;
+  font-size: clamp(1.5rem, 2.3vw, 1.95rem);
+}
+
+.site-article-body h4 {
+  margin-top: 1.9rem;
+  font-size: clamp(1.2rem, 2vw, 1.45rem);
+}
+
+.site-article-body p,
+.site-article-body ul,
+.site-article-body ol,
+.site-article-body blockquote,
+.site-article-body pre {
+  margin-top: 1.35rem;
+}
+
+.site-article-body p {
+  color: var(--site-muted);
+}
+
+.site-article-body strong {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.site-article-body a {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--site-primary) 65%, transparent);
+  text-underline-offset: 0.22em;
+}
+
+.site-article-body ul,
+.site-article-body ol {
+  padding-left: 1.4rem;
+}
+
+.site-article-body ul {
+  list-style: disc;
+}
+
+.site-article-body ol {
+  list-style: decimal;
+}
+
+.site-article-body li {
+  margin-top: 0.65rem;
+  color: var(--site-muted);
+  padding-left: 0.2rem;
+}
+
+.site-article-body li::marker {
+  color: var(--foreground);
+}
+
+.site-article-body code {
+  border: 1px solid var(--site-border);
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--site-surface-soft) 88%, black 12%);
+  color: var(--foreground);
+  padding: 0.14rem 0.42rem;
+  font-size: 0.94em;
+}
+
+.site-article-body blockquote {
+  border-left: 3px solid color-mix(in srgb, var(--site-primary) 60%, transparent);
+  padding-left: 1rem;
+  color: var(--foreground);
+}
+
+@media (max-width: 640px) {
+  .site-article-body {
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+
+  .site-article-body h2 {
+    margin-top: 2.4rem;
+  }
+
+  .site-article-body h3 {
+    margin-top: 2rem;
+  }
+}
+
 .site-input {
   background: var(--site-surface-soft) !important;
   border-color: var(--site-border) !important;

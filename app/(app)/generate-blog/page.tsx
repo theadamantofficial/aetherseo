@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { auth } from "@/lib/firebase";
 import {
@@ -14,7 +14,7 @@ import {
 import { blogWorkspaceCopy, globalLanguageOptions } from "@/lib/site-language";
 import { useTranslatedCopy } from "@/lib/use-translated-copy";
 
-export default function GenerateBlogPage() {
+function GenerateBlogPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { language, uiLanguage } = useLanguage();
@@ -46,7 +46,6 @@ export default function GenerateBlogPage() {
   const [blog, setBlog] = useState<GeneratedBlog | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isBusy, setBusy] = useState(false);
-  const hasGeneratedBlog = Boolean(blog);
   const currentLanguage = globalLanguageOptions.find((item) => item.code === outputLanguage) ?? globalLanguageOptions[0];
 
   useEffect(() => {
@@ -239,7 +238,7 @@ export default function GenerateBlogPage() {
           {blog?.previewMeta || "Generate a real blog draft and it will appear here immediately after saving."}
         </p>
         <div className="mt-8 space-y-5">
-          {hasGeneratedBlog ? (
+          {blog ? (
             <>
               {blog.paragraphs.map((paragraph) => (
                 <p key={paragraph}>{paragraph}</p>
@@ -277,4 +276,12 @@ export default function GenerateBlogPage() {
 
 function queryKeywordOrValue(value: string) {
   return value.trim().length > 0;
+}
+
+export default function GenerateBlogPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[320px]" />}>
+      <GenerateBlogPageContent />
+    </Suspense>
+  );
 }

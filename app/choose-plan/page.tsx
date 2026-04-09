@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { useLanguage } from "@/components/language-provider";
 import SitePreferences from "@/components/site-preferences";
@@ -169,7 +169,7 @@ function formatFirebaseMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export default function ChoosePlanPage() {
+function ChoosePlanPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { language, uiLanguage } = useLanguage();
@@ -408,6 +408,14 @@ export default function ChoosePlanPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ChoosePlanPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#081120]" />}>
+      <ChoosePlanPageContent />
+    </Suspense>
   );
 }
 

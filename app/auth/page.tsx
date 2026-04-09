@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import {
   User,
   isSignInWithEmailLink,
@@ -226,7 +226,7 @@ function clearAuthDraftState() {
   window.localStorage.removeItem(PAID_TIER_STORAGE);
 }
 
-export default function AuthPage() {
+function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { uiLanguage } = useLanguage();
@@ -457,7 +457,7 @@ export default function AuthPage() {
     }
 
     if (!userUid) {
-      setStatus(copy.status.workspaceSelected(plan === "paid" ? copy.paidWorkspace : copy.freeWorkspace));
+      setStatus(copy.status.workspaceSelected(copy.freeWorkspace));
       return;
     }
 
@@ -716,5 +716,13 @@ export default function AuthPage() {
         </footer>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#081120]" />}>
+      <AuthPageContent />
+    </Suspense>
   );
 }

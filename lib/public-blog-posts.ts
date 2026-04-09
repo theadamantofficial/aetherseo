@@ -1,7 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { PublishedBlogPost } from "@/lib/blog-post-utils";
-import type { SiteLanguage } from "@/lib/site-language";
+import type { BlogLanguage, PublishedBlogPost } from "@/lib/blog-post-utils";
 
 const storePath = path.join(process.cwd(), "data", "public-blog-posts.json");
 
@@ -40,12 +39,12 @@ export async function listAllPublishedBlogPosts() {
   return sortPosts(await readStore());
 }
 
-export async function listPublishedBlogPosts(language?: SiteLanguage) {
+export async function listPublishedBlogPosts(language?: BlogLanguage) {
   const posts = await readStore();
   return sortPosts(language ? posts.filter((entry) => entry.language === language) : posts);
 }
 
-export async function getPublishedBlogPost(language: SiteLanguage, slug: string) {
+export async function getPublishedBlogPost(language: BlogLanguage, slug: string) {
   const posts = await readStore();
   return posts.find((entry) => entry.language === language && entry.slug === slug) ?? null;
 }

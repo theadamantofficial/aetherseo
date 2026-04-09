@@ -3,11 +3,16 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { blogLanguageOptions, estimateReadTime, slugify, type PublishedBlogPost } from "@/lib/blog-post-utils";
-import type { SiteLanguage } from "@/lib/site-language";
+import {
+  blogLanguageOptions,
+  estimateReadTime,
+  slugify,
+  type BlogLanguage,
+  type PublishedBlogPost,
+} from "@/lib/blog-post-utils";
 
 type ComposerState = {
-  language: SiteLanguage;
+  language: BlogLanguage;
   slug: string;
   title: string;
   category: string;
@@ -410,7 +415,7 @@ export default function BlogAdminPage() {
                         onChange={(event) =>
                           setComposer((current) => ({
                             ...current,
-                            language: event.target.value as SiteLanguage,
+                            language: event.target.value as BlogLanguage,
                           }))
                         }
                         className={`${adminInputClass} site-select pr-10`}

@@ -27,7 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       {
         url: `${siteUrl}/${language}`,
         lastModified,
-        changeFrequency: "weekly",
+        changeFrequency: "weekly" as const,
         priority: 1,
         alternates: {
           languages: buildLanguageMap((lang) => `/${lang}`),
@@ -36,7 +36,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       {
         url: `${siteUrl}/${language}/blog`,
         lastModified,
-        changeFrequency: "weekly",
+        changeFrequency: "weekly" as const,
         priority: 0.9,
         alternates: {
           languages: buildLanguageMap((lang) => `/${lang}/blog`),
@@ -45,7 +45,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       {
         url: `${siteUrl}/${language}/privacy-policy`,
         lastModified,
-        changeFrequency: "monthly",
+        changeFrequency: "monthly" as const,
         priority: 0.4,
         alternates: {
           languages: buildLanguageMap((lang) => `/${lang}/privacy-policy`),
@@ -54,7 +54,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       {
         url: `${siteUrl}/${language}/terms-of-service`,
         lastModified,
-        changeFrequency: "monthly",
+        changeFrequency: "monthly" as const,
         priority: 0.4,
         alternates: {
           languages: buildLanguageMap((lang) => `/${lang}/terms-of-service`),

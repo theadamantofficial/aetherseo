@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { auth } from "@/lib/firebase";
 import { resolveAppUiLanguage, type AppUiLanguage } from "@/lib/app-ui-language";
@@ -482,7 +482,7 @@ const assistantUiCopy: Record<
   },
 };
 
-export default function AiAssistantPage() {
+function AiAssistantPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { language, uiLanguage } = useLanguage();
@@ -752,5 +752,13 @@ export default function AiAssistantPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AiAssistantPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[320px]" />}>
+      <AiAssistantPageContent />
+    </Suspense>
   );
 }

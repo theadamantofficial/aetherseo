@@ -7,52 +7,16 @@ import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { auth } from "@/lib/firebase";
 import { resolveAppUiLanguage, type AppUiLanguage } from "@/lib/app-ui-language";
+import { getPaidPlanDefinition, PAID_PLAN_TIERS } from "@/lib/paid-plans";
 import {
   getPaidTierLabel,
-  getPaidTierMeta,
   getUserProfile,
   type PaidPlanTier,
   type UserProfile,
 } from "@/lib/firebase-data";
+import { useUsdInrRate } from "@/lib/use-usd-inr-rate";
 
 type CurrencyCode = "usd" | "inr";
-
-const planCards: Array<{
-  id: "free" | PaidPlanTier;
-  title: string;
-  priceInr: string;
-  priceUsd: string;
-  bodyKey: "free" | PaidPlanTier;
-}> = [
-  {
-    id: "free",
-    title: "Free",
-    priceInr: "₹0/mo",
-    priceUsd: "$0/mo",
-    bodyKey: "free",
-  },
-  {
-    id: "starter",
-    title: "Starter",
-    priceInr: "₹299/mo",
-    priceUsd: "$5/mo",
-    bodyKey: "starter",
-  },
-  {
-    id: "pro",
-    title: "Pro",
-    priceInr: "₹999/mo",
-    priceUsd: "$15/mo",
-    bodyKey: "pro",
-  },
-  {
-    id: "agency",
-    title: "Agency",
-    priceInr: "₹2999/mo",
-    priceUsd: "$39/mo",
-    bodyKey: "agency",
-  },
-];
 
 const billingUiCopy: Record<
   AppUiLanguage,
@@ -336,6 +300,7 @@ export default function BillingPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>("usd");
   const [upgradeReason, setUpgradeReason] = useState<keyof typeof billingUiCopy.en.notices | "">("");
+  const { usdToInrRate } = useUsdInrRate();
   const activeLanguage = resolveAppUiLanguage(language, uiLanguage);
   const ui = billingUiCopy[activeLanguage];
 
@@ -384,10 +349,38 @@ export default function BillingPage() {
   }
 
   const paidTierLabel = getPaidTierLabel(profile?.paidPlanTier);
-  const paidTierMeta = getPaidTierMeta(profile?.paidPlanTier);
+  const currentPlanDefinition =
+    profile?.plan === "paid" && profile.paidPlanTier
+      ? getPaidPlanDefinition(profile.paidPlanTier, usdToInrRate)
+      : null;
+  const planCards: Array<{
+    id: "free" | PaidPlanTier;
+    title: string;
+    priceInr: string;
+    priceUsd: string;
+    bodyKey: "free" | PaidPlanTier;
+  }> = [
+    {
+      id: "free",
+      title: "Free",
+      priceInr: "₹0/mo",
+      priceUsd: "$0/mo",
+      bodyKey: "free",
+    },
+    ...PAID_PLAN_TIERS.map((tier) => {
+      const definition = getPaidPlanDefinition(tier, usdToInrRate);
+      return {
+        id: tier,
+        title: definition.title,
+        priceInr: definition.priceInr,
+        priceUsd: definition.priceUsd,
+        bodyKey: tier,
+      };
+    }),
+  ];
   const currentPlanName = profile?.plan === "paid" ? paidTierLabel ?? ui.paidPlanName : ui.freePlanName;
-  const currentPlanPriceInr = profile?.plan === "paid" ? paidTierMeta?.priceInr ?? "Custom" : "₹0/mo";
-  const currentPlanPriceUsd = profile?.plan === "paid" ? paidTierMeta?.priceUsd ?? "Custom" : "$0/mo";
+  const currentPlanPriceInr = profile?.plan === "paid" ? currentPlanDefinition?.priceInr ?? "Custom" : "₹0/mo";
+  const currentPlanPriceUsd = profile?.plan === "paid" ? currentPlanDefinition?.priceUsd ?? "Custom" : "$0/mo";
   const currentPlanPrice = currency === "usd" ? currentPlanPriceUsd : currentPlanPriceInr;
 
   return (

@@ -28,7 +28,7 @@ export class RazorpayApiError extends Error {
 type PendingPaymentOrder = {
   amount: number;
   createdAt: FirebaseFirestore.FieldValue;
-  currency: "INR";
+  currency: "INR" | "USD";
   email: string | null;
   mode: RazorpayMode;
   orderId: string;
@@ -136,8 +136,8 @@ export async function createPendingRazorpayOrder({
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      amount: definition.amountInr,
-      currency: "INR",
+      amount: definition.amountUsd,
+      currency: "USD",
       notes: {
         email: email ?? "",
         phone,
@@ -155,7 +155,7 @@ export async function createPendingRazorpayOrder({
 
   const payload = (await response.json()) as {
     amount: number;
-    currency: "INR";
+    currency: "INR" | "USD";
     id: string;
   };
 
@@ -215,7 +215,7 @@ export function verifyRazorpaySignature({
 
 export async function getPendingPaymentOrder(orderId: string): Promise<{
   amount: number;
-  currency: "INR";
+  currency: "INR" | "USD";
   id: string;
   mode: RazorpayMode;
   paymentId: string | null;
@@ -237,7 +237,7 @@ export async function getPendingPaymentOrder(orderId: string): Promise<{
 
   return {
     amount: typeof data.amount === "number" ? data.amount : 0,
-    currency: data.currency === "INR" ? "INR" : "INR",
+    currency: data.currency === "USD" ? "USD" : "INR",
     id: snapshot.id,
     mode: data.mode === "prod" ? "prod" : "test",
     paymentId: readString(data.paymentId),

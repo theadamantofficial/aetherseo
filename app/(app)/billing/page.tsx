@@ -293,6 +293,19 @@ const billingUiCopy: Record<
   },
 };
 
+function splitPriceLabel(price: string): { amount: string; suffix: string } {
+  const slashIndex = price.indexOf("/");
+
+  if (slashIndex === -1) {
+    return { amount: price, suffix: "" };
+  }
+
+  return {
+    amount: price.slice(0, slashIndex),
+    suffix: price.slice(slashIndex),
+  };
+}
+
 export default function BillingPage() {
   const router = useRouter();
   const { language, uiLanguage } = useLanguage();
@@ -382,6 +395,7 @@ export default function BillingPage() {
   const currentPlanPriceInr = profile?.plan === "paid" ? currentPlanDefinition?.priceInr ?? "Custom" : "₹0/mo";
   const currentPlanPriceUsd = profile?.plan === "paid" ? currentPlanDefinition?.priceUsd ?? "Custom" : "$0/mo";
   const currentPlanPrice = currency === "usd" ? currentPlanPriceUsd : currentPlanPriceInr;
+  const { amount: currentPlanAmount, suffix: currentPlanSuffix } = splitPriceLabel(currentPlanPrice);
 
   return (
     <div className="space-y-6">
@@ -425,8 +439,11 @@ export default function BillingPage() {
                 {profile?.plan === "paid" ? ui.currentPlanBodyPaid : ui.currentPlanBodyFree}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-5xl font-semibold">{currentPlanPrice}</p>
+            <div className="min-w-0 text-right">
+              <p className="flex flex-wrap items-baseline justify-end gap-x-1 gap-y-2 text-[clamp(2.5rem,4vw,3.75rem)] font-semibold leading-none">
+                <span>{currentPlanAmount}</span>
+                {currentPlanSuffix ? <span className="text-[0.62em]">{currentPlanSuffix}</span> : null}
+              </p>
               <p className="site-muted mt-1 text-sm">{currency === "usd" ? ui.billedUsd : ui.billedInr}</p>
             </div>
           </div>
@@ -459,7 +476,7 @@ export default function BillingPage() {
       <section>
         <h3 className="text-center text-4xl font-semibold">{ui.upgradeTitle}</h3>
         <p className="site-muted mt-2 text-center text-sm">{ui.upgradeBody}</p>
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-6 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr))]">
           {planCards.map((plan) => {
             const isCurrent =
               plan.id === "free"
@@ -467,11 +484,12 @@ export default function BillingPage() {
                 : profile?.plan === "paid" && profile?.paidPlanTier === plan.id;
             const isFeatured = plan.id === "pro";
             const price = currency === "usd" ? plan.priceUsd : plan.priceInr;
+            const { amount, suffix } = splitPriceLabel(price);
 
             return (
               <article
                 key={plan.id}
-                className={`flex h-full flex-col rounded-2xl border p-6 ${
+                className={`flex min-w-0 h-full flex-col rounded-2xl border p-6 ${
                   isFeatured ? "site-panel-vibrant border-[#6b5dff]" : "site-panel"
                 }`}
               >
@@ -487,7 +505,10 @@ export default function BillingPage() {
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-3 text-5xl font-semibold">{price}</p>
+                <p className="mt-3 flex flex-wrap items-baseline gap-x-1 gap-y-2 text-[clamp(2.5rem,4vw,3.35rem)] font-semibold leading-none">
+                  <span>{amount}</span>
+                  {suffix ? <span className="text-[0.62em]">{suffix}</span> : null}
+                </p>
                 <p className={`mt-2 text-sm ${isFeatured ? "text-white/80" : "site-muted"}`}>
                   {currency === "usd" ? ui.billedUsd : ui.billedInr}
                 </p>

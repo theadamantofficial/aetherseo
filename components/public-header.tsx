@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import SitePreferences from "@/components/site-preferences";
 import { useLanguage } from "@/components/language-provider";
 import { landingCopy, type SiteLanguage } from "@/lib/site-language";
@@ -12,35 +13,65 @@ type PublicHeaderProps = {
   buildLanguagePath: (language: SiteLanguage) => string;
 };
 
+function MobileHeaderToggle({ isOpen }: { isOpen: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" aria-hidden="true">
+      {isOpen ? (
+        <path d="m6 6 12 12M18 6 6 18" strokeWidth="1.8" strokeLinecap="round" />
+      ) : (
+        <>
+          <path d="M4 7h16" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M4 12h16" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M10 17h10" strokeWidth="1.8" strokeLinecap="round" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export default function PublicHeader({
   language,
   buildLanguagePath,
 }: PublicHeaderProps) {
   const { language: preferredLanguage } = useLanguage();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const copy = useTranslatedCopy(landingCopy[language], preferredLanguage, `public-header-${language}`);
 
   return (
     <div className="sticky top-2 z-50 mb-6 px-1 sm:top-4 sm:mb-10">
-      <header className="site-header-shell site-animate-header mx-auto flex w-full max-w-7xl flex-col gap-4 rounded-[1.75rem] px-4 py-4 sm:rounded-[2rem] sm:px-5 lg:flex-row lg:flex-wrap lg:items-center lg:gap-3 lg:px-3 lg:py-3">
-        <Link
-          href={`/${language}`}
-          className="mx-auto flex w-full min-w-0 items-center justify-center gap-3 rounded-[1.3rem] px-2 py-1.5 text-center transition hover:opacity-90 sm:w-auto sm:min-w-fit sm:shrink-0 sm:justify-start sm:text-left lg:mx-0 lg:rounded-full"
-        >
-          <Image
-            src="/aether-logo-mark.png"
-            alt="Aether SEO"
-            width={44}
-            height={44}
-            priority
-            className="h-11 w-11 rounded-full object-cover"
-          />
-          <span className="min-w-0">
-            <h1 className="text-base font-semibold md:text-lg">Aether SEO</h1>
-            <p className="site-muted text-[10px] uppercase tracking-[0.22em] sm:text-[11px] sm:tracking-[0.24em]">
-              AI MEETS SEO
-            </p>
-          </span>
-        </Link>
+      <header className="site-header-shell site-animate-header relative mx-auto flex w-full max-w-7xl flex-col gap-3 rounded-[1.5rem] px-3 py-3 sm:rounded-[2rem] sm:px-5 lg:flex-row lg:flex-wrap lg:items-center lg:gap-3 lg:px-3 lg:py-3">
+        <div className="flex w-full items-center justify-between gap-3 lg:w-auto lg:flex-none">
+          <Link
+            href={`/${language}`}
+            className="flex min-w-0 items-center gap-3 rounded-full px-1 py-1 transition hover:opacity-90"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <Image
+              src="/aether-logo-mark.png"
+              alt="Aether SEO"
+              width={44}
+              height={44}
+              priority
+              className="h-10 w-10 rounded-full object-cover sm:h-11 sm:w-11"
+            />
+            <span className="min-w-0">
+              <h1 className="truncate text-[15px] font-semibold sm:text-base md:text-lg">Aether SEO</h1>
+              <p className="site-muted text-[9px] uppercase tracking-[0.24em] sm:text-[11px] sm:tracking-[0.24em]">
+                AI MEETS SEO
+              </p>
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen((current) => !current)}
+            className="site-button-secondary flex h-11 w-11 shrink-0 items-center justify-center rounded-full lg:hidden"
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="public-mobile-menu"
+            aria-label={isMobileMenuOpen ? "Close navigation" : "Open navigation"}
+          >
+            <MobileHeaderToggle isOpen={isMobileMenuOpen} />
+          </button>
+        </div>
 
         <nav className="site-header-nav hidden flex-1 items-center justify-center gap-1 rounded-full px-2 py-1 lg:flex">
           <Link href={`/${language}#platform`} className="site-muted rounded-full px-4 py-2.5 text-sm font-medium transition hover:bg-white/10 hover:text-[var(--foreground)]">
@@ -60,25 +91,86 @@ export default function PublicHeader({
           </Link>
         </nav>
 
-        <div className="w-full lg:ml-auto lg:w-auto">
-          <div className="rounded-[1.45rem] border border-white/10 bg-white/[0.035] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_26px_rgba(15,23,42,0.08)] sm:p-3 lg:flex lg:items-center lg:gap-3 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
-            <SitePreferences buildLanguagePath={buildLanguagePath} className="w-full lg:w-auto lg:shrink-0" />
-            <div className="mt-2.5 grid w-full grid-cols-2 gap-2 lg:mt-0 lg:flex lg:w-auto lg:flex-nowrap">
+        <div className="hidden w-full lg:ml-auto lg:flex lg:w-auto lg:items-center lg:gap-3">
+          <SitePreferences buildLanguagePath={buildLanguagePath} className="w-full lg:w-auto lg:shrink-0" />
+          <div className="flex w-full gap-2 lg:w-auto lg:flex-nowrap">
+            <Link
+              href="/auth"
+              className="site-button-secondary inline-flex min-h-11 items-center justify-center rounded-full px-4 py-2.5 text-center text-sm font-medium transition hover:opacity-90"
+            >
+              {copy.nav.signIn}
+            </Link>
+            <Link
+              href={`/${language}#plans`}
+              className="site-button-ink inline-flex min-h-11 items-center justify-center rounded-full px-4 py-2.5 text-center text-sm font-semibold transition hover:-translate-y-0.5"
+            >
+              {copy.nav.explorePlans}
+            </Link>
+          </div>
+        </div>
+
+        {isMobileMenuOpen ? (
+          <div
+            id="public-mobile-menu"
+            className="absolute inset-x-3 top-[calc(100%+0.55rem)] z-30 rounded-[1.35rem] border border-white/10 px-3 py-3 shadow-[0_26px_80px_rgba(2,6,23,0.55)] lg:hidden sm:inset-x-5"
+            style={{ backgroundColor: "rgba(5, 8, 22, 0.97)" }}
+          >
+            <nav className="space-y-1">
               <Link
-                href="/auth"
-                className="site-button-secondary inline-flex min-h-11 items-center justify-center rounded-[1rem] px-4 py-2.5 text-center text-sm font-medium transition hover:opacity-90 sm:rounded-full"
+                href={`/${language}#platform`}
+                className="block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium text-white/88 transition hover:bg-white/8"
+                onClick={() => setIsMobileMenuOpen(false)}
               >
-                {copy.nav.signIn}
+                {copy.nav.platform}
+              </Link>
+              <Link
+                href={`/${language}#workflow`}
+                className="block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium text-white/88 transition hover:bg-white/8"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {copy.nav.workflow}
+              </Link>
+              <Link
+                href={`/${language}/blog`}
+                className="block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium text-white/88 transition hover:bg-white/8"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {copy.nav.blog}
               </Link>
               <Link
                 href={`/${language}#plans`}
-                className="site-button-ink inline-flex min-h-11 items-center justify-center rounded-[1rem] px-4 py-2.5 text-center text-sm font-semibold transition hover:-translate-y-0.5 sm:rounded-full"
+                className="block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium text-white/88 transition hover:bg-white/8"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {copy.nav.plans}
+              </Link>
+              <Link
+                href={`/${language}#faq`}
+                className="block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium text-white/88 transition hover:bg-white/8"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {copy.nav.faq}
+              </Link>
+            </nav>
+            <SitePreferences buildLanguagePath={buildLanguagePath} className="mt-3 w-full grid-cols-1" />
+            <div className="mt-3 grid gap-2">
+              <Link
+                href={`/${language}#plans`}
+                className="site-button-ink inline-flex min-h-11 items-center justify-center rounded-[1rem] px-4 py-2.5 text-center text-sm font-semibold"
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 {copy.nav.explorePlans}
               </Link>
+              <Link
+                href="/auth"
+                className="site-button-secondary inline-flex min-h-11 items-center justify-center rounded-[1rem] px-4 py-2.5 text-center text-sm font-medium"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {copy.nav.signIn}
+              </Link>
             </div>
           </div>
-        </div>
+        ) : null}
       </header>
     </div>
   );

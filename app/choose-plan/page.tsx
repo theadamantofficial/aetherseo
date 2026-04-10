@@ -318,6 +318,22 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function MobileHeaderToggle({ isOpen }: { isOpen: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" aria-hidden="true">
+      {isOpen ? (
+        <path d="m6 6 12 12M18 6 6 18" strokeWidth="1.8" strokeLinecap="round" />
+      ) : (
+        <>
+          <path d="M4 7h16" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M4 12h16" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M10 17h10" strokeWidth="1.8" strokeLinecap="round" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 function ChoosePlanPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -347,6 +363,7 @@ function ChoosePlanPageContent() {
   const [status, setStatus] = useState<string | null>(null);
   const [isBusy, setBusy] = useState(false);
   const [currency, setCurrency] = useState<CurrencyCode>("usd");
+  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const { fxDate, usdToInrRate } = useUsdInrRate();
   const paidPlans = PAID_PLAN_TIERS.map((tier) => ({
     id: tier,
@@ -586,38 +603,63 @@ function ChoosePlanPageContent() {
       ) : null}
 
       <div className="relative mx-auto max-w-6xl">
-        <header className="site-header-shell mb-8 flex flex-col gap-4 rounded-[1.75rem] px-4 py-4 sm:rounded-[2rem] sm:px-5 md:flex-row md:items-center md:justify-between md:gap-4 md:px-3 md:py-3">
-          <Link
-            href={`/${uiLanguage}`}
-            className="mx-auto flex w-full items-center justify-center gap-3 rounded-[1.3rem] px-2 py-1.5 text-center md:mx-0 md:w-auto md:justify-start md:rounded-full md:text-left"
-          >
-            <Image
-              src="/aether-logo-mark.png"
-              alt="Aether SEO"
-              width={44}
-              height={44}
-              priority
-              className="h-11 w-11 rounded-full object-cover"
-            />
-            <span className="min-w-0">
-              <p className="text-base font-semibold md:text-lg">Aether SEO</p>
-              <p className="site-muted text-[10px] uppercase tracking-[0.22em] sm:text-[11px]">
-                AI MEETS SEO
-              </p>
-            </span>
-          </Link>
+        <header className="site-header-shell relative mb-8 flex flex-col gap-3 rounded-[1.5rem] px-3 py-3 sm:rounded-[2rem] sm:px-5 md:flex-row md:items-center md:justify-between md:gap-4 md:px-3 md:py-3">
+          <div className="flex w-full items-center justify-between gap-3 md:w-auto md:flex-none">
+            <Link
+              href={`/${uiLanguage}`}
+              className="flex min-w-0 items-center gap-3 rounded-full px-1 py-1"
+              onClick={() => setIsHeaderMenuOpen(false)}
+            >
+              <Image
+                src="/aether-logo-mark.png"
+                alt="Aether SEO"
+                width={44}
+                height={44}
+                priority
+                className="h-10 w-10 rounded-full object-cover sm:h-11 sm:w-11"
+              />
+              <span className="min-w-0">
+                <p className="truncate text-[15px] font-semibold sm:text-base md:text-lg">Aether SEO</p>
+                <p className="site-muted text-[9px] uppercase tracking-[0.24em] sm:text-[11px]">
+                  AI MEETS SEO
+                </p>
+              </span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => setIsHeaderMenuOpen((current) => !current)}
+              className="site-button-secondary flex h-11 w-11 shrink-0 items-center justify-center rounded-full md:hidden"
+              aria-expanded={isHeaderMenuOpen}
+              aria-controls="choose-plan-mobile-menu"
+              aria-label={isHeaderMenuOpen ? "Close menu" : "Open menu"}
+            >
+              <MobileHeaderToggle isOpen={isHeaderMenuOpen} />
+            </button>
+          </div>
 
-          <div className="w-full md:w-auto">
-            <div className="rounded-[1.45rem] border border-white/10 bg-white/[0.035] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_26px_rgba(15,23,42,0.08)] sm:p-3 md:flex md:items-center md:gap-3 md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none">
-              <SitePreferences className="w-full md:w-auto md:shrink-0" />
+          <div className="hidden md:flex md:items-center md:gap-3">
+            <SitePreferences className="shrink-0" />
+            <Link href={`/${uiLanguage}`} className="site-button-secondary rounded-full px-4 py-2.5 text-sm font-medium">
+              {copy.home}
+            </Link>
+          </div>
+
+          {isHeaderMenuOpen ? (
+            <div
+              id="choose-plan-mobile-menu"
+              className="absolute inset-x-3 top-[calc(100%+0.55rem)] z-30 rounded-[1.35rem] border border-white/10 px-3 py-3 shadow-[0_26px_80px_rgba(2,6,23,0.55)] md:hidden sm:inset-x-5"
+              style={{ backgroundColor: "rgba(5, 8, 22, 0.97)" }}
+            >
+              <SitePreferences className="w-full grid-cols-1" />
               <Link
                 href={`/${uiLanguage}`}
-                className="site-button-secondary mt-2.5 inline-flex min-h-11 w-full items-center justify-center rounded-[1rem] px-4 py-2.5 text-sm font-medium md:mt-0 md:w-auto md:rounded-full"
+                className="site-button-secondary mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-[1rem] px-4 py-2.5 text-sm font-medium"
+                onClick={() => setIsHeaderMenuOpen(false)}
               >
                 {copy.home}
               </Link>
             </div>
-          </div>
+          ) : null}
         </header>
 
         <section className="site-panel-hero site-animate-rise rounded-[2.2rem] border px-7 py-8 md:px-10">

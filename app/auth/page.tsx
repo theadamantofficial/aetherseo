@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   User,
   isSignInWithEmailLink,
@@ -17,7 +17,6 @@ import SitePreferences from "@/components/site-preferences";
 import { appleProvider, auth, googleProvider } from "@/lib/firebase";
 import {
   isSupportedPaidTier,
-  setUserPaidTier,
   setUserPlan,
   upsertUserProfile,
   type PaidPlanTier,
@@ -275,7 +274,7 @@ function AuthPageContent() {
     planRef.current = selectedPlan;
   }, [selectedPlan]);
 
-  const finalizeSession = async (user: User, provider: string | null) => {
+  const finalizeSession = useCallback(async (user: User, provider: string | null) => {
     setBusy(true);
 
     try {
@@ -296,11 +295,8 @@ function AuthPageContent() {
         setSelectedPaidTier(profile.paidPlanTier);
 
         if (profile.plan === "paid" && !profile.paidPlanTier && chosenPaidTier) {
-          setStatus(copy.status.creatingWorkspace("paid"));
-          await setUserPaidTier(user.uid, chosenPaidTier, resolvedPhone);
-          setSelectedPaidTier(chosenPaidTier);
-          clearAuthDraftState();
-          router.replace("/dashboard");
+          setStatus(copy.status.workspaceReady);
+          router.replace(`/choose-plan?tier=${chosenPaidTier}`);
           return;
         }
 
@@ -312,11 +308,9 @@ function AuthPageContent() {
 
       setStatus(copy.status.creatingWorkspace(chosenPlan));
       if (chosenPlan === "paid" && chosenPaidTier) {
-        await setUserPaidTier(user.uid, chosenPaidTier, resolvedPhone);
         setSelectedPaidTier(chosenPaidTier);
-        clearAuthDraftState();
         setStatus(copy.status.workspaceReady);
-        router.replace("/dashboard");
+        router.replace(`/choose-plan?tier=${chosenPaidTier}`);
         return;
       }
 
@@ -336,7 +330,7 @@ function AuthPageContent() {
     } finally {
       setBusy(false);
     }
-  };
+  }, [copy.status, router]);
 
   useEffect(() => {
     const handleExistingLink = async () => {
@@ -386,7 +380,7 @@ function AuthPageContent() {
     return () => {
       unsubscribe();
     };
-  }, [copy.status.linkExpired, copy.status.reconnectBrowser, copy.status.signingInEmail, router]);
+  }, [copy.status.linkExpired, copy.status.reconnectBrowser, copy.status.signingInEmail, finalizeSession, router]);
 
   const sendEmailLink = async () => {
     if (!email.trim()) {

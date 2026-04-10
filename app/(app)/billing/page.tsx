@@ -106,7 +106,7 @@ const billingUiCopy: Record<
     subscriptionStatus: "Subscription Status",
     statusCurrentPlan: "Current plan",
     statusDisplayPrice: "Display price",
-    statusPaid: "Paid tier is active. Payment gateway sync has not been connected yet.",
+    statusPaid: "Paid tier is active and managed through Razorpay checkout.",
     statusFree: "No paid subscription is active on this account yet.",
     upgradeTitle: "Upgrade or Adjust Your Plan",
     upgradeBody:
@@ -146,7 +146,7 @@ const billingUiCopy: Record<
     subscriptionStatus: "Subscription Status",
     statusCurrentPlan: "Current plan",
     statusDisplayPrice: "Display price",
-    statusPaid: "Paid tier active hai. Payment gateway sync abhi connect nahi hua.",
+    statusPaid: "Paid tier active hai aur Razorpay checkout se manage ho raha hai.",
     statusFree: "Is account par abhi koi paid subscription active nahi hai.",
     upgradeTitle: "Apna Plan Upgrade ya Adjust Karo",
     upgradeBody:
@@ -187,7 +187,7 @@ const billingUiCopy: Record<
     statusCurrentPlan: "Plan actuel",
     statusDisplayPrice: "Prix affiche",
     statusPaid:
-      "Le niveau payant est actif. La synchro avec le paiement n'est pas encore connectee.",
+      "Le niveau payant est actif et gere via le checkout Razorpay.",
     statusFree: "Aucun abonnement payant n'est encore actif sur ce compte.",
     upgradeTitle: "Mettre a niveau ou ajuster votre plan",
     upgradeBody:
@@ -227,7 +227,7 @@ const billingUiCopy: Record<
     statusCurrentPlan: "Aktueller Plan",
     statusDisplayPrice: "Angezeigter Preis",
     statusPaid:
-      "Der bezahlte Tarif ist aktiv. Die Payment-Synchronisierung ist noch nicht verbunden.",
+      "Der bezahlte Tarif ist aktiv und wird ueber Razorpay Checkout verwaltet.",
     statusFree: "Auf diesem Konto ist noch kein bezahltes Abo aktiv.",
     upgradeTitle: "Plan upgraden oder anpassen",
     upgradeBody:
@@ -266,7 +266,7 @@ const billingUiCopy: Record<
     subscriptionStatus: "契約状況",
     statusCurrentPlan: "現在のプラン",
     statusDisplayPrice: "表示価格",
-    statusPaid: "有料プランは有効です。決済同期はまだ接続されていません。",
+    statusPaid: "有料プランは有効です。Razorpay の checkout で管理されています。",
     statusFree: "このアカウントではまだ有料契約は有効ではありません。",
     upgradeTitle: "プランを変更またはアップグレード",
     upgradeBody: "India-first の導線とグローバル価格基準を両立した明確な価格設計です。",
@@ -304,7 +304,7 @@ const billingUiCopy: Record<
     subscriptionStatus: "구독 상태",
     statusCurrentPlan: "현재 플랜",
     statusDisplayPrice: "표시 가격",
-    statusPaid: "유료 티어가 활성화되어 있습니다. 결제 연동은 아직 연결되지 않았습니다.",
+    statusPaid: "유료 티어가 활성화되어 있으며 Razorpay checkout으로 관리됩니다.",
     statusFree: "이 계정에는 아직 유료 구독이 없습니다.",
     upgradeTitle: "플랜 업그레이드 또는 조정",
     upgradeBody:

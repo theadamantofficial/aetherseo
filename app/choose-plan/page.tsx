@@ -8,70 +8,66 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useLanguage } from "@/components/language-provider";
 import SitePreferences from "@/components/site-preferences";
 import { auth } from "@/lib/firebase";
-import {
-  getUserProfile,
-  isSupportedPaidTier,
-  setUserPaidTier,
-  type PaidPlanTier,
-} from "@/lib/firebase-data";
+import { getUserProfile, isSupportedPaidTier } from "@/lib/firebase-data";
+import { PAID_PLAN_DEFINITIONS, type PaidPlanTier } from "@/lib/paid-plans";
 import { useTranslatedCopy } from "@/lib/use-translated-copy";
 
 const PAID_TIER_STORAGE = "rankly-paid-tier-choice";
+const RAZORPAY_CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 type CurrencyCode = "usd" | "inr";
 
-const paidPlans: Array<{
-  id: PaidPlanTier;
-  priceInr: string;
-  priceUsd: string;
-  badge: string;
+type RazorpayOrderResponse = {
+  amount: number;
+  currency: "INR";
+  keyId: string;
+  mode: "test" | "prod";
+  orderId: string;
   title: string;
-  subtitle: string;
-  features: string[];
-}> = [
-  {
-    id: "starter",
-    priceInr: "₹299/month",
-    priceUsd: "$5/month",
-    badge: "Most popular entry",
-    title: "Starter",
-    subtitle: "For individuals and freelancers",
-    features: [
-      "50 blogs per month",
-      "20 website audits",
-      "Faster generation",
-      "No watermark",
-    ],
-  },
-  {
-    id: "pro",
-    priceInr: "₹999/month",
-    priceUsd: "$15/month",
-    badge: "Main money maker",
-    title: "Pro",
-    subtitle: "For serious users who need depth",
-    features: [
-      "200 blogs per month",
-      "100 website audits",
-      "Priority AI",
-      "Advanced SEO suggestions",
-      "History and export",
-    ],
-  },
-  {
-    id: "agency",
-    priceInr: "₹2999/month",
-    priceUsd: "$39/month",
-    badge: "High-ticket tier",
-    title: "Agency",
-    subtitle: "For agencies and businesses",
-    features: [
-      "Unlimited usage with fair usage policy",
-      "Team access",
-      "API access",
-      "Automation features",
-    ],
-  },
-];
+};
+
+type RazorpaySuccessResponse = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
+
+type RazorpayCheckoutOptions = {
+  amount: number;
+  currency: string;
+  description: string;
+  handler: (response: RazorpaySuccessResponse) => void | Promise<void>;
+  key: string;
+  modal?: {
+    ondismiss?: () => void;
+  };
+  name: string;
+  notes?: Record<string, string>;
+  order_id: string;
+  prefill?: {
+    contact?: string;
+    email?: string;
+    name?: string;
+  };
+  theme?: {
+    color: string;
+  };
+};
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayCheckoutOptions) => {
+      open: () => void;
+    };
+  }
+}
+
+let razorpayCheckoutPromise: Promise<void> | null = null;
+
+const paidPlans = [
+  { id: "starter", ...PAID_PLAN_DEFINITIONS.starter },
+  { id: "pro", ...PAID_PLAN_DEFINITIONS.pro },
+  { id: "agency", ...PAID_PLAN_DEFINITIONS.agency },
+] satisfies Array<{ id: PaidPlanTier } & (typeof PAID_PLAN_DEFINITIONS)[PaidPlanTier]>;
 
 const pageCopy = {
   en: {
@@ -79,12 +75,11 @@ const pageCopy = {
     title: "Choose the paid plan that fits your publishing volume.",
     body: "Free remains your lead-magnet plan. This screen is only for paid users choosing the right operating tier before entering the dashboard.",
     globalNote: "India-friendly pricing with optional global reference",
-    helper: "You can switch tiers later from billing.",
-    saving: "Saving your paid plan...",
+    helper: "You can switch tiers later from billing. Payments run through Razorpay.",
     ready: "Your paid workspace is ready.",
-    failed: "Could not save the selected paid plan.",
-    cta: "Select plan",
+    payNow: "Pay with Razorpay",
     current: "Current plan",
+    selected: "Selected",
     dashboard: "Go to dashboard",
     home: "Back home",
     signIn: "Sign in first",
@@ -92,18 +87,25 @@ const pageCopy = {
     currencyLabel: "Display currency",
     usd: "USD",
     inr: "INR",
+    chargeNote: "Razorpay checkout charges in INR. USD is only a reference display.",
+    creatingOrder: "Preparing Razorpay checkout...",
+    openingCheckout: "Opening Razorpay checkout...",
+    verifyingPayment: "Verifying Razorpay payment...",
+    paymentCancelled: "Payment was cancelled before completion.",
+    paymentScriptError: "Razorpay checkout could not be loaded.",
+    orderFailed: "Could not create a Razorpay order.",
+    verifyFailed: "Could not verify the payment.",
   },
   es: {
     eyebrow: "Seleccion del plan pago",
     title: "Elige el plan pago segun tu volumen de publicacion.",
     body: "Free sigue siendo el plan de adquisicion. Esta pantalla es solo para usuarios pagos antes de entrar al dashboard.",
     globalNote: "Precio para India con referencia global opcional",
-    helper: "Luego puedes cambiar el nivel desde billing.",
-    saving: "Guardando tu plan pago...",
+    helper: "Luego puedes cambiar el nivel desde billing. Los pagos usan Razorpay.",
     ready: "Tu espacio pago ya esta listo.",
-    failed: "No se pudo guardar el plan seleccionado.",
-    cta: "Seleccionar plan",
+    payNow: "Pagar con Razorpay",
     current: "Plan actual",
+    selected: "Seleccionado",
     dashboard: "Ir al dashboard",
     home: "Volver al inicio",
     signIn: "Inicia sesion primero",
@@ -111,18 +113,25 @@ const pageCopy = {
     currencyLabel: "Moneda visible",
     usd: "USD",
     inr: "INR",
+    chargeNote: "Razorpay cobra en INR. USD solo se muestra como referencia.",
+    creatingOrder: "Preparando el checkout de Razorpay...",
+    openingCheckout: "Abriendo el checkout de Razorpay...",
+    verifyingPayment: "Verificando el pago de Razorpay...",
+    paymentCancelled: "El pago fue cancelado antes de completarse.",
+    paymentScriptError: "No se pudo cargar el checkout de Razorpay.",
+    orderFailed: "No se pudo crear la orden de Razorpay.",
+    verifyFailed: "No se pudo verificar el pago.",
   },
   fr: {
     eyebrow: "Selection du forfait payant",
     title: "Choisissez le forfait payant adapte a votre volume de publication.",
     body: "Free reste le plan d'acquisition. Cet ecran concerne seulement les utilisateurs payants avant l'entree dans le dashboard.",
     globalNote: "Tarification adaptee a l'Inde avec reference mondiale optionnelle",
-    helper: "Vous pourrez changer de niveau plus tard depuis billing.",
-    saving: "Enregistrement du forfait payant...",
+    helper: "Vous pourrez changer de niveau plus tard depuis billing. Les paiements passent par Razorpay.",
     ready: "Votre espace payant est pret.",
-    failed: "Impossible d'enregistrer le forfait selectionne.",
-    cta: "Choisir ce forfait",
+    payNow: "Payer avec Razorpay",
     current: "Forfait actuel",
+    selected: "Selectionne",
     dashboard: "Aller au dashboard",
     home: "Retour accueil",
     signIn: "Connectez-vous d'abord",
@@ -130,18 +139,25 @@ const pageCopy = {
     currencyLabel: "Devise affichee",
     usd: "USD",
     inr: "INR",
+    chargeNote: "Le checkout Razorpay facture en INR. Le USD reste une reference.",
+    creatingOrder: "Preparation du checkout Razorpay...",
+    openingCheckout: "Ouverture du checkout Razorpay...",
+    verifyingPayment: "Verification du paiement Razorpay...",
+    paymentCancelled: "Le paiement a ete annule avant la fin.",
+    paymentScriptError: "Impossible de charger le checkout Razorpay.",
+    orderFailed: "Impossible de creer la commande Razorpay.",
+    verifyFailed: "Impossible de verifier le paiement.",
   },
   hi: {
     eyebrow: "Paid workspace selection",
     title: "Apne publishing volume ke hisab se paid plan choose karo.",
     body: "Free lead-magnet plan hi rahega. Ye page sirf paid users ke liye hai dashboard me jane se pehle.",
     globalNote: "India-friendly pricing with optional global reference",
-    helper: "Baad me billing se tier change kar sakte ho.",
-    saving: "Paid plan save ho raha hai...",
+    helper: "Baad me billing se tier change kar sakte ho. Payments Razorpay se chalenge.",
     ready: "Tumhara paid workspace ready hai.",
-    failed: "Selected paid plan save nahi ho paya.",
-    cta: "Plan select karo",
+    payNow: "Razorpay se pay karo",
     current: "Current plan",
+    selected: "Selected",
     dashboard: "Dashboard kholo",
     home: "Home par jao",
     signIn: "Pehle sign in karo",
@@ -149,6 +165,14 @@ const pageCopy = {
     currencyLabel: "Display currency",
     usd: "USD",
     inr: "INR",
+    chargeNote: "Razorpay checkout INR me charge karega. USD sirf reference display hai.",
+    creatingOrder: "Razorpay checkout prepare ho raha hai...",
+    openingCheckout: "Razorpay checkout khul raha hai...",
+    verifyingPayment: "Razorpay payment verify ho raha hai...",
+    paymentCancelled: "Payment complete hone se pehle cancel ho gaya.",
+    paymentScriptError: "Razorpay checkout load nahi ho paya.",
+    orderFailed: "Razorpay order create nahi ho paya.",
+    verifyFailed: "Payment verify nahi ho paya.",
   },
 } as const;
 
@@ -169,42 +193,129 @@ function formatAuthErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+async function postJson<T>(url: string, token: string, body: object): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+  if (!response.ok) {
+    throw new Error(payload?.error ?? "Request failed.");
+  }
+
+  return payload as T;
+}
+
+async function ensureRazorpayCheckout(): Promise<void> {
+  if (typeof window === "undefined") {
+    throw new Error("Razorpay checkout can only open in the browser.");
+  }
+
+  if (window.Razorpay) {
+    return;
+  }
+
+  if (razorpayCheckoutPromise) {
+    return razorpayCheckoutPromise;
+  }
+
+  razorpayCheckoutPromise = new Promise<void>((resolve, reject) => {
+    const existingScript = document.querySelector(
+      `script[src="${RAZORPAY_CHECKOUT_SRC}"]`,
+    ) as HTMLScriptElement | null;
+
+    if (existingScript) {
+      existingScript.remove();
+    }
+
+    const script = document.createElement("script");
+
+    const cleanup = () => {
+      script.removeEventListener("load", handleLoad);
+      script.removeEventListener("error", handleError);
+    };
+
+    const handleLoad = () => {
+      cleanup();
+
+      if (window.Razorpay) {
+        resolve();
+        return;
+      }
+
+      razorpayCheckoutPromise = null;
+      reject(new Error("Razorpay checkout could not be loaded."));
+    };
+
+    const handleError = () => {
+      cleanup();
+      razorpayCheckoutPromise = null;
+      reject(new Error("Razorpay checkout could not be loaded."));
+    };
+
+    script.addEventListener("load", handleLoad, { once: true });
+    script.addEventListener("error", handleError, { once: true });
+
+    script.src = RAZORPAY_CHECKOUT_SRC;
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+  });
+
+  return razorpayCheckoutPromise;
+}
+
 function ChoosePlanPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { language, uiLanguage } = useLanguage();
   const copy = useTranslatedCopy(pageCopy[uiLanguage], language, `choose-plan-copy-${uiLanguage}`);
+  const requestedTier = searchParams.get("tier");
+  const initialSelectedTier =
+    requestedTier && isSupportedPaidTier(requestedTier) ? requestedTier : null;
   const [uid, setUid] = useState("");
   const [phone, setPhone] = useState("");
-  const [selectedTier, setSelectedTier] = useState<PaidPlanTier | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const [isBusy, setBusy] = useState(false);
-  const [currency, setCurrency] = useState<CurrencyCode>("usd");
-
-  useEffect(() => {
-    const requestedTier = searchParams.get("tier");
-    if (requestedTier && isSupportedPaidTier(requestedTier)) {
-      setSelectedTier(requestedTier);
-      setStatus(`Selected ${planLabel(requestedTier)}. Continue to sign in or confirm this tier.`);
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(PAID_TIER_STORAGE, requestedTier);
-      }
-      return;
+  const [selectedTier, setSelectedTier] = useState<PaidPlanTier | null>(() => {
+    if (initialSelectedTier) {
+      return initialSelectedTier;
     }
 
     if (typeof window !== "undefined") {
       const storedTier = window.localStorage.getItem(PAID_TIER_STORAGE);
       if (storedTier && isSupportedPaidTier(storedTier)) {
-        setSelectedTier(storedTier);
-        setStatus(`Selected ${planLabel(storedTier)}. Continue to sign in or confirm this tier.`);
+        return storedTier;
       }
     }
-  }, [searchParams]);
+
+    return null;
+  });
+  const [currentPaidTier, setCurrentPaidTier] = useState<PaidPlanTier | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [isBusy, setBusy] = useState(false);
+  const [currency, setCurrency] = useState<CurrencyCode>("usd");
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (selectedTier) {
+      window.localStorage.setItem(PAID_TIER_STORAGE, selectedTier);
+    } else {
+      window.localStorage.removeItem(PAID_TIER_STORAGE);
+    }
+  }, [selectedTier]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         setUid("");
+        setCurrentPaidTier(null);
         return;
       }
 
@@ -213,7 +324,8 @@ function ChoosePlanPageContent() {
       try {
         const profile = await getUserProfile(currentUser.uid);
         setPhone(profile.phone);
-        setSelectedTier(profile.paidPlanTier);
+        setCurrentPaidTier(profile.paidPlanTier);
+        setSelectedTier((existingSelection) => existingSelection ?? profile.paidPlanTier);
       } catch {
         setStatus(copy.signIn);
       }
@@ -222,7 +334,7 @@ function ChoosePlanPageContent() {
     return () => {
       unsubscribe();
     };
-  }, [copy.signIn, router]);
+  }, [copy.signIn]);
 
   async function handleChoosePlan(tier: PaidPlanTier) {
     setSelectedTier(tier);
@@ -232,25 +344,100 @@ function ChoosePlanPageContent() {
     }
 
     if (!uid) {
-      setStatus(`Selected ${planLabel(tier)}. Continue to sign in to activate this paid tier.`);
       router.push(`/auth?plan=paid&tier=${tier}`);
       return;
     }
 
+    if (currentPaidTier === tier) {
+      router.replace("/dashboard");
+      return;
+    }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      setStatus(copy.signIn);
+      return;
+    }
+
     setBusy(true);
-    setStatus(copy.saving);
 
     try {
-      await setUserPaidTier(uid, tier, phone);
-      setSelectedTier(tier);
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem(PAID_TIER_STORAGE);
-      }
-      setStatus(copy.ready);
-      router.replace("/dashboard");
+      await ensureRazorpayCheckout();
     } catch (error) {
-      setStatus(formatAuthErrorMessage(error, copy.failed));
       setBusy(false);
+      setStatus(formatAuthErrorMessage(error, copy.paymentScriptError));
+      return;
+    }
+
+    setStatus(copy.creatingOrder);
+
+    try {
+      const token = await currentUser.getIdToken();
+      const order = await postJson<RazorpayOrderResponse>("/api/razorpay/order", token, {
+        paidPlanTier: tier,
+        phone,
+      });
+
+      setStatus(copy.openingCheckout);
+
+      const RazorpayCheckout = window.Razorpay;
+      if (!RazorpayCheckout) {
+        throw new Error(copy.paymentScriptError);
+      }
+
+      const razorpay = new RazorpayCheckout({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: "Aether SEO",
+        description: `${order.title} plan`,
+        order_id: order.orderId,
+        prefill: {
+          contact: phone || undefined,
+          email: currentUser.email ?? undefined,
+          name: currentUser.displayName ?? undefined,
+        },
+        notes: {
+          mode: order.mode,
+          planTier: tier,
+        },
+        theme: {
+          color: "#111111",
+        },
+        modal: {
+          ondismiss: () => {
+            setBusy(false);
+            setStatus(copy.paymentCancelled);
+          },
+        },
+        handler: async (response) => {
+          setStatus(copy.verifyingPayment);
+
+          try {
+            const verificationToken = await currentUser.getIdToken();
+            await postJson<{ ok: true }>("/api/razorpay/verify", verificationToken, {
+              paidPlanTier: tier,
+              ...response,
+            });
+
+            if (typeof window !== "undefined") {
+              window.localStorage.removeItem(PAID_TIER_STORAGE);
+            }
+
+            setCurrentPaidTier(tier);
+            setStatus(copy.ready);
+            router.replace("/dashboard");
+          } catch (error) {
+            setBusy(false);
+            setStatus(formatAuthErrorMessage(error, copy.verifyFailed));
+          }
+        },
+      });
+
+      razorpay.open();
+    } catch (error) {
+      setBusy(false);
+      setStatus(formatAuthErrorMessage(error, copy.orderFailed));
     }
   }
 
@@ -280,134 +467,142 @@ function ChoosePlanPageContent() {
           </div>
         </header>
 
-        <section className="site-panel-hero site-animate-rise rounded-[2.2rem] border px-7 py-8 md:px-10">
-          <p className="site-chip inline-flex rounded-full border px-4 py-2 text-xs uppercase tracking-[0.18em]">
-            {copy.eyebrow}
-          </p>
-          <h1 className="mt-6 max-w-4xl text-4xl font-semibold leading-tight md:text-5xl">
-            {copy.title}
-          </h1>
-          <p className="site-muted mt-5 max-w-3xl text-sm leading-7 md:text-base">
-            {copy.body}
-          </p>
+          <section className="site-panel-hero site-animate-rise rounded-[2.2rem] border px-7 py-8 md:px-10">
+            <p className="site-chip inline-flex rounded-full border px-4 py-2 text-xs uppercase tracking-[0.18em]">
+              {copy.eyebrow}
+            </p>
+            <h1 className="mt-6 max-w-4xl text-4xl font-semibold leading-tight md:text-5xl">
+              {copy.title}
+            </h1>
+            <p className="site-muted mt-5 max-w-3xl text-sm leading-7 md:text-base">
+              {copy.body}
+            </p>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <div className="site-panel-soft rounded-[1.5rem] border p-5">
-              <p className="site-muted text-xs uppercase tracking-[0.16em]">Global + India friendly</p>
-              <p className="mt-3 text-2xl font-semibold">{copy.globalNote}</p>
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              <div className="site-panel-soft rounded-[1.5rem] border p-5">
+                <p className="site-muted text-xs uppercase tracking-[0.16em]">Global + India friendly</p>
+                <p className="mt-3 text-2xl font-semibold">{copy.globalNote}</p>
+              </div>
+              <div className="site-panel-soft rounded-[1.5rem] border p-5">
+                <p className="site-muted text-xs uppercase tracking-[0.16em]">Pricing logic</p>
+                <p className="mt-3 text-2xl font-semibold">Aggressive pricing, high margin potential.</p>
+              </div>
+              <div className="site-panel-soft rounded-[1.5rem] border p-5">
+                <p className="site-muted text-xs uppercase tracking-[0.16em]">Note</p>
+                <p className="mt-3 text-2xl font-semibold">{copy.fairUsage}</p>
+              </div>
             </div>
-            <div className="site-panel-soft rounded-[1.5rem] border p-5">
-              <p className="site-muted text-xs uppercase tracking-[0.16em]">Pricing logic</p>
-              <p className="mt-3 text-2xl font-semibold">Aggressive pricing, high margin potential.</p>
-            </div>
-            <div className="site-panel-soft rounded-[1.5rem] border p-5">
-              <p className="site-muted text-xs uppercase tracking-[0.16em]">Note</p>
-              <p className="mt-3 text-2xl font-semibold">{copy.fairUsage}</p>
-            </div>
-          </div>
 
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-            <p className="site-muted text-sm">USD is the default display currency. Switch if the user prefers local pricing.</p>
-            <div className="site-pref-bar inline-flex items-center gap-2 rounded-full p-1.5">
-              <span className="site-muted px-2 text-xs uppercase tracking-[0.16em]">{copy.currencyLabel}</span>
-              <button
-                type="button"
-                onClick={() => setCurrency("usd")}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  currency === "usd" ? "site-button-ink" : "site-button-secondary"
-                }`}
-              >
-                {copy.usd}
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrency("inr")}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  currency === "inr" ? "site-button-ink" : "site-button-secondary"
-                }`}
-              >
-                {copy.inr}
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {paidPlans.map((plan) => {
-            const isSelected = selectedTier === plan.id;
-            const isFeatured = plan.id === "pro";
-            const price = currency === "usd" ? plan.priceUsd : plan.priceInr;
-
-            return (
-              <article
-                key={plan.id}
-                className={`${isFeatured ? "site-panel-vibrant" : "site-panel"} site-hover-lift site-animate-rise flex h-full flex-col rounded-[2rem] border p-6`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className={`${isFeatured ? "text-white/75" : "site-accent-text"} text-xs uppercase tracking-[0.16em]`}>
-                      {plan.badge}
-                    </p>
-                    <h2 className="mt-3 text-3xl font-semibold">{plan.title}</h2>
-                    <p className={`${isFeatured ? "text-white/78" : "site-muted"} mt-2 text-sm leading-6`}>
-                      {plan.subtitle}
-                    </p>
-                  </div>
-                  {isSelected ? (
-                    <span className={`${isFeatured ? "bg-white text-[#111111]" : "site-chip"} rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]`}>
-                      {copy.current}
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="mt-7">
-                  <p className="text-4xl font-semibold">{price}</p>
-                  <p className={`${isFeatured ? "text-white/72" : "site-muted"} mt-2 text-sm`}>
-                    {currency === "usd" ? "Billed monthly in USD." : "Converted monthly INR display."}
-                  </p>
-                </div>
-
-                <div className="mt-7 flex-1 space-y-3">
-                  {plan.features.map((feature) => (
-                    <div
-                      key={feature}
-                      className={`${isFeatured ? "bg-white/10 border-white/15 text-white" : "site-panel-soft"} rounded-[1.2rem] border px-4 py-3 text-sm`}
-                    >
-                      {feature}
-                    </div>
-                  ))}
-                </div>
-
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="site-muted text-sm">USD is the default display currency. Switch if the user prefers local pricing.</p>
+                <p className="site-muted mt-2 text-xs">{copy.chargeNote}</p>
+              </div>
+              <div className="site-pref-bar inline-flex items-center gap-2 rounded-full p-1.5">
+                <span className="site-muted px-2 text-xs uppercase tracking-[0.16em]">{copy.currencyLabel}</span>
                 <button
                   type="button"
-                  disabled={isBusy}
-                  onClick={() => handleChoosePlan(plan.id)}
-                  className={`${isFeatured ? "site-button-secondary" : "site-button-primary"} mt-6 flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70`}
-                  style={isFeatured ? { backgroundColor: "#ffffff", color: "#111111" } : undefined}
+                  onClick={() => setCurrency("usd")}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    currency === "usd" ? "site-button-ink" : "site-button-secondary"
+                  }`}
                 >
-                  {!uid ? `Continue with ${plan.title}` : isSelected ? copy.dashboard : copy.cta}
+                  {copy.usd}
                 </button>
-              </article>
-            );
-          })}
-        </section>
+                <button
+                  type="button"
+                  onClick={() => setCurrency("inr")}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    currency === "inr" ? "site-button-ink" : "site-button-secondary"
+                  }`}
+                >
+                  {copy.inr}
+                </button>
+              </div>
+            </div>
+          </section>
 
-        <div className="site-panel mt-8 rounded-[1.8rem] border px-5 py-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <p className="site-muted text-sm">{status ?? copy.helper}</p>
-            {uid ? (
-              <Link href="/dashboard" className="site-button-secondary rounded-full px-4 py-2 text-sm font-medium">
-                {copy.dashboard}
-              </Link>
-            ) : (
-              <Link href="/auth?plan=paid" className="site-button-secondary rounded-full px-4 py-2 text-sm font-medium">
-                {copy.signIn}
-              </Link>
-            )}
+          <section className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {paidPlans.map((plan) => {
+              const isCurrent = currentPaidTier === plan.id;
+              const isSelected = selectedTier === plan.id;
+              const isFeatured = plan.id === "pro";
+              const price = currency === "usd" ? plan.priceUsd : plan.priceInr;
+
+              return (
+                <article
+                  key={plan.id}
+                  className={`${isFeatured ? "site-panel-vibrant" : "site-panel"} ${isSelected && !isCurrent ? "border-[#f5b547]" : ""} site-hover-lift site-animate-rise flex h-full flex-col rounded-[2rem] border p-6`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className={`${isFeatured ? "text-white/75" : "site-accent-text"} text-xs uppercase tracking-[0.16em]`}>
+                        {plan.badge}
+                      </p>
+                      <h2 className="mt-3 text-3xl font-semibold">{plan.title}</h2>
+                      <p className={`${isFeatured ? "text-white/78" : "site-muted"} mt-2 text-sm leading-6`}>
+                        {plan.subtitle}
+                      </p>
+                    </div>
+                    {isCurrent ? (
+                      <span className={`${isFeatured ? "bg-white text-[#111111]" : "site-chip"} rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]`}>
+                        {copy.current}
+                      </span>
+                    ) : isSelected ? (
+                      <span className="site-chip rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]">
+                        {copy.selected}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-7">
+                    <p className="text-4xl font-semibold">{price}</p>
+                    <p className={`${isFeatured ? "text-white/72" : "site-muted"} mt-2 text-sm`}>
+                      {currency === "usd" ? "Billed monthly in USD." : "Converted monthly INR display."}
+                    </p>
+                  </div>
+
+                  <div className="mt-7 flex-1 space-y-3">
+                    {plan.features.map((feature) => (
+                      <div
+                        key={feature}
+                        className={`${isFeatured ? "border-white/15 bg-white/10 text-white" : "site-panel-soft"} rounded-[1.2rem] border px-4 py-3 text-sm`}
+                      >
+                        {feature}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => handleChoosePlan(plan.id)}
+                    className={`${isFeatured ? "site-button-secondary" : "site-button-primary"} mt-6 flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70`}
+                    style={isFeatured ? { backgroundColor: "#ffffff", color: "#111111" } : undefined}
+                  >
+                    {isCurrent ? copy.dashboard : `Subscribe ${plan.title}`}
+                  </button>
+                </article>
+              );
+            })}
+          </section>
+
+          <div className="site-panel mt-8 rounded-[1.8rem] border px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <p className="site-muted text-sm">{status ?? copy.helper}</p>
+              {uid ? (
+                <Link href="/dashboard" className="site-button-secondary rounded-full px-4 py-2 text-sm font-medium">
+                  {copy.dashboard}
+                </Link>
+              ) : (
+                <Link href="/auth?plan=paid" className="site-button-secondary rounded-full px-4 py-2 text-sm font-medium">
+                  {copy.signIn}
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
   );
 }
 
@@ -417,16 +612,4 @@ export default function ChoosePlanPage() {
       <ChoosePlanPageContent />
     </Suspense>
   );
-}
-
-function planLabel(tier: PaidPlanTier): string {
-  if (tier === "starter") {
-    return "Starter";
-  }
-
-  if (tier === "pro") {
-    return "Pro";
-  }
-
-  return "Agency";
 }

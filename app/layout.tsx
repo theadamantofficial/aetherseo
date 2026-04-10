@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CookieConsentProvider } from "@/components/cookie-consent-provider";
 import SiteMonitor from "@/components/site-monitor";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -70,6 +71,7 @@ export default function RootLayout({
             {children}
           </ThemeProvider>
         </CookieConsentProvider>
+        <SpeedInsights />
       </body>
     </html>
   );

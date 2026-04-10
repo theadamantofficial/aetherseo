@@ -586,8 +586,11 @@ function ChoosePlanPageContent() {
       ) : null}
 
       <div className="relative mx-auto max-w-6xl">
-        <header className="site-header-shell mb-8 flex items-center justify-between gap-4 rounded-[2rem] px-3 py-3">
-          <Link href={`/${uiLanguage}`} className="flex items-center gap-3 rounded-full px-2 py-1.5">
+        <header className="site-header-shell mb-8 flex flex-col gap-4 rounded-[1.75rem] px-4 py-4 sm:rounded-[2rem] sm:px-5 md:flex-row md:items-center md:justify-between md:gap-4 md:px-3 md:py-3">
+          <Link
+            href={`/${uiLanguage}`}
+            className="mx-auto flex w-full items-center justify-center gap-3 rounded-[1.3rem] px-2 py-1.5 text-center md:mx-0 md:w-auto md:justify-start md:rounded-full md:text-left"
+          >
             <Image
               src="/aether-logo-mark.png"
               alt="Aether SEO"
@@ -596,16 +599,24 @@ function ChoosePlanPageContent() {
               priority
               className="h-11 w-11 rounded-full object-cover"
             />
-            <span>
+            <span className="min-w-0">
               <p className="text-base font-semibold md:text-lg">Aether SEO</p>
-              <p className="site-muted text-[11px] uppercase tracking-[0.22em]">AI MEETS SEO</p>
+              <p className="site-muted text-[10px] uppercase tracking-[0.22em] sm:text-[11px]">
+                AI MEETS SEO
+              </p>
             </span>
           </Link>
-          <div className="flex items-center gap-3">
-            <SitePreferences className="shrink-0" />
-            <Link href={`/${uiLanguage}`} className="site-button-secondary rounded-full px-4 py-2.5 text-sm font-medium">
-              {copy.home}
-            </Link>
+
+          <div className="w-full md:w-auto">
+            <div className="rounded-[1.45rem] border border-white/10 bg-white/[0.035] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_26px_rgba(15,23,42,0.08)] sm:p-3 md:flex md:items-center md:gap-3 md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+              <SitePreferences className="w-full md:w-auto md:shrink-0" />
+              <Link
+                href={`/${uiLanguage}`}
+                className="site-button-secondary mt-2.5 inline-flex min-h-11 w-full items-center justify-center rounded-[1rem] px-4 py-2.5 text-sm font-medium md:mt-0 md:w-auto md:rounded-full"
+              >
+                {copy.home}
+              </Link>
+            </div>
           </div>
         </header>
 

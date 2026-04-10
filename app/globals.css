@@ -573,7 +573,7 @@ html[data-theme="dark"] .site-header-shell {
   .site-pref-bar,
   .site-theme-toggle {
     width: 100%;
-    justify-content: space-between;
+    justify-content: stretch;
   }
 }
 
@@ -587,6 +587,7 @@ html[data-theme="dark"] .site-header-shell {
   position: relative;
   display: inline-flex;
   align-items: center;
+  min-width: 0;
 }
 
 .site-select {
@@ -597,6 +598,13 @@ html[data-theme="dark"] .site-header-shell {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.14),
     0 10px 22px rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 640px) {
+  .site-select {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .site-select option {

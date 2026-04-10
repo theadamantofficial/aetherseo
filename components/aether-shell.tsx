@@ -314,7 +314,7 @@ export default function AetherShell({ children }: { children: ReactNode }) {
           </nav>
         </aside>
 
-        <div className="flex flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <header className="site-header-shell flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:h-16 md:flex-nowrap md:px-8">
             <div
               className="relative order-2 w-full max-w-full md:order-1 md:max-w-sm"
@@ -392,7 +392,7 @@ export default function AetherShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="site-page flex-1 p-4 md:p-8">{children}</main>
+          <main className="site-page min-w-0 flex-1 p-4 md:p-8">{children}</main>
 
           <footer className="site-panel border-t px-6 py-8 text-xs">
             <div className="flex flex-wrap items-center justify-between gap-4">

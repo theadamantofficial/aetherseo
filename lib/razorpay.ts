@@ -216,9 +216,12 @@ export function verifyRazorpaySignature({
 export async function getPendingPaymentOrder(orderId: string): Promise<{
   amount: number;
   currency: "INR" | "USD";
+  email: string | null;
   id: string;
   mode: RazorpayMode;
   paymentId: string | null;
+  phone: string;
+  planPurchaseNotificationSent: boolean;
   status: "created" | "verified";
   tier: PaidPlanTier;
   uid: string;
@@ -238,9 +241,12 @@ export async function getPendingPaymentOrder(orderId: string): Promise<{
   return {
     amount: typeof data.amount === "number" ? data.amount : 0,
     currency: data.currency === "USD" ? "USD" : "INR",
+    email: readString(data.email),
     id: snapshot.id,
     mode: data.mode === "prod" ? "prod" : "test",
     paymentId: readString(data.paymentId),
+    phone: typeof data.phone === "string" ? data.phone.trim() : "",
+    planPurchaseNotificationSent: Boolean(data.planPurchaseNotificationSentAt),
     status: data.status === "verified" ? "verified" : "created",
     tier: data.tier,
     uid: typeof data.uid === "string" ? data.uid : "",
@@ -264,6 +270,17 @@ export async function markPaymentOrderVerified({
       status: "verified",
       updatedAt: FieldValue.serverTimestamp(),
       verifiedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export async function markPaymentOrderPlanPurchaseNotified(orderId: string) {
+  const db = getFirebaseAdminDb();
+  await db.collection(ORDERS_COLLECTION).doc(orderId).set(
+    {
+      planPurchaseNotificationSentAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     },
     { merge: true },
   );

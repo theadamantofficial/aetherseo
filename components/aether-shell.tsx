@@ -208,43 +208,6 @@ export default function AetherShell({ children }: { children: ReactNode }) {
     };
   }, [router]);
 
-  useEffect(() => {
-    if (
-      !profile ||
-      profile.plan !== "paid" ||
-      !profile.paidPlanTier ||
-      typeof window === "undefined"
-    ) {
-      return;
-    }
-
-    const notificationKey = `aether-plan-notified:${profile.uid}:${profile.paidPlanTier}`;
-    if (window.sessionStorage.getItem(notificationKey)) {
-      return;
-    }
-
-    window.sessionStorage.setItem(notificationKey, "pending");
-
-    void fetch("/api/plan-purchase", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        uid: profile.uid,
-        email: profile.email,
-        phone: profile.phone,
-        paidPlanTier: profile.paidPlanTier,
-      }),
-    })
-      .then(() => {
-        window.sessionStorage.setItem(notificationKey, "sent");
-      })
-      .catch(() => {
-        window.sessionStorage.removeItem(notificationKey);
-      });
-  }, [profile]);
-
   function focusSearch() {
     setIsSearchOpen(true);
     searchInputRef.current?.focus();

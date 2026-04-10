@@ -41,7 +41,7 @@ export default function SitePreferences({
   const { mode, setMode } = useTheme();
 
   return (
-    <div className={`site-pref-bar grid w-full grid-cols-2 items-center gap-2 rounded-full p-1.5 sm:inline-flex sm:w-auto ${className}`.trim()}>
+    <div className={`site-pref-bar grid w-full grid-cols-2 items-center gap-2 rounded-[1.2rem] p-0 sm:inline-flex sm:w-auto sm:rounded-full sm:p-1.5 ${className}`.trim()}>
       <label className="site-select-wrap min-w-0">
         <span className="site-select-icon" aria-hidden="true">
           <ThemeIcon />
@@ -50,7 +50,7 @@ export default function SitePreferences({
         <select
           value={mode}
           onChange={(event) => setMode(event.target.value as "auto" | "light" | "dark")}
-          className="site-select h-10 w-full min-w-0 rounded-full pl-10 pr-9 text-sm font-medium outline-none sm:h-11 sm:min-w-[122px] sm:pr-10"
+          className="site-select h-11 w-full min-w-0 rounded-[1rem] pl-10 pr-9 text-[13px] font-medium outline-none sm:min-w-[122px] sm:rounded-full sm:pr-10 sm:text-sm"
         >
           <option value="auto">Auto</option>
           <option value="light">Light</option>
@@ -75,7 +75,7 @@ export default function SitePreferences({
               router.push(buildLanguagePath(nextLanguage));
             }
           }}
-          className="site-select h-10 w-full min-w-0 rounded-full pl-10 pr-9 text-sm font-medium outline-none sm:h-11 sm:min-w-[170px] sm:pr-10"
+          className="site-select h-11 w-full min-w-0 rounded-[1rem] pl-10 pr-9 text-[13px] font-medium outline-none sm:min-w-[170px] sm:rounded-full sm:pr-10 sm:text-sm"
         >
           {globalLanguageOptions.map((option) => (
             <option key={option.code} value={option.code} title={option.label}>

@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { firestore } from "./firebase";
+import { PAID_PLAN_DEFINITIONS } from "./paid-plans";
 
 export type BillingPlan = "free" | "paid";
 export type PaidPlanTier = "starter" | "pro" | "agency";
@@ -144,8 +145,8 @@ const PAID_PLAN_TIER_OPTIONS: PaidPlanTier[] = ["starter", "pro", "agency"];
 const PAID_PLAN_TIER_META: Record<PaidPlanTier, PaidPlanTierMeta> = {
   starter: {
     label: "Starter",
-    priceInr: "₹299/mo",
-    priceUsd: "$5/mo",
+    priceInr: PAID_PLAN_DEFINITIONS.starter.priceInr,
+    priceUsd: PAID_PLAN_DEFINITIONS.starter.priceUsd,
     dashboardTitle: "Starter workspace dashboard",
     dashboardBody: "Entry paid access for individuals and freelancers with faster generation and clean exports.",
     usageMax: 50,
@@ -173,8 +174,8 @@ const PAID_PLAN_TIER_META: Record<PaidPlanTier, PaidPlanTierMeta> = {
   },
   pro: {
     label: "Pro",
-    priceInr: "₹999/mo",
-    priceUsd: "$15/mo",
+    priceInr: PAID_PLAN_DEFINITIONS.pro.priceInr,
+    priceUsd: PAID_PLAN_DEFINITIONS.pro.priceUsd,
     dashboardTitle: "Pro workspace dashboard",
     dashboardBody: "High-volume publishing with stronger SEO suggestions, history, export control, and priority AI access.",
     usageMax: 200,
@@ -202,8 +203,8 @@ const PAID_PLAN_TIER_META: Record<PaidPlanTier, PaidPlanTierMeta> = {
   },
   agency: {
     label: "Agency",
-    priceInr: "₹2999/mo",
-    priceUsd: "$39/mo",
+    priceInr: PAID_PLAN_DEFINITIONS.agency.priceInr,
+    priceUsd: PAID_PLAN_DEFINITIONS.agency.priceUsd,
     dashboardTitle: "Agency workspace dashboard",
     dashboardBody: "Fair-usage scale for agencies and businesses with team workflows, API access, and automation-heavy operations.",
     usageMax: 999,

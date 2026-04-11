@@ -1,16 +1,22 @@
 "use client";
 
-import { useEffect, useState, type ComponentType } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 
 const ANIMATION_PATH = "/lottie-loader.json";
 const STORAGE_KEY = "aether-site-loader-animation-v1";
 
-type LottieRenderer = ComponentType<{
+type LottiePlayerProps = {
   animationData: object;
   autoplay?: boolean;
   className?: string;
   loop?: boolean;
-}>;
+  onDOMLoaded?: () => void;
+};
+
+const Lottie = dynamic<LottiePlayerProps>(() => import("lottie-react"), {
+  ssr: false,
+});
 
 type SiteLoaderProps = {
   className?: string;
@@ -18,9 +24,7 @@ type SiteLoaderProps = {
 };
 
 let cachedAnimationData: object | null = null;
-let cachedLottieRenderer: LottieRenderer | null = null;
 let animationRequest: Promise<object | null> | null = null;
-let lottieRendererRequest: Promise<LottieRenderer | null> | null = null;
 
 function readStoredAnimationData() {
   if (typeof window === "undefined") {
@@ -69,10 +73,10 @@ function loadAnimationData() {
           throw new Error("Failed to load loader animation.");
         }
 
-        const animationData = (await response.json()) as object;
-        cachedAnimationData = animationData;
-        storeAnimationData(animationData);
-        return animationData;
+        const nextAnimationData = (await response.json()) as object;
+        cachedAnimationData = nextAnimationData;
+        storeAnimationData(nextAnimationData);
+        return nextAnimationData;
       })
       .catch(() => null)
       .finally(() => {
@@ -85,34 +89,11 @@ function loadAnimationData() {
   return animationRequest;
 }
 
-function loadLottieRenderer() {
-  if (cachedLottieRenderer) {
-    return Promise.resolve(cachedLottieRenderer);
-  }
-
-  if (!lottieRendererRequest) {
-    lottieRendererRequest = import("lottie-react")
-      .then((module) => {
-        cachedLottieRenderer = module.default as LottieRenderer;
-        return cachedLottieRenderer;
-      })
-      .catch(() => null)
-      .finally(() => {
-        if (!cachedLottieRenderer) {
-          lottieRendererRequest = null;
-        }
-      });
-  }
-
-  return lottieRendererRequest;
-}
-
 export function preloadSiteLoader() {
   if (typeof window === "undefined") {
     return;
   }
 
-  void loadLottieRenderer();
   void loadAnimationData();
 }
 
@@ -120,11 +101,13 @@ function getInitialAnimationData() {
   return cachedAnimationData ?? readStoredAnimationData();
 }
 
-function LoaderFallback({ className }: { className: string }) {
+function LoaderFallback({ className, visible }: { className: string; visible: boolean }) {
   return (
     <div
       aria-hidden="true"
-      className={`relative flex items-center justify-center rounded-full ${className}`}
+      className={`pointer-events-none absolute inset-0 flex items-center justify-center rounded-full transition-opacity duration-200 ${
+        visible ? "opacity-100" : "opacity-0"
+      } ${className}`}
     >
       <div className="site-skeleton absolute inset-0 rounded-full" />
       <div className="absolute inset-[10%] animate-spin rounded-full border-[3px] border-[var(--site-primary)]/20 border-t-[var(--site-primary)] border-r-[var(--site-primary)]/60" />
@@ -134,15 +117,14 @@ function LoaderFallback({ className }: { className: string }) {
 }
 
 /**
- * Render a centered loading animation that can be warmed and reused across screens.
+ * Render a centered loading animation that reuses cached JSON and avoids route-transition races.
  * @param props.size - Controls the animation dimensions and container height.
  * @param props.className - Additional classes on the outer wrapper.
  */
 export default function SiteLoader({ className = "", size = "md" }: SiteLoaderProps) {
   const [animationData, setAnimationData] = useState<object | null>(getInitialAnimationData);
-  const [LottieRendererComponent, setLottieRendererComponent] = useState<LottieRenderer | null>(
-    cachedLottieRenderer,
-  );
+  const [isAnimationReady, setIsAnimationReady] = useState(false);
+  const [shouldRenderAnimation, setShouldRenderAnimation] = useState(false);
 
   useEffect(() => {
     preloadSiteLoader();
@@ -156,18 +138,29 @@ export default function SiteLoader({ className = "", size = "md" }: SiteLoaderPr
       });
     }
 
-    if (!LottieRendererComponent) {
-      void loadLottieRenderer().then((nextLottieRenderer) => {
-        if (isActive && nextLottieRenderer) {
-          setLottieRendererComponent(() => nextLottieRenderer);
-        }
-      });
-    }
-
     return () => {
       isActive = false;
     };
-  }, [animationData, LottieRendererComponent]);
+  }, [animationData]);
+
+  useEffect(() => {
+    setIsAnimationReady(false);
+
+    if (!animationData) {
+      setShouldRenderAnimation(false);
+      return;
+    }
+
+    setShouldRenderAnimation(false);
+    const delay = size === "full" ? 160 : 80;
+    const timerId = window.setTimeout(() => {
+      setShouldRenderAnimation(true);
+    }, delay);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [animationData, size]);
 
   const sizeMap = {
     sm: { container: "min-h-[120px]", animation: "h-20 w-20" },
@@ -180,7 +173,7 @@ export default function SiteLoader({ className = "", size = "md" }: SiteLoaderPr
   } as const;
 
   const resolvedSize = sizeMap[size];
-  const canRenderAnimation = Boolean(animationData && LottieRendererComponent);
+  const showFallback = !animationData || !shouldRenderAnimation || !isAnimationReady;
 
   return (
     <div
@@ -191,15 +184,20 @@ export default function SiteLoader({ className = "", size = "md" }: SiteLoaderPr
     >
       <span className="sr-only">Loading</span>
       <div className={`relative ${resolvedSize.animation}`}>
-        {canRenderAnimation && LottieRendererComponent && animationData ? (
-          <LottieRendererComponent
+        <LoaderFallback className={resolvedSize.animation} visible={showFallback} />
+        {animationData && shouldRenderAnimation ? (
+          <Lottie
             animationData={animationData}
             loop
             autoplay
-            className={`${resolvedSize.animation} transition-opacity duration-200`}
+            onDOMLoaded={() => {
+              setIsAnimationReady(true);
+            }}
+            className={`${resolvedSize.animation} transition-opacity duration-200 ${
+              showFallback ? "opacity-0" : "opacity-100"
+            }`}
           />
         ) : null}
-        {!canRenderAnimation ? <LoaderFallback className={resolvedSize.animation} /> : null}
       </div>
     </div>
   );

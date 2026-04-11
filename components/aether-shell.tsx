@@ -237,7 +237,7 @@ export default function AetherShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="site-page min-h-screen text-[#e9eeff]">
-      <div className="mx-auto flex min-h-screen max-w-[1440px]">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1440px]">
         <aside className="site-panel hidden w-64 border-r p-5 lg:flex lg:flex-col">
           <div>
             <div className="flex items-center gap-3">
@@ -355,43 +355,48 @@ export default function AetherShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="site-page min-w-0 flex-1 p-4 md:p-8">{children}</main>
+          <main className="site-page min-w-0 flex-1 px-4 py-5 md:px-8 md:py-8">
+            <div className="mx-auto w-full max-w-[1180px]">{children}</div>
+          </main>
 
-          <footer className="site-panel border-t px-6 py-8 text-xs">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p>© 2026 TheAdamant</p>
-                <p className="site-muted mt-1">All rights reserved.</p>
+          <footer className="border-t border-[var(--site-border)] px-4 pb-8 pt-6 md:px-8">
+            <div className="site-panel mx-auto w-full max-w-[1180px] rounded-[1.75rem] border px-6 py-6 text-xs md:px-8">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p>© 2026 TheAdamant</p>
+                  <p className="site-muted mt-1">All rights reserved.</p>
+                </div>
+                <div className="flex items-center gap-6">
+                  <Link href={`/${uiLanguage}/privacy-policy`}>Privacy Policy</Link>
+                  <Link href={`/${uiLanguage}/terms-of-service`}>Terms of Service</Link>
+                </div>
               </div>
-              <div className="flex items-center gap-6">
-                <Link href={`/${uiLanguage}/privacy-policy`}>Privacy Policy</Link>
-                <Link href={`/${uiLanguage}/terms-of-service`}>Terms of Service</Link>
+
+              <div className="site-panel-soft mx-auto mt-6 flex w-full max-w-md items-center justify-center gap-3 rounded-full border px-4 py-2 text-sm">
+                <button
+                  type="button"
+                  onClick={focusSearch}
+                  className="site-button-secondary rounded-full px-3 py-1"
+                >
+                  {copy.quickSearch}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/generate-blog")}
+                  className="site-button-primary rounded-full px-3 py-1 font-medium"
+                >
+                  {copy.newAction}
+                </button>
+                {canUseAssistant ? (
+                  <Link href="/ai-assistant" className="site-button-secondary rounded-full px-3 py-1">
+                    {copy.aiAssistant}
+                  </Link>
+                ) : (
+                  <Link href="/billing?upgrade=assistant-locked" className="site-button-secondary rounded-full px-3 py-1">
+                    {copy.upgradeToPro}
+                  </Link>
+                )}
               </div>
-            </div>
-            <div className="site-panel-soft mx-auto mt-6 flex w-full max-w-md items-center justify-center gap-3 rounded-full border px-4 py-2 text-sm">
-              <button
-                type="button"
-                onClick={focusSearch}
-                className="site-button-secondary rounded-full px-3 py-1"
-              >
-                {copy.quickSearch}
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/generate-blog")}
-                className="site-button-primary rounded-full px-3 py-1 font-medium"
-              >
-                {copy.newAction}
-              </button>
-              {canUseAssistant ? (
-                <Link href="/ai-assistant" className="site-button-secondary rounded-full px-3 py-1">
-                  {copy.aiAssistant}
-                </Link>
-              ) : (
-                <Link href="/billing?upgrade=assistant-locked" className="site-button-secondary rounded-full px-3 py-1">
-                  {copy.upgradeToPro}
-                </Link>
-              )}
             </div>
           </footer>
         </div>

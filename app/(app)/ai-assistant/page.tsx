@@ -483,6 +483,20 @@ const assistantUiCopy: Record<
   },
 };
 
+function clampPreview(value: string, maxLength: number) {
+  const normalized = value.trim().replace(/\s+/g, " ");
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, Math.max(maxLength - 3, 0)).trimEnd()}...`;
+}
+
 function AiAssistantPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -500,6 +514,47 @@ function AiAssistantPageContent() {
   const ui = assistantUiCopy[activeLanguage];
   const activeAction = useMemo(() => ui.actions[action], [action, ui.actions]);
   const isAssistantUnlocked = plan === "paid";
+  const primaryInputPreview = clampPreview(input || result?.input || activeAction.placeholder, 120);
+  const linkedUrl = result?.url || url || ui.noUrl;
+  const summaryPreview = clampPreview(result?.summary ?? activeAction.description, 180);
+  const emptyStateCards = [
+    {
+      label: ui.primaryInput,
+      value: primaryInputPreview,
+    },
+    {
+      label: ui.produceTitle,
+      value: clampPreview(ui.produceBody, 120),
+    },
+    {
+      label: ui.outputLanguage,
+      value: `${ui.outputLanguageBody} ${activeLanguage.toUpperCase()}`,
+    },
+  ];
+  const signalLabels = [
+    result?.sections[0]?.heading ?? ui.primaryInput,
+    result?.sections[1]?.heading ?? ui.sectionsTitle,
+    result?.sections[2]?.heading ?? ui.outputLanguage,
+  ];
+  const metricCards = [
+    {
+      label: ui.actionsLabel,
+      value: String(actionIds.length),
+      detail: activeAction.label,
+    },
+    {
+      label: ui.latestModeLabel,
+      value: activeAction.label,
+      detail: clampPreview(activeAction.description, 92),
+    },
+    {
+      label: ui.outputLanguage,
+      value: activeLanguage.toUpperCase(),
+      detail: clampPreview(linkedUrl, 92),
+    },
+  ];
+  const stageMetricLabel = result ? ui.sectionsTitle : ui.actionsLabel;
+  const stageMetricValue = result ? String(result.sections.length) : String(actionIds.length);
 
   useEffect(() => {
     const queryAction = searchParams.get("action");
@@ -729,44 +784,157 @@ function AiAssistantPageContent() {
           </div>
         </section>
 
-        <div
-          ref={resultRef}
-          className="site-panel-hero site-animate-rise min-w-0 overflow-hidden rounded-2xl border p-8"
-          style={{ ["--site-delay" as string]: "80ms" }}
-        >
-          <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
-            {ui.latestResult}
-          </p>
-          <h2 className="mt-4 text-4xl font-semibold">{result?.title ?? ui.emptyTitle}</h2>
-          <p className="site-muted mt-3 text-sm">{result?.summary ?? ui.emptyBody}</p>
+        <div className="grid min-w-0 gap-6">
+          <div
+            ref={resultRef}
+            className="site-panel-hero site-animate-rise min-w-0 overflow-hidden rounded-2xl border p-8 lg:min-h-[36rem]"
+            style={{ ["--site-delay" as string]: "80ms" }}
+          >
+            <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
+              {ui.latestResult}
+            </p>
+            <h2 className="mt-4 text-4xl font-semibold">{result?.title ?? ui.emptyTitle}</h2>
+            <p className="site-muted mt-3 text-sm leading-7">{result?.summary ?? ui.emptyBody}</p>
 
-          {result ? (
-            <div className="mt-6 flex flex-wrap gap-2">
-              <span className="site-panel-soft rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em]">
-                {ui.actions[result.action]?.label ?? result.action}
-              </span>
-              <span className="site-panel-soft rounded-full border px-3 py-1 text-xs">
-                {result.language.toUpperCase()}
-              </span>
-              <span className="site-panel-soft max-w-full truncate rounded-full border px-3 py-1 text-xs">
-                {result.url || ui.noUrl}
-              </span>
-            </div>
-          ) : null}
+            {result ? (
+              <div className="mt-6 flex flex-wrap gap-2">
+                <span className="site-panel-soft rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em]">
+                  {ui.actions[result.action]?.label ?? result.action}
+                </span>
+                <span className="site-panel-soft rounded-full border px-3 py-1 text-xs">
+                  {result.language.toUpperCase()}
+                </span>
+                <span className="site-panel-soft max-w-full truncate rounded-full border px-3 py-1 text-xs">
+                  {result.url || ui.noUrl}
+                </span>
+              </div>
+            ) : null}
 
-          {result ? (
-            <div className="mt-8 space-y-4">
-              <h3 className="text-xl font-semibold">{ui.sectionsTitle}</h3>
-              <div className="grid gap-4 xl:grid-cols-2">
-                {result.sections.map((section) => (
-                  <article key={section.heading} className="site-panel-soft rounded-2xl border p-5">
-                    <h4 className="text-xl font-semibold">{section.heading}</h4>
-                    <p className="site-muted mt-2 text-sm leading-6">{section.body}</p>
+            {result ? (
+              <div className="mt-8 space-y-4">
+                <h3 className="text-xl font-semibold">{ui.sectionsTitle}</h3>
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {result.sections.map((section) => (
+                    <article key={section.heading} className="site-panel-soft rounded-2xl border p-5">
+                      <h4 className="text-xl font-semibold">{section.heading}</h4>
+                      <p className="site-muted mt-2 text-sm leading-6">{section.body}</p>
+                      {section.bullets.length ? (
+                        <ul className="mt-4 grid gap-2">
+                          {section.bullets.slice(0, 3).map((bullet) => (
+                            <li
+                              key={bullet}
+                              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs leading-6 text-white/80"
+                            >
+                              {bullet}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {emptyStateCards.map((card, index) => (
+                  <article
+                    key={card.label}
+                    className="site-panel-soft site-animate-rise rounded-2xl border p-5"
+                    style={{ ["--site-delay" as string]: `${120 + index * 40}ms` }}
+                  >
+                    <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{card.label}</p>
+                    <p className="mt-3 text-sm leading-7">{card.value}</p>
                   </article>
                 ))}
+                <article className="site-panel-soft rounded-2xl border p-5 md:col-span-2 xl:col-span-3">
+                  <p className="text-sm font-semibold">{ui.produceTitle}</p>
+                  <p className="site-muted mt-2 text-sm leading-7">{ui.idleStatus}</p>
+                </article>
               </div>
+            )}
+          </div>
+
+          <section className="grid gap-4 xl:grid-cols-[1.08fr,0.92fr]">
+            <article
+              className="site-panel site-animate-rise overflow-hidden rounded-2xl border p-6"
+              style={{ ["--site-delay" as string]: "140ms" }}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="max-w-xl">
+                  <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
+                    {ui.latestModeLabel}
+                  </p>
+                  <h3 className="mt-4 text-2xl font-semibold">{result?.title ?? activeAction.label}</h3>
+                  <p className="site-muted mt-3 text-sm leading-7">{summaryPreview}</p>
+                </div>
+
+                <div className="site-panel-soft rounded-2xl border px-4 py-3 text-right">
+                  <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                    {stageMetricLabel}
+                  </p>
+                  <p className="mt-2 text-3xl font-semibold">{stageMetricValue}</p>
+                  <p className="site-muted mt-1 text-xs">{activeLanguage.toUpperCase()}</p>
+                </div>
+              </div>
+
+              <div className="relative mt-6 min-h-[18rem] overflow-hidden rounded-[1.75rem] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.22),transparent_34%),radial-gradient(circle_at_78%_18%,_rgba(20,184,166,0.18),transparent_22%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015))] p-5">
+                <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:38px_38px]" />
+                <div className="absolute left-[18%] top-[24%] h-px w-[28%] rotate-[16deg] bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+                <div className="absolute right-[18%] top-[28%] h-px w-[28%] -rotate-[16deg] bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+                <div className="absolute bottom-[24%] left-1/2 h-px w-[42%] -translate-x-1/2 bg-gradient-to-r from-transparent via-white/28 to-transparent" />
+
+                <div className="site-animate-glow absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-[radial-gradient(circle,_rgba(255,255,255,0.16),rgba(99,102,241,0.16)_44%,transparent_74%)] shadow-[0_0_50px_rgba(99,102,241,0.3)]" />
+                <div className="absolute left-1/2 top-1/2 flex h-28 w-28 -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center text-sm font-semibold">
+                  {activeAction.label}
+                </div>
+
+                <div
+                  className="site-panel-soft site-animate-float absolute left-4 top-4 max-w-[10rem] rounded-2xl border px-4 py-3 text-sm font-medium sm:left-8 sm:top-6"
+                  style={{ animationDelay: "120ms" }}
+                >
+                  {signalLabels[0]}
+                </div>
+                <div
+                  className="site-panel-soft site-animate-float absolute right-4 top-8 max-w-[10rem] rounded-2xl border px-4 py-3 text-sm font-medium sm:right-8 sm:top-10"
+                  style={{ animationDelay: "400ms" }}
+                >
+                  {signalLabels[1]}
+                </div>
+                <div
+                  className="site-panel-soft site-animate-float absolute bottom-[4.5rem] left-1/2 max-w-[12rem] -translate-x-1/2 rounded-2xl border px-4 py-3 text-center text-sm font-medium sm:bottom-20"
+                  style={{ animationDelay: "240ms" }}
+                >
+                  {signalLabels[2]}
+                </div>
+
+                <div className="absolute inset-x-5 bottom-5 flex flex-wrap gap-2">
+                  <span className="site-panel rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.16em]">
+                    {activeAction.label}
+                  </span>
+                  <span className="site-panel-soft rounded-full border px-3 py-1 text-[11px]">
+                    {activeLanguage.toUpperCase()}
+                  </span>
+                  <span className="site-panel-soft max-w-full truncate rounded-full border px-3 py-1 text-[11px]">
+                    {linkedUrl}
+                  </span>
+                </div>
+              </div>
+            </article>
+
+            <div className="grid gap-4">
+              {metricCards.map((card, index) => (
+                <article
+                  key={card.label}
+                  className="site-panel-soft site-animate-rise rounded-2xl border p-5"
+                  style={{ ["--site-delay" as string]: `${180 + index * 40}ms` }}
+                >
+                  <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{card.label}</p>
+                  <p className="mt-3 text-2xl font-semibold">{card.value}</p>
+                  <p className="site-muted mt-2 text-sm leading-7">{card.detail}</p>
+                </article>
+              ))}
             </div>
-          ) : null}
+          </section>
         </div>
       </div>
     </div>

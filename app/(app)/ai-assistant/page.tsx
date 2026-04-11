@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -7,12 +8,23 @@ import { useLanguage } from "@/components/language-provider";
 import { auth } from "@/lib/firebase";
 import { resolveAppUiLanguage, type AppUiLanguage } from "@/lib/app-ui-language";
 import {
+  getAssistantAddonDefinitions,
+  type AssistantAddonType,
+} from "@/lib/assistant-addons";
+import {
   getDashboardForUser,
+  getUserProfile,
   saveAssistantRunForUser,
   type AssistantActionType,
   type AssistantRun,
   type BillingPlan,
+  type UserProfile,
 } from "@/lib/firebase-data";
+import {
+  ensureRazorpayCheckout,
+  postAuthenticatedJson,
+  type RazorpayOrderResponse,
+} from "@/lib/razorpay-client";
 
 type ActionConfig = {
   id: AssistantActionType;
@@ -497,23 +509,114 @@ function clampPreview(value: string, maxLength: number) {
   return `${normalized.slice(0, Math.max(maxLength - 3, 0)).trimEnd()}...`;
 }
 
+type AssistantRunDraft = Omit<AssistantRun, "id" | "createdAt"> &
+  Partial<Pick<AssistantRun, "id" | "createdAt">>;
+
+type AssistantApiResponse = {
+  assistantRun?: AssistantRunDraft;
+  creditsUsed?: {
+    image?: number;
+    prompt?: number;
+  };
+  ephemeralImageDataUrl?: string | null;
+  error?: string;
+  warnings?: string[];
+};
+
+const assistantAddonDefinitions = getAssistantAddonDefinitions();
+
+const addonUi = {
+  checkoutBody:
+    "This is a one-time Razorpay payment for a single assistant add-on credit. The credit is added to your account immediately after verification.",
+  checkoutTitle: "Assistant add-on checkout",
+  copy: "Copy",
+  copyDone: "Copied",
+  downloadImage: "Download image",
+  imageCreditLabel: "Image credits",
+  imageHelper:
+    "Generate one SEO-driven blog image per credit. The output includes alt text, a search-friendly filename, and a ready-to-download asset.",
+  includeWithRun: "Include with this run",
+  oneTimeCharge: "One-time charge",
+  promptCreditLabel: "Prompt credits",
+  promptHelper:
+    "Generate one direct-use developer prompt pack per credit. The pack includes Conductor and Cursor prompts tailored to the assistant output.",
+  purchaseCredit: "Buy credit",
+  seoImage: "SEO image generation",
+  toolsTitle: "Paid add-ons",
+  toolsBody:
+    "Unlock developer prompts and blog images as separate one-time purchases. Paid assistant access is still required for the run itself.",
+  developerPromptPack: "Developer prompt pack",
+  bestOutput: "Best output",
+  alternative: "Alternative option",
+  directUse: "Ready to use now",
+  developerPrompts: "Developer-ready prompts",
+  imageOutput: "SEO image output",
+  implementationPlan: "Execution plan",
+  sessionPreviewNote:
+    "This image preview is available in the current session. Buy another credit when you want a fresh generated asset.",
+  warnings: "Generation notes",
+};
+
+function formatAuthErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === "object" && error !== null) {
+    const maybeCode = "code" in error && typeof error.code === "string" ? error.code : null;
+    const maybeMessage = "message" in error && typeof error.message === "string" ? error.message : null;
+
+    if (maybeCode && maybeMessage) {
+      return `${fallback} (${maybeCode}: ${maybeMessage})`;
+    }
+
+    if (maybeMessage) {
+      return `${fallback} (${maybeMessage})`;
+    }
+  }
+
+  return fallback;
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="site-panel-soft flex items-center justify-between rounded-[1.25rem] border px-4 py-3 text-sm">
+      <span className="site-muted">{label}</span>
+      <span className="text-right font-semibold">{value}</span>
+    </div>
+  );
+}
+
 function AiAssistantPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { language, uiLanguage } = useLanguage();
   const resultRef = useRef<HTMLDivElement | null>(null);
   const [uid, setUid] = useState("");
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [plan, setPlan] = useState<BillingPlan | null>(null);
   const [action, setAction] = useState<AssistantActionType>("blog-brief");
   const [input, setInput] = useState("");
   const [url, setUrl] = useState("");
   const [result, setResult] = useState<AssistantRun | null>(null);
   const [status, setStatus] = useState<StatusState | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [ephemeralImageDataUrl, setEphemeralImageDataUrl] = useState<string | null>(null);
+  const [includePromptPack, setIncludePromptPack] = useState(false);
+  const [includeSeoImageAsset, setIncludeSeoImageAsset] = useState(false);
+  const [checkoutAddon, setCheckoutAddon] = useState<AssistantAddonType | null>(null);
+  const [copiedItem, setCopiedItem] = useState("");
   const [isBusy, setBusy] = useState(false);
+  const [isCheckoutBusy, setCheckoutBusy] = useState(false);
   const activeLanguage = resolveAppUiLanguage(language, uiLanguage);
   const ui = assistantUiCopy[activeLanguage];
   const activeAction = useMemo(() => ui.actions[action], [action, ui.actions]);
   const isAssistantUnlocked = plan === "paid";
+  const checkoutDefinition = checkoutAddon ? assistantAddonDefinitions[checkoutAddon] : null;
+  const promptCredits = profile?.assistantPromptCredits ?? 0;
+  const imageCredits = profile?.assistantImageCredits ?? 0;
+  const imagePreviewSrc = ephemeralImageDataUrl || result?.imageAsset?.imageUrl || null;
+  const readyToUse = Array.isArray(result?.readyToUse) ? result.readyToUse : [];
+  const resultSections = Array.isArray(result?.sections) ? result.sections : [];
+  const alternativeSections = Array.isArray(result?.alternative?.sections)
+    ? result.alternative.sections
+    : [];
   const primaryInputPreview = clampPreview(input || result?.input || activeAction.placeholder, 120);
   const linkedUrl = result?.url || url || ui.noUrl;
   const summaryPreview = clampPreview(result?.summary ?? activeAction.description, 180);
@@ -523,38 +626,14 @@ function AiAssistantPageContent() {
       value: primaryInputPreview,
     },
     {
-      label: ui.produceTitle,
-      value: clampPreview(ui.produceBody, 120),
+      label: addonUi.directUse,
+      value: "Get a best-use output, an alternative version, and implementation-ready recommendations in one run.",
     },
     {
-      label: ui.outputLanguage,
-      value: `${ui.outputLanguageBody} ${activeLanguage.toUpperCase()}`,
+      label: addonUi.toolsTitle,
+      value: `${addonUi.developerPromptPack}: ${assistantAddonDefinitions["developer-prompt-pack"].priceLabel}. ${addonUi.seoImage}: ${assistantAddonDefinitions["seo-image"].priceLabel}.`,
     },
   ];
-  const signalLabels = [
-    result?.sections[0]?.heading ?? ui.primaryInput,
-    result?.sections[1]?.heading ?? ui.sectionsTitle,
-    result?.sections[2]?.heading ?? ui.outputLanguage,
-  ];
-  const metricCards = [
-    {
-      label: ui.actionsLabel,
-      value: String(actionIds.length),
-      detail: activeAction.label,
-    },
-    {
-      label: ui.latestModeLabel,
-      value: activeAction.label,
-      detail: clampPreview(activeAction.description, 92),
-    },
-    {
-      label: ui.outputLanguage,
-      value: activeLanguage.toUpperCase(),
-      detail: clampPreview(linkedUrl, 92),
-    },
-  ];
-  const stageMetricLabel = result ? ui.sectionsTitle : ui.actionsLabel;
-  const stageMetricValue = result ? String(result.sections.length) : String(actionIds.length);
 
   useEffect(() => {
     const queryAction = searchParams.get("action");
@@ -582,16 +661,24 @@ function AiAssistantPageContent() {
       }
 
       setUid(currentUser.uid);
+
       try {
-        const dashboard = await getDashboardForUser(currentUser.uid);
+        const [dashboard, nextProfile] = await Promise.all([
+          getDashboardForUser(currentUser.uid),
+          getUserProfile(currentUser.uid),
+        ]);
+
         setPlan(dashboard.plan);
+        setProfile(nextProfile);
+
         if (dashboard.plan === "free") {
           router.replace("/billing?upgrade=assistant-locked");
           return;
         }
-        if (dashboard.assistantRuns[0]) {
-          setResult(dashboard.assistantRuns[0]);
-        }
+
+        setResult(dashboard.assistantRuns[0] ?? null);
+        setWarnings([]);
+        setEphemeralImageDataUrl(null);
       } catch {
         setStatus({ tone: "error", text: ui.loadError });
       }
@@ -601,6 +688,152 @@ function AiAssistantPageContent() {
       unsubscribe();
     };
   }, [router, ui.loadError]);
+
+  async function copyText(key: string, text: string) {
+    if (!text) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedItem(key);
+      setStatus({ tone: "muted", text: `${addonUi.copyDone}: ${key}` });
+      window.setTimeout(() => {
+        setCopiedItem((current) => (current === key ? "" : current));
+      }, 1600);
+    } catch {
+      setStatus({ tone: "error", text: "Could not copy to clipboard." });
+    }
+  }
+
+  async function handleConfirmAddonCheckout() {
+    if (!checkoutAddon) {
+      return;
+    }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      setStatus({ tone: "error", text: ui.authRequired });
+      return;
+    }
+
+    const addonType = checkoutAddon;
+    const addonDefinition = assistantAddonDefinitions[addonType];
+
+    setCheckoutBusy(true);
+
+    try {
+      await ensureRazorpayCheckout();
+    } catch (error) {
+      setCheckoutBusy(false);
+      setStatus({
+        tone: "error",
+        text: formatAuthErrorMessage(error, "Razorpay checkout could not be loaded."),
+      });
+      return;
+    }
+
+    setStatus({ tone: "muted", text: "Preparing Razorpay checkout..." });
+
+    try {
+      const orderToken = await currentUser.getIdToken();
+      const order = await postAuthenticatedJson<RazorpayOrderResponse>(
+        "/api/assistant-addons/order",
+        orderToken,
+        {
+          addonType,
+          phone: profile?.phone ?? "",
+        },
+      );
+
+      const RazorpayCheckout = window.Razorpay;
+      if (!RazorpayCheckout) {
+        throw new Error("Razorpay checkout could not be loaded.");
+      }
+
+      const razorpay = new RazorpayCheckout({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: "Aether SEO",
+        description: `${order.title} one-time credit`,
+        order_id: order.orderId,
+        prefill: {
+          contact: profile?.phone || undefined,
+          email: currentUser.email ?? undefined,
+          name: currentUser.displayName ?? undefined,
+        },
+        notes: {
+          addonType,
+          source: "ai-assistant",
+          unitPriceUsd: addonDefinition.priceLabel,
+        },
+        theme: {
+          color: "#111111",
+        },
+        modal: {
+          ondismiss: () => {
+            setCheckoutBusy(false);
+            setStatus({ tone: "muted", text: "Payment was cancelled before completion." });
+          },
+        },
+        handler: async (response) => {
+          setStatus({ tone: "muted", text: "Verifying Razorpay payment..." });
+
+          try {
+            const verificationToken = await currentUser.getIdToken();
+            await postAuthenticatedJson<{ ok: true }>(
+              "/api/assistant-addons/verify",
+              verificationToken,
+              {
+                addonType,
+                ...response,
+              },
+            );
+
+            setProfile((current) =>
+              current
+                ? {
+                    ...current,
+                    assistantPromptCredits:
+                      current.assistantPromptCredits +
+                      (addonType === "developer-prompt-pack" ? 1 : 0),
+                    assistantImageCredits:
+                      current.assistantImageCredits + (addonType === "seo-image" ? 1 : 0),
+                  }
+                : current,
+            );
+            setCheckoutAddon(null);
+            setCheckoutBusy(false);
+            setStatus({
+              tone: "muted",
+              text: `${addonDefinition.title} credit added to your account.`,
+            });
+
+            if (addonType === "developer-prompt-pack") {
+              setIncludePromptPack(true);
+            } else {
+              setIncludeSeoImageAsset(true);
+            }
+          } catch (error) {
+            setCheckoutBusy(false);
+            setStatus({
+              tone: "error",
+              text: formatAuthErrorMessage(error, "Could not verify the add-on payment."),
+            });
+          }
+        },
+      });
+
+      razorpay.open();
+    } catch (error) {
+      setCheckoutBusy(false);
+      setStatus({
+        tone: "error",
+        text: formatAuthErrorMessage(error, "Could not create the add-on order."),
+      });
+    }
+  }
 
   async function handleGenerate() {
     if (!uid) {
@@ -618,52 +851,100 @@ function AiAssistantPageContent() {
       return;
     }
 
+    if (includePromptPack && promptCredits < 1) {
+      setStatus({
+        tone: "error",
+        text: "Developer prompt credits are empty. Buy a $2 prompt pack before adding it to this run.",
+      });
+      return;
+    }
+
+    if (includeSeoImageAsset && imageCredits < 1) {
+      setStatus({
+        tone: "error",
+        text: "SEO image credits are empty. Buy a $5 image credit before adding it to this run.",
+      });
+      return;
+    }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      setStatus({ tone: "error", text: ui.authRequired });
+      return;
+    }
+
     setBusy(true);
+    setWarnings([]);
     setStatus({ tone: "muted", text: ui.generating });
 
     try {
-      const response = await fetch("/api/ai-assistant", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const token = await currentUser.getIdToken();
+      const payload = await postAuthenticatedJson<AssistantApiResponse>(
+        "/api/ai-assistant",
+        token,
+        {
           action,
+          includePromptPack,
+          includeSeoImageAsset,
           input,
-          url,
           language: activeLanguage,
-        }),
-      });
-      const rawResponse = await response.text();
-      let payload: { assistantRun?: AssistantRun; error?: string } | null = null;
+          url,
+        },
+      );
 
-      try {
-        payload = rawResponse ? (JSON.parse(rawResponse) as { assistantRun?: AssistantRun; error?: string }) : null;
-      } catch {
-        payload = null;
-      }
-
-      if (!response.ok) {
-        throw new Error(payload?.error || rawResponse || "Could not generate the AI assistant result.");
-      }
-
-      if (!payload?.assistantRun) {
+      if (!payload.assistantRun) {
         throw new Error("AI assistant returned an empty result.");
       }
 
-      const assistantRun = payload.assistantRun;
-      setResult(assistantRun);
-      const nextDashboard = await saveAssistantRunForUser(uid, assistantRun);
+      setEphemeralImageDataUrl(payload.ephemeralImageDataUrl ?? null);
+      setWarnings(payload.warnings ?? []);
+
+      const nextDashboard = await saveAssistantRunForUser(uid, payload.assistantRun);
+      const nextResult = nextDashboard.assistantRuns[0] ?? null;
+
       setPlan(nextDashboard.plan);
-      setStatus({ tone: "muted", text: ui.saved });
+      setResult(nextResult);
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              assistantPromptCredits: Math.max(
+                0,
+                current.assistantPromptCredits - (payload.creditsUsed?.prompt ?? 0),
+              ),
+              assistantImageCredits: Math.max(
+                0,
+                current.assistantImageCredits - (payload.creditsUsed?.image ?? 0),
+              ),
+            }
+          : current,
+      );
+
+      if ((payload.creditsUsed?.prompt ?? 0) > 0) {
+        setIncludePromptPack(false);
+      }
+
+      if ((payload.creditsUsed?.image ?? 0) > 0) {
+        setIncludeSeoImageAsset(false);
+      }
+
+      setStatus({
+        tone: "muted",
+        text: payload.warnings?.length ? `${ui.saved} ${payload.warnings[0]}` : ui.saved,
+      });
+
       requestAnimationFrame(() => {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     } catch (error) {
-      if (error instanceof Error && error.message === "AI assistant is available on paid plans only. Upgrade to continue.") {
+      if (
+        error instanceof Error &&
+        error.message === "AI assistant is available on paid plans only. Upgrade to continue."
+      ) {
         router.replace("/billing?upgrade=assistant-locked");
         return;
       }
+
       setStatus({
         tone: "error",
         text: error instanceof Error ? error.message : "Could not generate the AI assistant result.",
@@ -675,265 +956,554 @@ function AiAssistantPageContent() {
 
   return (
     <div className="space-y-6">
-      <section className="site-panel-hero site-animate-rise overflow-hidden rounded-2xl border p-8">
-        <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
-          {ui.badge}
-        </p>
-        <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl font-semibold">{ui.title}</h1>
-            <p className="site-muted mt-3 text-sm">{ui.body}</p>
+      {checkoutDefinition ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#081120]/72 p-4 backdrop-blur-sm">
+          <div className="site-panel-hero w-full max-w-xl rounded-[2rem] border p-6 md:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="site-chip inline-flex rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.16em]">
+                  {checkoutDefinition.title}
+                </p>
+                <h2 className="mt-4 text-3xl font-semibold">{addonUi.checkoutTitle}</h2>
+                <p className="site-muted mt-3 text-sm leading-6">{addonUi.checkoutBody}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isCheckoutBusy) {
+                    setCheckoutAddon(null);
+                  }
+                }}
+                className="site-button-secondary rounded-full px-4 py-2 text-sm font-medium"
+                disabled={isCheckoutBusy}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <SummaryRow label={addonUi.oneTimeCharge} value={checkoutDefinition.priceLabel} />
+              <SummaryRow label="Credit added" value="1 use" />
+              <SummaryRow label="Add-on" value={checkoutDefinition.title} />
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setCheckoutAddon(null)}
+                className="site-button-secondary rounded-full px-5 py-3 text-sm font-semibold"
+                disabled={isCheckoutBusy}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmAddonCheckout()}
+                className="site-button-primary rounded-full px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={isCheckoutBusy}
+              >
+                Continue to payment
+              </button>
+            </div>
           </div>
-          <div className="grid w-full gap-2 text-sm sm:grid-cols-3 lg:w-auto">
-            <div className="site-panel-soft min-w-0 rounded-2xl border px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.16em] text-[var(--site-muted)]">{ui.actionsLabel}</p>
-              <p className="mt-2 text-2xl font-semibold">{actionIds.length}</p>
+        </div>
+      ) : null}
+
+      <section className="site-panel-hero site-animate-rise overflow-hidden rounded-[2rem] border p-8">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="max-w-3xl">
+            <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
+              {ui.badge}
+            </p>
+            <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">{ui.title}</h1>
+            <p className="site-muted mt-3 max-w-2xl text-sm leading-7">{ui.body}</p>
+          </div>
+
+          <div className="grid w-full gap-3 text-sm sm:grid-cols-2 xl:w-[26rem]">
+            <div className="site-panel-soft rounded-2xl border px-4 py-4">
+              <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{addonUi.promptCreditLabel}</p>
+              <p className="mt-3 text-3xl font-semibold">{promptCredits}</p>
+              <p className="site-muted mt-2 text-sm">Conductor and Cursor prompt packs.</p>
             </div>
-            <div className="site-panel-soft min-w-0 rounded-2xl border px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.16em] text-[var(--site-muted)]">{ui.languageLabel}</p>
-              <p className="mt-2 text-2xl font-semibold uppercase">{activeLanguage}</p>
-            </div>
-            <div className="site-panel-soft min-w-0 rounded-2xl border px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.16em] text-[var(--site-muted)]">{ui.latestModeLabel}</p>
-              <p className="mt-2 truncate text-lg font-semibold">{activeAction.label}</p>
+            <div className="site-panel-soft rounded-2xl border px-4 py-4">
+              <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{addonUi.imageCreditLabel}</p>
+              <p className="mt-3 text-3xl font-semibold">{imageCredits}</p>
+              <p className="site-muted mt-2 text-sm">SEO-driven blog image generations.</p>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="grid items-start gap-6 lg:[grid-template-columns:minmax(320px,380px)_minmax(0,1fr)]">
-        <section className="site-panel site-animate-rise h-fit min-w-0 rounded-2xl border p-6 lg:sticky lg:top-24">
-          <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
-            {ui.workflowSelector}
-          </p>
-          <div className="mt-6 grid gap-3">
-            {actionIds.map((id) => {
-              const item = ui.actions[id];
+      <div className="grid items-start gap-6 xl:grid-cols-[360px,minmax(0,1fr)]">
+        <aside className="space-y-6 xl:sticky xl:top-24">
+          <section className="site-panel site-animate-rise rounded-[1.8rem] border p-6">
+            <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
+              {ui.workflowSelector}
+            </p>
 
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setAction(item.id)}
-                  className={`rounded-2xl border p-4 text-left ${
-                    action === item.id ? "site-button-primary" : "site-panel-soft"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-base font-semibold">{item.label}</p>
-                    {action === item.id ? (
-                      <span className="rounded-full bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
-                        {ui.active}
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className={`mt-2 text-sm ${action === item.id ? "text-white/80" : "site-muted"}`}>
-                    {item.description}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
+            <div className="mt-6 grid gap-3">
+              {actionIds.map((id) => {
+                const item = ui.actions[id];
 
-          <div className="mt-6 space-y-4">
-            <div>
-              <p className="site-muted mb-2 text-xs uppercase tracking-[0.18em]">{ui.primaryInput}</p>
-              <textarea
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                placeholder={activeAction.placeholder}
-                rows={5}
-                className="site-input w-full rounded-2xl px-4 py-3 outline-none"
-              />
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setAction(item.id)}
+                    className={`rounded-2xl border p-4 text-left ${
+                      action === item.id ? "site-button-primary" : "site-panel-soft"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-base font-semibold">{item.label}</p>
+                      {action === item.id ? (
+                        <span className="rounded-full bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
+                          {ui.active}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className={`mt-2 text-sm leading-6 ${action === item.id ? "text-white/80" : "site-muted"}`}>
+                      {item.description}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
-            <div>
-              <p className="site-muted mb-2 text-xs uppercase tracking-[0.18em]">{activeAction.urlLabel}</p>
-              <input
-                value={url}
-                onChange={(event) => setUrl(event.target.value)}
-                placeholder="https://example.com/page"
-                className="site-input w-full rounded-xl px-4 py-3 outline-none"
-              />
-            </div>
-            <div className="site-panel-soft rounded-2xl border p-4">
-              <p className="text-sm font-semibold">{ui.produceTitle}</p>
-              <p className="site-muted mt-2 text-sm">{ui.produceBody}</p>
-              <ul className="site-muted mt-3 space-y-1 text-sm">
-                <li>• {ui.bullets[0]}</li>
-                <li>• {ui.bullets[1]}</li>
-                <li>• {ui.bullets[2]}</li>
-              </ul>
-            </div>
-            <div className="site-panel-soft rounded-2xl border p-4">
-              <p className="text-sm font-semibold">{ui.outputLanguage}</p>
-              <p className="site-muted mt-2 text-sm">
-                {ui.outputLanguageBody} <span className="font-medium uppercase">{activeLanguage}</span>
+
+            <div className="mt-6 space-y-4">
+              <div>
+                <p className="site-muted mb-2 text-xs uppercase tracking-[0.18em]">{ui.primaryInput}</p>
+                <textarea
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
+                  placeholder={activeAction.placeholder}
+                  rows={5}
+                  className="site-input w-full rounded-2xl px-4 py-3 outline-none"
+                />
+              </div>
+
+              <div>
+                <p className="site-muted mb-2 text-xs uppercase tracking-[0.18em]">{activeAction.urlLabel}</p>
+                <input
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
+                  placeholder="https://example.com/page"
+                  className="site-input w-full rounded-xl px-4 py-3 outline-none"
+                />
+              </div>
+
+              <div className="site-panel-soft rounded-2xl border p-4">
+                <p className="text-sm font-semibold">{ui.produceTitle}</p>
+                <p className="site-muted mt-2 text-sm leading-7">{ui.produceBody}</p>
+                <ul className="site-muted mt-3 space-y-1 text-sm">
+                  <li>• {ui.bullets[0]}</li>
+                  <li>• {ui.bullets[1]}</li>
+                  <li>• {ui.bullets[2]}</li>
+                </ul>
+              </div>
+
+              <div className="site-panel-soft rounded-2xl border p-4">
+                <p className="text-sm font-semibold">{ui.outputLanguage}</p>
+                <p className="site-muted mt-2 text-sm leading-7">
+                  {ui.outputLanguageBody} <span className="font-medium uppercase">{activeLanguage}</span>
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={isBusy || !isAssistantUnlocked}
+                className="site-button-primary w-full rounded-xl px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isBusy ? ui.generating : `${ui.runPrefix} ${activeAction.label}`}
+              </button>
+
+              <p className={`text-xs leading-6 ${status?.tone === "error" ? "text-red-500" : "site-muted"}`}>
+                {status?.text ??
+                  (isAssistantUnlocked
+                    ? ui.idleStatus
+                    : "AI assistant unlocks on paid plans. Upgrade to continue.")}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={isBusy || !isAssistantUnlocked}
-              className="site-button-primary w-full rounded-xl px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isBusy ? ui.generating : `${ui.runPrefix} ${activeAction.label}`}
-            </button>
-            <p className={`text-xs ${status?.tone === "error" ? "text-red-500" : "site-muted"}`}>
-              {status?.text ?? (isAssistantUnlocked ? ui.idleStatus : "AI assistant unlocks on paid plans. Upgrade to continue.")}
-            </p>
-          </div>
-        </section>
+          </section>
 
-        <div className="grid min-w-0 gap-6">
-          <div
-            ref={resultRef}
-            className="site-panel-hero site-animate-rise min-w-0 overflow-hidden rounded-2xl border p-8 lg:min-h-[36rem]"
+          <section className="site-panel site-animate-rise rounded-[1.8rem] border p-6" style={{ ["--site-delay" as string]: "90ms" }}>
+            <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
+              {addonUi.toolsTitle}
+            </p>
+            <p className="site-muted mt-4 text-sm leading-7">{addonUi.toolsBody}</p>
+
+            <div className="mt-5 grid gap-4">
+              {([
+                {
+                  checked: includePromptPack,
+                  credits: promptCredits,
+                  definition: assistantAddonDefinitions["developer-prompt-pack"],
+                  helper: addonUi.promptHelper,
+                  key: "developer-prompt-pack" as const,
+                  label: addonUi.promptCreditLabel,
+                  setChecked: setIncludePromptPack,
+                  title: addonUi.developerPromptPack,
+                },
+                {
+                  checked: includeSeoImageAsset,
+                  credits: imageCredits,
+                  definition: assistantAddonDefinitions["seo-image"],
+                  helper: addonUi.imageHelper,
+                  key: "seo-image" as const,
+                  label: addonUi.imageCreditLabel,
+                  setChecked: setIncludeSeoImageAsset,
+                  title: addonUi.seoImage,
+                },
+              ]).map((addon) => (
+                <article key={addon.key} className="site-panel-soft rounded-2xl border p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-base font-semibold">{addon.title}</p>
+                      <p className="site-muted mt-2 text-sm leading-7">{addon.helper}</p>
+                    </div>
+                    <span className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold">
+                      {addon.definition.priceLabel}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{addon.label}</p>
+                      <p className="mt-1 text-2xl font-semibold">{addon.credits}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutAddon(addon.key)}
+                      className="site-button-secondary rounded-full px-4 py-2 text-sm font-semibold"
+                    >
+                      {addonUi.purchaseCredit}
+                    </button>
+                  </div>
+
+                  <label className={`mt-4 flex items-center gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm ${addon.credits > 0 ? "bg-white/5" : "opacity-60"}`}>
+                    <input
+                      type="checkbox"
+                      checked={addon.checked}
+                      onChange={(event) => addon.setChecked(event.target.checked)}
+                      disabled={addon.credits < 1}
+                      className="h-4 w-4 accent-[var(--site-primary)]"
+                    />
+                    <span>{addonUi.includeWithRun}</span>
+                  </label>
+                </article>
+              ))}
+            </div>
+          </section>
+        </aside>
+
+        <div className="space-y-6" ref={resultRef}>
+          <section
+            className="site-panel-hero site-animate-rise overflow-hidden rounded-[2rem] border p-8"
             style={{ ["--site-delay" as string]: "80ms" }}
           >
-            <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
-              {ui.latestResult}
-            </p>
-            <h2 className="mt-4 text-4xl font-semibold">{result?.title ?? ui.emptyTitle}</h2>
-            <p className="site-muted mt-3 text-sm leading-7">{result?.summary ?? ui.emptyBody}</p>
+            <div className="flex flex-wrap items-start justify-between gap-5">
+              <div className="max-w-3xl">
+                <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
+                  {result ? ui.latestResult : ui.latestModeLabel}
+                </p>
+                <h2 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">
+                  {result?.title ?? activeAction.label}
+                </h2>
+                <p className="site-muted mt-3 text-sm leading-7">
+                  {result?.summary ?? `${activeAction.description} ${ui.emptyBody}`}
+                </p>
+              </div>
 
-            {result ? (
-              <div className="mt-6 flex flex-wrap gap-2">
-                <span className="site-panel-soft rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em]">
-                  {ui.actions[result.action]?.label ?? result.action}
-                </span>
-                <span className="site-panel-soft rounded-full border px-3 py-1 text-xs">
-                  {result.language.toUpperCase()}
-                </span>
-                <span className="site-panel-soft max-w-full truncate rounded-full border px-3 py-1 text-xs">
-                  {result.url || ui.noUrl}
-                </span>
+              <div className="grid gap-3 sm:grid-cols-2 xl:w-[22rem]">
+                <div className="site-panel-soft rounded-2xl border px-4 py-4">
+                  <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{ui.outputLanguage}</p>
+                  <p className="mt-3 text-2xl font-semibold uppercase">{activeLanguage}</p>
+                  <p className="site-muted mt-2 text-sm">{linkedUrl}</p>
+                </div>
+                <div className="site-panel-soft rounded-2xl border px-4 py-4">
+                  <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{ui.sectionsTitle}</p>
+                  <p className="mt-3 text-2xl font-semibold">{resultSections.length || 3}</p>
+                  <p className="site-muted mt-2 text-sm">{summaryPreview}</p>
+                </div>
+              </div>
+            </div>
+
+            {warnings.length ? (
+              <div className="site-panel-soft mt-6 rounded-2xl border p-4">
+                <p className="text-sm font-semibold">{addonUi.warnings}</p>
+                <ul className="site-muted mt-3 space-y-2 text-sm leading-6">
+                  {warnings.map((warning) => (
+                    <li key={warning}>• {warning}</li>
+                  ))}
+                </ul>
               </div>
             ) : null}
 
             {result ? (
-              <div className="mt-8 space-y-4">
-                <h3 className="text-xl font-semibold">{ui.sectionsTitle}</h3>
-                <div className="grid gap-4 xl:grid-cols-2">
-                  {result.sections.map((section) => (
-                    <article key={section.heading} className="site-panel-soft rounded-2xl border p-5">
-                      <h4 className="text-xl font-semibold">{section.heading}</h4>
-                      <p className="site-muted mt-2 text-sm leading-6">{section.body}</p>
-                      {section.bullets.length ? (
-                        <ul className="mt-4 grid gap-2">
-                          {section.bullets.slice(0, 3).map((bullet) => (
-                            <li
-                              key={bullet}
-                              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs leading-6 text-white/80"
+              <div className="mt-8 grid gap-6 xl:grid-cols-[1.08fr,0.92fr]">
+                <div className="space-y-6">
+                  <article className="site-panel-soft rounded-[1.7rem] border p-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                          {addonUi.directUse}
+                        </p>
+                        <h3 className="mt-2 text-2xl font-semibold">{addonUi.bestOutput}</h3>
+                      </div>
+                      <span className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
+                        {ui.actions[result.action]?.label ?? result.action}
+                      </span>
+                    </div>
+
+                    <div className="mt-5 grid gap-4 md:grid-cols-2">
+                      {(readyToUse.length ? readyToUse : [
+                        {
+                          label: addonUi.bestOutput,
+                          content: summaryPreview,
+                          bullets: [],
+                        },
+                      ]).map((item, index) => (
+                        <article key={`${item.label}-${index}`} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                            {index === 0 ? addonUi.bestOutput : addonUi.alternative}
+                          </p>
+                          <h4 className="mt-2 text-lg font-semibold">{item.label}</h4>
+                          <p className="site-muted mt-3 text-sm leading-7">{item.content}</p>
+                          {item.bullets.length ? (
+                            <ul className="mt-4 grid gap-2 text-sm">
+                              {item.bullets.map((bullet) => (
+                                <li key={bullet} className="rounded-xl border border-white/10 px-3 py-2 leading-6">
+                                  {bullet}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </article>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="site-panel-soft rounded-[1.7rem] border p-5">
+                    <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                      {addonUi.implementationPlan}
+                    </p>
+                    <h3 className="mt-2 text-2xl font-semibold">{ui.sectionsTitle}</h3>
+                    <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                      {(resultSections.length ? resultSections : []).map((section) => (
+                        <article key={section.heading} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <h4 className="text-lg font-semibold">{section.heading}</h4>
+                          <p className="site-muted mt-3 text-sm leading-7">{section.body}</p>
+                          {section.bullets.length ? (
+                            <ul className="mt-4 grid gap-2 text-sm">
+                              {section.bullets.map((bullet) => (
+                                <li key={bullet} className="rounded-xl border border-white/10 px-3 py-2 leading-6">
+                                  {bullet}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </article>
+                      ))}
+                    </div>
+                  </article>
+                </div>
+
+                <div className="space-y-6">
+                  {result?.alternative ? (
+                    <article className="site-panel-soft rounded-[1.7rem] border p-5">
+                      <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                        {addonUi.alternative}
+                      </p>
+                      <h3 className="mt-2 text-2xl font-semibold">{result.alternative.title}</h3>
+                      <p className="site-muted mt-3 text-sm leading-7">{result.alternative.summary}</p>
+                      <div className="mt-4 grid gap-3">
+                        {alternativeSections.map((section) => (
+                          <div key={section.heading} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                            <p className="font-semibold">{section.heading}</p>
+                            <p className="site-muted mt-2 text-sm leading-7">{section.body}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ) : null}
+
+                  {result?.promptPack ? (
+                    <article className="site-panel-soft rounded-[1.7rem] border p-5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                            {addonUi.developerPrompts}
+                          </p>
+                          <h3 className="mt-2 text-2xl font-semibold">{addonUi.developerPromptPack}</h3>
+                        </div>
+                        <span className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold">
+                          $2 add-on
+                        </span>
+                      </div>
+
+                      <div className="mt-5 grid gap-4">
+                        {([
+                          { key: "Brief", value: result.promptPack.brief },
+                          { key: "Conductor", value: result.promptPack.conductor },
+                          { key: "Cursor", value: result.promptPack.cursor },
+                        ]).map((entry) => (
+                          <article key={entry.key} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                            <div className="flex items-center justify-between gap-4">
+                              <p className="text-lg font-semibold">{entry.key}</p>
+                              <button
+                                type="button"
+                                onClick={() => void copyText(entry.key, entry.value)}
+                                className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold"
+                              >
+                                {copiedItem === entry.key ? addonUi.copyDone : addonUi.copy}
+                              </button>
+                            </div>
+                            <p className="site-muted mt-3 text-sm leading-7 whitespace-pre-line">
+                              {entry.value}
+                            </p>
+                          </article>
+                        ))}
+                      </div>
+                    </article>
+                  ) : null}
+
+                  {result?.imageAsset ? (
+                    <article className="site-panel-soft rounded-[1.7rem] border p-5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                            {addonUi.imageOutput}
+                          </p>
+                          <h3 className="mt-2 text-2xl font-semibold">{result.imageAsset.title}</h3>
+                        </div>
+                        <span className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold">
+                          $5 add-on
+                        </span>
+                      </div>
+
+                      <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0d152b]">
+                        {imagePreviewSrc ? (
+                          <div className="relative aspect-[16/10] w-full">
+                            <Image
+                              src={imagePreviewSrc}
+                              alt={result.imageAsset.alt}
+                              fill
+                              sizes="(max-width: 768px) 100vw, 60vw"
+                              unoptimized
+                              className="object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex min-h-[16rem] items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.2),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 text-center text-sm text-white/70">
+                            The image metadata is saved, but no preview is available yet.
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-4 grid gap-3">
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <p className="site-muted text-[11px] uppercase tracking-[0.18em]">Alt text</p>
+                          <p className="mt-2 text-sm leading-7">{result.imageAsset.alt}</p>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <p className="site-muted text-[11px] uppercase tracking-[0.18em]">File name</p>
+                          <p className="mt-2 text-sm leading-7">{result.imageAsset.fileName}</p>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <div className="flex items-center justify-between gap-4">
+                            <p className="text-sm font-semibold">Generation prompt</p>
+                            <button
+                              type="button"
+                              onClick={() => void copyText("Image prompt", result.imageAsset?.prompt ?? "")}
+                              className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold"
                             >
-                              {bullet}
-                            </li>
-                          ))}
-                        </ul>
+                              {copiedItem === "Image prompt" ? addonUi.copyDone : addonUi.copy}
+                            </button>
+                          </div>
+                          <p className="site-muted mt-3 text-sm leading-7">{result.imageAsset.prompt}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                        {imagePreviewSrc ? (
+                          <a
+                            href={imagePreviewSrc}
+                            download={result.imageAsset.fileName}
+                            className="site-button-primary rounded-full px-4 py-2 text-sm font-semibold"
+                          >
+                            {addonUi.downloadImage}
+                          </a>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => void copyText("Image alt text", result.imageAsset?.alt ?? "")}
+                          className="site-button-secondary rounded-full px-4 py-2 text-sm font-semibold"
+                        >
+                          {copiedItem === "Image alt text" ? addonUi.copyDone : "Copy alt text"}
+                        </button>
+                      </div>
+
+                      {!result.imageAsset.imageUrl && imagePreviewSrc ? (
+                        <p className="site-muted mt-4 text-xs leading-6">{addonUi.sessionPreviewNote}</p>
                       ) : null}
                     </article>
-                  ))}
+                  ) : null}
                 </div>
               </div>
             ) : (
-              <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {emptyStateCards.map((card, index) => (
-                  <article
-                    key={card.label}
-                    className="site-panel-soft site-animate-rise rounded-2xl border p-5"
-                    style={{ ["--site-delay" as string]: `${120 + index * 40}ms` }}
-                  >
-                    <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{card.label}</p>
-                    <p className="mt-3 text-sm leading-7">{card.value}</p>
-                  </article>
-                ))}
-                <article className="site-panel-soft rounded-2xl border p-5 md:col-span-2 xl:col-span-3">
-                  <p className="text-sm font-semibold">{ui.produceTitle}</p>
-                  <p className="site-muted mt-2 text-sm leading-7">{ui.idleStatus}</p>
+              <div className="mt-8 grid gap-5 lg:grid-cols-[1.08fr,0.92fr]">
+                <article className="site-panel-soft relative overflow-hidden rounded-[1.8rem] border p-6">
+                  <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
+                  <div className="relative min-h-[20rem]">
+                    <div className="site-animate-glow absolute left-1/2 top-1/2 h-[7.5rem] w-[7.5rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-[radial-gradient(circle,_rgba(255,255,255,0.18),rgba(99,102,241,0.18)_42%,transparent_74%)]" />
+                    <div className="absolute left-1/2 top-1/2 flex h-[7.5rem] w-[7.5rem] -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center text-sm font-semibold">
+                      {activeAction.label}
+                    </div>
+
+                    {emptyStateCards.map((card, index) => (
+                      <div
+                        key={card.label}
+                        className={`site-panel-soft site-animate-float absolute max-w-[13rem] rounded-2xl border px-4 py-3 text-sm ${
+                          index === 0
+                            ? "left-4 top-4 sm:left-8 sm:top-8"
+                            : index === 1
+                              ? "right-4 top-10 sm:right-8 sm:top-12"
+                              : "bottom-6 left-1/2 -translate-x-1/2"
+                        }`}
+                      >
+                        <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{card.label}</p>
+                        <p className="mt-2 leading-6">{card.value}</p>
+                      </div>
+                    ))}
+                  </div>
                 </article>
+
+                <div className="grid gap-4">
+                  <article className="site-panel-soft rounded-[1.7rem] border p-5">
+                    <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{ui.primaryInput}</p>
+                    <p className="mt-2 text-lg font-semibold">{primaryInputPreview}</p>
+                    <p className="site-muted mt-3 text-sm leading-7">
+                      Start with a concrete topic, problem, audit issue, or target keyword so the output is directly usable.
+                    </p>
+                  </article>
+                  <article className="site-panel-soft rounded-[1.7rem] border p-5">
+                    <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{addonUi.developerPromptPack}</p>
+                    <p className="mt-2 text-lg font-semibold">
+                      {assistantAddonDefinitions["developer-prompt-pack"].priceLabel} one time
+                    </p>
+                    <p className="site-muted mt-3 text-sm leading-7">{addonUi.promptHelper}</p>
+                  </article>
+                  <article className="site-panel-soft rounded-[1.7rem] border p-5">
+                    <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{addonUi.seoImage}</p>
+                    <p className="mt-2 text-lg font-semibold">
+                      {assistantAddonDefinitions["seo-image"].priceLabel} one time
+                    </p>
+                    <p className="site-muted mt-3 text-sm leading-7">{addonUi.imageHelper}</p>
+                  </article>
+                </div>
               </div>
             )}
-          </div>
-
-          <section className="grid gap-4 xl:grid-cols-[1.08fr,0.92fr]">
-            <article
-              className="site-panel site-animate-rise overflow-hidden rounded-2xl border p-6"
-              style={{ ["--site-delay" as string]: "140ms" }}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="max-w-xl">
-                  <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
-                    {ui.latestModeLabel}
-                  </p>
-                  <h3 className="mt-4 text-2xl font-semibold">{result?.title ?? activeAction.label}</h3>
-                  <p className="site-muted mt-3 text-sm leading-7">{summaryPreview}</p>
-                </div>
-
-                <div className="site-panel-soft rounded-2xl border px-4 py-3 text-right">
-                  <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
-                    {stageMetricLabel}
-                  </p>
-                  <p className="mt-2 text-3xl font-semibold">{stageMetricValue}</p>
-                  <p className="site-muted mt-1 text-xs">{activeLanguage.toUpperCase()}</p>
-                </div>
-              </div>
-
-              <div className="relative mt-6 min-h-[18rem] overflow-hidden rounded-[1.75rem] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.22),transparent_34%),radial-gradient(circle_at_78%_18%,_rgba(20,184,166,0.18),transparent_22%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015))] p-5">
-                <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:38px_38px]" />
-                <div className="absolute left-[18%] top-[24%] h-px w-[28%] rotate-[16deg] bg-gradient-to-r from-transparent via-white/35 to-transparent" />
-                <div className="absolute right-[18%] top-[28%] h-px w-[28%] -rotate-[16deg] bg-gradient-to-r from-transparent via-white/35 to-transparent" />
-                <div className="absolute bottom-[24%] left-1/2 h-px w-[42%] -translate-x-1/2 bg-gradient-to-r from-transparent via-white/28 to-transparent" />
-
-                <div className="site-animate-glow absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-[radial-gradient(circle,_rgba(255,255,255,0.16),rgba(99,102,241,0.16)_44%,transparent_74%)] shadow-[0_0_50px_rgba(99,102,241,0.3)]" />
-                <div className="absolute left-1/2 top-1/2 flex h-28 w-28 -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center text-sm font-semibold">
-                  {activeAction.label}
-                </div>
-
-                <div
-                  className="site-panel-soft site-animate-float absolute left-4 top-4 max-w-[10rem] rounded-2xl border px-4 py-3 text-sm font-medium sm:left-8 sm:top-6"
-                  style={{ animationDelay: "120ms" }}
-                >
-                  {signalLabels[0]}
-                </div>
-                <div
-                  className="site-panel-soft site-animate-float absolute right-4 top-8 max-w-[10rem] rounded-2xl border px-4 py-3 text-sm font-medium sm:right-8 sm:top-10"
-                  style={{ animationDelay: "400ms" }}
-                >
-                  {signalLabels[1]}
-                </div>
-                <div
-                  className="site-panel-soft site-animate-float absolute bottom-[4.5rem] left-1/2 max-w-[12rem] -translate-x-1/2 rounded-2xl border px-4 py-3 text-center text-sm font-medium sm:bottom-20"
-                  style={{ animationDelay: "240ms" }}
-                >
-                  {signalLabels[2]}
-                </div>
-
-                <div className="absolute inset-x-5 bottom-5 flex flex-wrap gap-2">
-                  <span className="site-panel rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.16em]">
-                    {activeAction.label}
-                  </span>
-                  <span className="site-panel-soft rounded-full border px-3 py-1 text-[11px]">
-                    {activeLanguage.toUpperCase()}
-                  </span>
-                  <span className="site-panel-soft max-w-full truncate rounded-full border px-3 py-1 text-[11px]">
-                    {linkedUrl}
-                  </span>
-                </div>
-              </div>
-            </article>
-
-            <div className="grid gap-4">
-              {metricCards.map((card, index) => (
-                <article
-                  key={card.label}
-                  className="site-panel-soft site-animate-rise rounded-2xl border p-5"
-                  style={{ ["--site-delay" as string]: `${180 + index * 40}ms` }}
-                >
-                  <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{card.label}</p>
-                  <p className="mt-3 text-2xl font-semibold">{card.value}</p>
-                  <p className="site-muted mt-2 text-sm leading-7">{card.detail}</p>
-                </article>
-              ))}
-            </div>
           </section>
         </div>
       </div>

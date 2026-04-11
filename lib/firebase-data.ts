@@ -38,6 +38,8 @@ export type UserProfile = {
   phone: string;
   plan: BillingPlan | null;
   paidPlanTier: PaidPlanTier | null;
+  assistantPromptCredits: number;
+  assistantImageCredits: number;
   provider: string | null;
   createdAt?: Timestamp | null;
   updatedAt?: Timestamp | null;
@@ -96,6 +98,32 @@ export type AssistantSection = {
   bullets: string[];
 };
 
+export type AssistantReadyOutput = {
+  label: string;
+  content: string;
+  bullets: string[];
+};
+
+export type AssistantAlternative = {
+  title: string;
+  summary: string;
+  sections: AssistantSection[];
+};
+
+export type AssistantPromptPack = {
+  brief: string;
+  conductor: string;
+  cursor: string;
+};
+
+export type AssistantImageAsset = {
+  alt: string;
+  fileName: string;
+  imageUrl: string | null;
+  prompt: string;
+  title: string;
+};
+
 export type AssistantRun = {
   id: string;
   action: AssistantActionType;
@@ -105,6 +133,10 @@ export type AssistantRun = {
   title: string;
   summary: string;
   sections: AssistantSection[];
+  readyToUse: AssistantReadyOutput[];
+  alternative: AssistantAlternative | null;
+  promptPack: AssistantPromptPack | null;
+  imageAsset: AssistantImageAsset | null;
   createdAt: string;
 };
 
@@ -360,6 +392,152 @@ function cleanPhone(input: string): string {
   return input.trim();
 }
 
+function normalizeCreditCount(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+function isAssistantActionType(value: unknown): value is AssistantActionType {
+  return (
+    value === "blog-brief" ||
+    value === "metadata" ||
+    value === "keyword-cluster" ||
+    value === "schema-faq" ||
+    value === "fix-plan"
+  );
+}
+
+function normalizeAssistantSection(value: unknown): AssistantSection | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const section = value as { heading?: unknown; body?: unknown; bullets?: unknown };
+  if (typeof section.heading !== "string" || typeof section.body !== "string") {
+    return null;
+  }
+
+  return {
+    heading: section.heading,
+    body: section.body,
+    bullets: sanitizeArray<string>(section.bullets, []).filter((bullet) => typeof bullet === "string"),
+  };
+}
+
+function normalizeAssistantRun(value: unknown): AssistantRun | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const run = value as {
+    action?: unknown;
+    alternative?: unknown;
+    createdAt?: unknown;
+    id?: unknown;
+    imageAsset?: unknown;
+    input?: unknown;
+    language?: unknown;
+    promptPack?: unknown;
+    readyToUse?: unknown;
+    sections?: unknown;
+    summary?: unknown;
+    title?: unknown;
+    url?: unknown;
+  };
+
+  if (
+    typeof run.id !== "string" ||
+    !isAssistantActionType(run.action) ||
+    typeof run.input !== "string" ||
+    typeof run.url !== "string" ||
+    typeof run.language !== "string" ||
+    typeof run.title !== "string" ||
+    typeof run.summary !== "string" ||
+    typeof run.createdAt !== "string"
+  ) {
+    return null;
+  }
+
+  const sections = sanitizeArray<unknown>(run.sections, [])
+    .map((section) => normalizeAssistantSection(section))
+    .filter((section): section is AssistantSection => Boolean(section));
+  const alternative =
+    typeof run.alternative === "object" &&
+    run.alternative !== null &&
+    typeof (run.alternative as { title?: unknown }).title === "string" &&
+    typeof (run.alternative as { summary?: unknown }).summary === "string"
+      ? {
+          title: (run.alternative as { title: string }).title,
+          summary: (run.alternative as { summary: string }).summary,
+          sections: sanitizeArray<unknown>((run.alternative as { sections?: unknown }).sections, [])
+            .map((section) => normalizeAssistantSection(section))
+            .filter((section): section is AssistantSection => Boolean(section)),
+        }
+      : null;
+  const readyToUse = sanitizeArray<unknown>(run.readyToUse, [])
+    .filter(
+      (item): item is {
+        bullets?: unknown;
+        content: string;
+        label: string;
+      } =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as { label?: unknown }).label === "string" &&
+        typeof (item as { content?: unknown }).content === "string",
+    )
+    .map((item) => ({
+      label: item.label,
+      content: item.content,
+      bullets: sanitizeArray<string>(item.bullets, []).filter((bullet) => typeof bullet === "string"),
+    }));
+  const promptPack =
+    typeof run.promptPack === "object" &&
+    run.promptPack !== null &&
+    typeof (run.promptPack as { brief?: unknown }).brief === "string" &&
+    typeof (run.promptPack as { conductor?: unknown }).conductor === "string" &&
+    typeof (run.promptPack as { cursor?: unknown }).cursor === "string"
+      ? {
+          brief: (run.promptPack as { brief: string }).brief,
+          conductor: (run.promptPack as { conductor: string }).conductor,
+          cursor: (run.promptPack as { cursor: string }).cursor,
+        }
+      : null;
+  const imageAsset =
+    typeof run.imageAsset === "object" &&
+    run.imageAsset !== null &&
+    typeof (run.imageAsset as { alt?: unknown }).alt === "string" &&
+    typeof (run.imageAsset as { fileName?: unknown }).fileName === "string" &&
+    typeof (run.imageAsset as { prompt?: unknown }).prompt === "string" &&
+    typeof (run.imageAsset as { title?: unknown }).title === "string"
+      ? {
+          alt: (run.imageAsset as { alt: string }).alt,
+          fileName: (run.imageAsset as { fileName: string }).fileName,
+          imageUrl:
+            typeof (run.imageAsset as { imageUrl?: unknown }).imageUrl === "string"
+              ? (run.imageAsset as { imageUrl: string }).imageUrl
+              : null,
+          prompt: (run.imageAsset as { prompt: string }).prompt,
+          title: (run.imageAsset as { title: string }).title,
+        }
+      : null;
+
+  return {
+    id: run.id,
+    action: run.action,
+    input: run.input,
+    url: run.url,
+    language: run.language,
+    title: run.title,
+    summary: run.summary,
+    sections,
+    readyToUse,
+    alternative,
+    promptPack,
+    imageAsset,
+    createdAt: run.createdAt,
+  };
+}
+
 function normalizeDashboard(
   value: unknown,
   plan: BillingPlan,
@@ -370,7 +548,9 @@ function normalizeDashboard(
   const raw = (value ?? {}) as DocumentData;
   const generatedBlogs = sanitizeArray<GeneratedBlog>(raw.generatedBlogs, fallback.generatedBlogs);
   const auditRuns = sanitizeArray<AuditRun>(raw.auditRuns, fallback.auditRuns);
-  const assistantRuns = sanitizeArray<AssistantRun>(raw.assistantRuns, fallback.assistantRuns);
+  const assistantRuns = sanitizeArray<unknown>(raw.assistantRuns, fallback.assistantRuns)
+    .map((run) => normalizeAssistantRun(run))
+    .filter((run): run is AssistantRun => Boolean(run));
   const derivedState = buildDynamicDashboardState(
     plan,
     paidPlanTier,
@@ -640,6 +820,8 @@ export async function upsertUserProfile({
       phone: cleanPhone(phone) || (typeof stored.phone === "string" ? stored.phone : ""),
       plan: resolvedPlan,
       paidPlanTier: resolvedPaidPlanTier,
+      assistantPromptCredits: normalizeCreditCount(stored.assistantPromptCredits),
+      assistantImageCredits: normalizeCreditCount(stored.assistantImageCredits),
       provider: provider || (typeof stored.provider === "string" ? stored.provider : null),
       createdAt: stored.createdAt ?? null,
       updatedAt: serverTimestamp() as Timestamp | null,
@@ -652,6 +834,8 @@ export async function upsertUserProfile({
       phone: nextProfile.phone,
       plan: nextProfile.plan,
       paidPlanTier: nextProfile.plan === "paid" ? nextProfile.paidPlanTier : null,
+      assistantPromptCredits: nextProfile.assistantPromptCredits,
+      assistantImageCredits: nextProfile.assistantImageCredits,
       provider: nextProfile.provider,
       updatedAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
@@ -672,6 +856,8 @@ export async function upsertUserProfile({
     phone: cleanPhone(phone),
     plan: normalizedPlan ?? null,
     paidPlanTier: null,
+    assistantPromptCredits: 0,
+    assistantImageCredits: 0,
     provider,
     createdAt: serverTimestamp() as Timestamp | null,
     updatedAt: serverTimestamp() as Timestamp | null,
@@ -709,6 +895,8 @@ export async function getUserProfile(uid: string): Promise<UserProfile> {
     phone: typeof raw.phone === "string" ? raw.phone : "",
     plan: isBillingPlan(raw.plan) ? (raw.plan as BillingPlan) : null,
     paidPlanTier: isPaidPlanTier(raw.paidPlanTier) ? (raw.paidPlanTier as PaidPlanTier) : null,
+    assistantPromptCredits: normalizeCreditCount(raw.assistantPromptCredits),
+    assistantImageCredits: normalizeCreditCount(raw.assistantImageCredits),
     provider: typeof raw.provider === "string" ? raw.provider : null,
     createdAt: raw.createdAt ?? null,
     updatedAt: raw.updatedAt ?? null,
@@ -740,6 +928,8 @@ export async function setUserPlan(uid: string, plan: BillingPlan, phone = ""): P
       phone: updated.phone,
       plan,
       paidPlanTier: updated.paidPlanTier,
+      assistantPromptCredits: 0,
+      assistantImageCredits: 0,
       provider: null,
       updatedAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
@@ -772,6 +962,8 @@ export async function setUserPaidTier(
       phone: updated.phone,
       plan: "paid",
       paidPlanTier,
+      assistantPromptCredits: 0,
+      assistantImageCredits: 0,
       provider: null,
       updatedAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),

@@ -15,7 +15,6 @@ type PublicBlogIndexProps = {
 export default function PublicBlogIndex({ language, posts }: PublicBlogIndexProps) {
   const router = useRouter();
   const copy = blogUiCopy[language];
-  const buildLanguagePath = (nextLanguage: SiteLanguage) => `/${nextLanguage}/blog`;
 
   function formatBlogDate(value: string) {
     return new Intl.DateTimeFormat("en-GB", {
@@ -29,7 +28,7 @@ export default function PublicBlogIndex({ language, posts }: PublicBlogIndexProp
   return (
     <div className="site-page min-h-screen px-4 py-4 text-[var(--foreground)] sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <PublicHeader language={language} buildLanguagePath={buildLanguagePath} />
+        <PublicHeader language={language} />
 
         <main className="space-y-8">
             <section className="site-panel-hero rounded-[2.4rem] px-6 py-8 sm:px-8 sm:py-10">

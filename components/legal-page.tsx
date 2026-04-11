@@ -16,12 +16,7 @@ export default function LegalPage({ language, type }: LegalPageProps) {
   return (
     <main className="site-page min-h-screen px-6 py-12">
       <div className="mx-auto max-w-6xl">
-        <PublicHeader
-          language={language}
-          buildLanguagePath={(nextLanguage) =>
-            `/${nextLanguage}/${type === "privacy" ? "privacy-policy" : "terms-of-service"}`
-          }
-        />
+        <PublicHeader language={language} />
 
         <section className="site-panel site-animate-rise mx-auto max-w-4xl rounded-[2rem] p-8 md:p-10">
           <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{type === "privacy" ? "Legal" : "Terms"}</p>

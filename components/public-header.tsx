@@ -10,7 +10,6 @@ import { useTranslatedCopy } from "@/lib/use-translated-copy";
 
 type PublicHeaderProps = {
   language: SiteLanguage;
-  buildLanguagePath: (language: SiteLanguage) => string;
 };
 
 function MobileHeaderToggle({ isOpen }: { isOpen: boolean }) {
@@ -31,7 +30,6 @@ function MobileHeaderToggle({ isOpen }: { isOpen: boolean }) {
 
 export default function PublicHeader({
   language,
-  buildLanguagePath,
 }: PublicHeaderProps) {
   const { language: preferredLanguage } = useLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -92,7 +90,7 @@ export default function PublicHeader({
         </nav>
 
         <div className="hidden w-full lg:ml-auto lg:flex lg:w-auto lg:items-center lg:gap-3">
-          <SitePreferences buildLanguagePath={buildLanguagePath} className="w-full lg:w-auto lg:shrink-0" />
+          <SitePreferences className="w-full lg:w-auto lg:shrink-0" />
           <div className="flex w-full gap-2 lg:w-auto lg:flex-nowrap">
             <Link
               href="/auth"
@@ -112,47 +110,46 @@ export default function PublicHeader({
         {isMobileMenuOpen ? (
           <div
             id="public-mobile-menu"
-            className="absolute inset-x-3 top-[calc(100%+0.55rem)] z-30 rounded-[1.35rem] border border-white/10 px-3 py-3 shadow-[0_26px_80px_rgba(2,6,23,0.55)] lg:hidden sm:inset-x-5"
-            style={{ backgroundColor: "rgba(5, 8, 22, 0.97)" }}
+            className="site-mobile-menu absolute inset-x-3 top-[calc(100%+0.55rem)] z-30 rounded-[1.35rem] px-3 py-3 lg:hidden sm:inset-x-5"
           >
             <nav className="space-y-1">
               <Link
                 href={`/${language}#platform`}
-                className="block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium text-white/88 transition hover:bg-white/8"
+                className="site-mobile-menu-link block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium transition"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {copy.nav.platform}
               </Link>
               <Link
                 href={`/${language}#workflow`}
-                className="block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium text-white/88 transition hover:bg-white/8"
+                className="site-mobile-menu-link block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium transition"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {copy.nav.workflow}
               </Link>
               <Link
                 href={`/${language}/blog`}
-                className="block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium text-white/88 transition hover:bg-white/8"
+                className="site-mobile-menu-link block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium transition"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {copy.nav.blog}
               </Link>
               <Link
                 href={`/${language}#plans`}
-                className="block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium text-white/88 transition hover:bg-white/8"
+                className="site-mobile-menu-link block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium transition"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {copy.nav.plans}
               </Link>
               <Link
                 href={`/${language}#faq`}
-                className="block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium text-white/88 transition hover:bg-white/8"
+                className="site-mobile-menu-link block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium transition"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {copy.nav.faq}
               </Link>
             </nav>
-            <SitePreferences buildLanguagePath={buildLanguagePath} className="mt-3 w-full grid-cols-1" />
+            <SitePreferences className="mt-3 w-full grid-cols-1" />
             <div className="mt-3 grid gap-2">
               <Link
                 href={`/${language}#plans`}

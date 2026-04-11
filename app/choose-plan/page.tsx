@@ -647,8 +647,7 @@ function ChoosePlanPageContent() {
           {isHeaderMenuOpen ? (
             <div
               id="choose-plan-mobile-menu"
-              className="absolute inset-x-3 top-[calc(100%+0.55rem)] z-30 rounded-[1.35rem] border border-white/10 px-3 py-3 shadow-[0_26px_80px_rgba(2,6,23,0.55)] md:hidden sm:inset-x-5"
-              style={{ backgroundColor: "rgba(5, 8, 22, 0.97)" }}
+              className="site-mobile-menu absolute inset-x-3 top-[calc(100%+0.55rem)] z-30 rounded-[1.35rem] px-3 py-3 md:hidden sm:inset-x-5"
             >
               <SitePreferences className="w-full grid-cols-1" />
               <Link

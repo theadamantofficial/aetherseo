@@ -14,6 +14,7 @@ type ThemeContextValue = {
 };
 
 const STORAGE_KEY = "aether-site-theme-mode";
+const CONSENT_COOKIE = "aether-cookie-consent=accepted";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function getAutoTheme(): ResolvedTheme {
@@ -21,60 +22,63 @@ function getAutoTheme(): ResolvedTheme {
   return currentHour >= 7 && currentHour < 19 ? "light" : "dark";
 }
 
-function resolveTheme(mode: ThemeMode): ResolvedTheme {
-  return mode === "auto" ? getAutoTheme() : mode;
+function hasStoredPreferenceConsent() {
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  return document.cookie.split("; ").includes(CONSENT_COOKIE);
+}
+
+function getStoredThemeMode(): ThemeMode {
+  if (typeof window === "undefined" || !hasStoredPreferenceConsent()) {
+    return "auto";
+  }
+
+  const stored = window.localStorage.getItem(STORAGE_KEY);
+  return stored === "light" || stored === "dark" || stored === "auto" ? stored : "auto";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { canStorePreferences } = useCookieConsent();
-  const [mode, setMode] = useState<ThemeMode>("auto");
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("dark");
+  const [mode, setMode] = useState<ThemeMode>(() => getStoredThemeMode());
+  const [autoTheme, setAutoTheme] = useState<ResolvedTheme>(() => getAutoTheme());
+  const resolvedTheme = mode === "auto" ? autoTheme : mode;
 
   useEffect(() => {
-    if (!canStorePreferences) {
-      const nextMode = "auto";
-      setMode(nextMode);
-      setResolvedTheme(resolveTheme(nextMode));
-      return;
-    }
-
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    const nextMode = stored === "light" || stored === "dark" || stored === "auto" ? stored : "auto";
-    setMode(nextMode);
-    setResolvedTheme(resolveTheme(nextMode));
-  }, [canStorePreferences]);
-
-  useEffect(() => {
-    const nextTheme = resolveTheme(mode);
-    setResolvedTheme(nextTheme);
-    document.documentElement.dataset.theme = nextTheme;
-    document.documentElement.style.colorScheme = nextTheme;
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.style.colorScheme = resolvedTheme;
 
     if (canStorePreferences) {
       window.localStorage.setItem(STORAGE_KEY, mode);
     }
+  }, [canStorePreferences, mode, resolvedTheme]);
 
+  useEffect(() => {
     if (mode !== "auto") {
       return;
     }
 
     const interval = window.setInterval(() => {
-      const autoTheme = getAutoTheme();
-        setResolvedTheme(autoTheme);
-        document.documentElement.dataset.theme = autoTheme;
-        document.documentElement.style.colorScheme = autoTheme;
+      setAutoTheme(getAutoTheme());
     }, 60_000);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [canStorePreferences, mode]);
+  }, [mode]);
 
   const value = useMemo(
     () => ({
       mode,
       resolvedTheme,
-      setMode,
+      setMode: (nextMode: ThemeMode) => {
+        if (nextMode === "auto") {
+          setAutoTheme(getAutoTheme());
+        }
+
+        setMode(nextMode);
+      },
     }),
     [mode, resolvedTheme],
   );

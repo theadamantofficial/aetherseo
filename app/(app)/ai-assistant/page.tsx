@@ -617,6 +617,12 @@ function AiAssistantPageContent() {
   const alternativeSections = Array.isArray(result?.alternative?.sections)
     ? result.alternative.sections
     : [];
+  const resultActionLabel = result ? (ui.actions[result.action]?.label ?? result.action) : activeAction.label;
+  const directUsePreview = clampPreview(
+    readyToUse[0]?.content ?? result?.summary ?? activeAction.description,
+    220,
+  );
+  const sectionCount = resultSections.length || 3;
   const primaryInputPreview = clampPreview(input || result?.input || activeAction.placeholder, 120);
   const linkedUrl = result?.url || url || ui.noUrl;
   const summaryPreview = clampPreview(result?.summary ?? activeAction.description, 180);
@@ -1035,7 +1041,7 @@ function AiAssistantPageContent() {
       </section>
 
       <div className="grid items-start gap-6 xl:grid-cols-[360px,minmax(0,1fr)]">
-        <aside className="space-y-6 xl:sticky xl:top-24">
+        <aside className="space-y-6 xl:sticky xl:top-2">
           <section className="site-panel site-animate-rise rounded-[1.8rem] border p-6">
             <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
               {ui.workflowSelector}
@@ -1202,20 +1208,41 @@ function AiAssistantPageContent() {
             className="site-panel-hero site-animate-rise overflow-hidden rounded-[2rem] border p-8"
             style={{ ["--site-delay" as string]: "80ms" }}
           >
-            <div className="flex flex-wrap items-start justify-between gap-5">
-              <div className="max-w-3xl">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr),minmax(280px,0.9fr)] xl:items-start">
+              <div>
                 <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
                   {result ? ui.latestResult : ui.latestModeLabel}
                 </p>
                 <h2 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">
                   {result?.title ?? activeAction.label}
                 </h2>
-                <p className="site-muted mt-3 text-sm leading-7">
+                <p className="site-muted mt-3 max-w-3xl text-sm leading-7">
                   {result?.summary ?? `${activeAction.description} ${ui.emptyBody}`}
                 </p>
+
+                <article className="site-panel-soft mt-6 rounded-[1.8rem] border p-5">
+                  <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{ui.primaryInput}</p>
+                  <p className="mt-3 text-lg font-semibold leading-7">{primaryInputPreview}</p>
+
+                  <div className="mt-4 grid items-start gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                        {addonUi.directUse}
+                      </p>
+                      <p className="mt-2 text-sm leading-7">{directUsePreview}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                        {ui.actionsLabel}
+                      </p>
+                      <p className="mt-2 text-lg font-semibold">{resultActionLabel}</p>
+                      <p className="site-muted mt-2 text-sm leading-6">{linkedUrl}</p>
+                    </div>
+                  </div>
+                </article>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:w-[22rem]">
+              <div className="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <div className="site-panel-soft rounded-2xl border px-4 py-4">
                   <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{ui.outputLanguage}</p>
                   <p className="mt-3 text-2xl font-semibold uppercase">{activeLanguage}</p>
@@ -1223,236 +1250,257 @@ function AiAssistantPageContent() {
                 </div>
                 <div className="site-panel-soft rounded-2xl border px-4 py-4">
                   <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{ui.sectionsTitle}</p>
-                  <p className="mt-3 text-2xl font-semibold">{resultSections.length || 3}</p>
+                  <p className="mt-3 text-2xl font-semibold">{sectionCount}</p>
                   <p className="site-muted mt-2 text-sm">{summaryPreview}</p>
+                </div>
+                <div className="site-panel-soft rounded-2xl border px-4 py-4 sm:col-span-2 xl:col-span-1">
+                  <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{addonUi.toolsTitle}</p>
+                  <p className="mt-3 text-lg font-semibold">
+                    {result?.promptPack || result?.imageAsset ? "Attached to this result" : "Optional upgrades"}
+                  </p>
+                  <p className="site-muted mt-2 text-sm leading-6">
+                    {result?.promptPack || result?.imageAsset
+                      ? [
+                          result?.promptPack ? addonUi.developerPromptPack : null,
+                          result?.imageAsset ? addonUi.seoImage : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" + ")
+                      : addonUi.toolsBody}
+                  </p>
                 </div>
               </div>
             </div>
+          </section>
 
-            {warnings.length ? (
-              <div className="site-panel-soft mt-6 rounded-2xl border p-4">
-                <p className="text-sm font-semibold">{addonUi.warnings}</p>
-                <ul className="site-muted mt-3 space-y-2 text-sm leading-6">
-                  {warnings.map((warning) => (
-                    <li key={warning}>• {warning}</li>
-                  ))}
-                </ul>
+          {warnings.length ? (
+            <section className="site-panel-soft rounded-2xl border p-4">
+              <p className="text-sm font-semibold">{addonUi.warnings}</p>
+              <ul className="site-muted mt-3 space-y-2 text-sm leading-6">
+                {warnings.map((warning) => (
+                  <li key={warning}>• {warning}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {result ? (
+            <div className="grid items-start gap-6 xl:grid-cols-[1.08fr,0.92fr]">
+              <div className="space-y-6">
+                <article className="site-panel-soft rounded-[1.7rem] border p-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                        {addonUi.directUse}
+                      </p>
+                      <h3 className="mt-2 text-2xl font-semibold">{addonUi.bestOutput}</h3>
+                    </div>
+                    <span className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
+                      {resultActionLabel}
+                    </span>
+                  </div>
+
+                  <div className="mt-5 grid items-start gap-4 md:grid-cols-2">
+                    {(readyToUse.length ? readyToUse : [
+                      {
+                        label: addonUi.bestOutput,
+                        content: summaryPreview,
+                        bullets: [],
+                      },
+                    ]).map((item, index) => (
+                      <article key={`${item.label}-${index}`} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                          {index === 0 ? addonUi.bestOutput : addonUi.alternative}
+                        </p>
+                        <h4 className="mt-2 text-lg font-semibold">{item.label}</h4>
+                        <p className="site-muted mt-3 text-sm leading-7">{item.content}</p>
+                        {item.bullets.length ? (
+                          <ul className="mt-4 grid items-start gap-2 text-sm">
+                            {item.bullets.map((bullet) => (
+                              <li key={bullet} className="rounded-xl border border-white/10 px-3 py-2 leading-6">
+                                {bullet}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </article>
+                    ))}
+                  </div>
+                </article>
+
+                <article className="site-panel-soft rounded-[1.7rem] border p-5">
+                  <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                    {addonUi.implementationPlan}
+                  </p>
+                  <h3 className="mt-2 text-2xl font-semibold">{ui.sectionsTitle}</h3>
+                  <div className="mt-5 grid items-start gap-4 lg:grid-cols-2">
+                    {(resultSections.length ? resultSections : []).map((section) => (
+                      <article key={section.heading} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <h4 className="text-lg font-semibold">{section.heading}</h4>
+                        <p className="site-muted mt-3 text-sm leading-7">{section.body}</p>
+                        {section.bullets.length ? (
+                          <ul className="mt-4 grid items-start gap-2 text-sm">
+                            {section.bullets.map((bullet) => (
+                              <li key={bullet} className="rounded-xl border border-white/10 px-3 py-2 leading-6">
+                                {bullet}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </article>
+                    ))}
+                  </div>
+                </article>
               </div>
-            ) : null}
 
-            {result ? (
-              <div className="mt-8 grid gap-6 xl:grid-cols-[1.08fr,0.92fr]">
-                <div className="space-y-6">
+              <div className="space-y-6">
+                {result?.alternative ? (
+                  <article className="site-panel-soft rounded-[1.7rem] border p-5">
+                    <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                      {addonUi.alternative}
+                    </p>
+                    <h3 className="mt-2 text-2xl font-semibold">{result.alternative.title}</h3>
+                    <p className="site-muted mt-3 text-sm leading-7">{result.alternative.summary}</p>
+                    <div className="mt-4 grid items-start gap-3">
+                      {alternativeSections.map((section) => (
+                        <div key={section.heading} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <p className="font-semibold">{section.heading}</p>
+                          <p className="site-muted mt-2 text-sm leading-7">{section.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                ) : null}
+
+                {result?.promptPack ? (
                   <article className="site-panel-soft rounded-[1.7rem] border p-5">
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
-                          {addonUi.directUse}
+                          {addonUi.developerPrompts}
                         </p>
-                        <h3 className="mt-2 text-2xl font-semibold">{addonUi.bestOutput}</h3>
+                        <h3 className="mt-2 text-2xl font-semibold">{addonUi.developerPromptPack}</h3>
                       </div>
-                      <span className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
-                        {ui.actions[result.action]?.label ?? result.action}
+                      <span className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold">
+                        $2 add-on
                       </span>
                     </div>
 
-                    <div className="mt-5 grid gap-4 md:grid-cols-2">
-                      {(readyToUse.length ? readyToUse : [
-                        {
-                          label: addonUi.bestOutput,
-                          content: summaryPreview,
-                          bullets: [],
-                        },
-                      ]).map((item, index) => (
-                        <article key={`${item.label}-${index}`} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                          <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
-                            {index === 0 ? addonUi.bestOutput : addonUi.alternative}
-                          </p>
-                          <h4 className="mt-2 text-lg font-semibold">{item.label}</h4>
-                          <p className="site-muted mt-3 text-sm leading-7">{item.content}</p>
-                          {item.bullets.length ? (
-                            <ul className="mt-4 grid gap-2 text-sm">
-                              {item.bullets.map((bullet) => (
-                                <li key={bullet} className="rounded-xl border border-white/10 px-3 py-2 leading-6">
-                                  {bullet}
-                                </li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </article>
-                      ))}
-                    </div>
-                  </article>
-
-                  <article className="site-panel-soft rounded-[1.7rem] border p-5">
-                    <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
-                      {addonUi.implementationPlan}
-                    </p>
-                    <h3 className="mt-2 text-2xl font-semibold">{ui.sectionsTitle}</h3>
-                    <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                      {(resultSections.length ? resultSections : []).map((section) => (
-                        <article key={section.heading} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                          <h4 className="text-lg font-semibold">{section.heading}</h4>
-                          <p className="site-muted mt-3 text-sm leading-7">{section.body}</p>
-                          {section.bullets.length ? (
-                            <ul className="mt-4 grid gap-2 text-sm">
-                              {section.bullets.map((bullet) => (
-                                <li key={bullet} className="rounded-xl border border-white/10 px-3 py-2 leading-6">
-                                  {bullet}
-                                </li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </article>
-                      ))}
-                    </div>
-                  </article>
-                </div>
-
-                <div className="space-y-6">
-                  {result?.alternative ? (
-                    <article className="site-panel-soft rounded-[1.7rem] border p-5">
-                      <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
-                        {addonUi.alternative}
-                      </p>
-                      <h3 className="mt-2 text-2xl font-semibold">{result.alternative.title}</h3>
-                      <p className="site-muted mt-3 text-sm leading-7">{result.alternative.summary}</p>
-                      <div className="mt-4 grid gap-3">
-                        {alternativeSections.map((section) => (
-                          <div key={section.heading} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                            <p className="font-semibold">{section.heading}</p>
-                            <p className="site-muted mt-2 text-sm leading-7">{section.body}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </article>
-                  ) : null}
-
-                  {result?.promptPack ? (
-                    <article className="site-panel-soft rounded-[1.7rem] border p-5">
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
-                            {addonUi.developerPrompts}
-                          </p>
-                          <h3 className="mt-2 text-2xl font-semibold">{addonUi.developerPromptPack}</h3>
-                        </div>
-                        <span className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold">
-                          $2 add-on
-                        </span>
-                      </div>
-
-                      <div className="mt-5 grid gap-4">
-                        {([
-                          { key: "Brief", value: result.promptPack.brief },
-                          { key: "Conductor", value: result.promptPack.conductor },
-                          { key: "Cursor", value: result.promptPack.cursor },
-                        ]).map((entry) => (
-                          <article key={entry.key} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                            <div className="flex items-center justify-between gap-4">
-                              <p className="text-lg font-semibold">{entry.key}</p>
-                              <button
-                                type="button"
-                                onClick={() => void copyText(entry.key, entry.value)}
-                                className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold"
-                              >
-                                {copiedItem === entry.key ? addonUi.copyDone : addonUi.copy}
-                              </button>
-                            </div>
-                            <p className="site-muted mt-3 text-sm leading-7 whitespace-pre-line">
-                              {entry.value}
-                            </p>
-                          </article>
-                        ))}
-                      </div>
-                    </article>
-                  ) : null}
-
-                  {result?.imageAsset ? (
-                    <article className="site-panel-soft rounded-[1.7rem] border p-5">
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
-                            {addonUi.imageOutput}
-                          </p>
-                          <h3 className="mt-2 text-2xl font-semibold">{result.imageAsset.title}</h3>
-                        </div>
-                        <span className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold">
-                          $5 add-on
-                        </span>
-                      </div>
-
-                      <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0d152b]">
-                        {imagePreviewSrc ? (
-                          <div className="relative aspect-[16/10] w-full">
-                            <Image
-                              src={imagePreviewSrc}
-                              alt={result.imageAsset.alt}
-                              fill
-                              sizes="(max-width: 768px) 100vw, 60vw"
-                              unoptimized
-                              className="object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex min-h-[16rem] items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.2),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 text-center text-sm text-white/70">
-                            The image metadata is saved, but no preview is available yet.
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mt-4 grid gap-3">
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                          <p className="site-muted text-[11px] uppercase tracking-[0.18em]">Alt text</p>
-                          <p className="mt-2 text-sm leading-7">{result.imageAsset.alt}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                          <p className="site-muted text-[11px] uppercase tracking-[0.18em]">File name</p>
-                          <p className="mt-2 text-sm leading-7">{result.imageAsset.fileName}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="mt-5 grid items-start gap-4">
+                      {([
+                        { key: "Brief", value: result.promptPack.brief },
+                        { key: "Conductor", value: result.promptPack.conductor },
+                        { key: "Cursor", value: result.promptPack.cursor },
+                      ]).map((entry) => (
+                        <article key={entry.key} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                           <div className="flex items-center justify-between gap-4">
-                            <p className="text-sm font-semibold">Generation prompt</p>
+                            <p className="text-lg font-semibold">{entry.key}</p>
                             <button
                               type="button"
-                              onClick={() => void copyText("Image prompt", result.imageAsset?.prompt ?? "")}
+                              onClick={() => void copyText(entry.key, entry.value)}
                               className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold"
                             >
-                              {copiedItem === "Image prompt" ? addonUi.copyDone : addonUi.copy}
+                              {copiedItem === entry.key ? addonUi.copyDone : addonUi.copy}
                             </button>
                           </div>
-                          <p className="site-muted mt-3 text-sm leading-7">{result.imageAsset.prompt}</p>
+                          <p className="site-muted mt-3 text-sm leading-7 whitespace-pre-line">
+                            {entry.value}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                  </article>
+                ) : null}
+
+                {result?.imageAsset ? (
+                  <article className="site-panel-soft rounded-[1.7rem] border p-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="site-muted text-[11px] uppercase tracking-[0.18em]">
+                          {addonUi.imageOutput}
+                        </p>
+                        <h3 className="mt-2 text-2xl font-semibold">{result.imageAsset.title}</h3>
+                      </div>
+                      <span className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold">
+                        $5 add-on
+                      </span>
+                    </div>
+
+                    <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0d152b]">
+                      {imagePreviewSrc ? (
+                        <div className="relative aspect-[16/10] w-full">
+                          <Image
+                            src={imagePreviewSrc}
+                            alt={result.imageAsset.alt}
+                            fill
+                            sizes="(max-width: 768px) 100vw, 60vw"
+                            unoptimized
+                            className="object-cover"
+                          />
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex min-h-[16rem] items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.2),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 text-center text-sm text-white/70">
+                          The image metadata is saved, but no preview is available yet.
+                        </div>
+                      )}
+                    </div>
 
-                      <div className="mt-4 flex flex-wrap items-center gap-3">
-                        {imagePreviewSrc ? (
-                          <a
-                            href={imagePreviewSrc}
-                            download={result.imageAsset.fileName}
-                            className="site-button-primary rounded-full px-4 py-2 text-sm font-semibold"
+                    <div className="mt-4 grid items-start gap-3">
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="site-muted text-[11px] uppercase tracking-[0.18em]">Alt text</p>
+                        <p className="mt-2 text-sm leading-7">{result.imageAsset.alt}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="site-muted text-[11px] uppercase tracking-[0.18em]">File name</p>
+                        <p className="mt-2 text-sm leading-7">{result.imageAsset.fileName}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <p className="text-sm font-semibold">Generation prompt</p>
+                          <button
+                            type="button"
+                            onClick={() => void copyText("Image prompt", result.imageAsset?.prompt ?? "")}
+                            className="site-button-secondary rounded-full px-3 py-1 text-xs font-semibold"
                           >
-                            {addonUi.downloadImage}
-                          </a>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() => void copyText("Image alt text", result.imageAsset?.alt ?? "")}
-                          className="site-button-secondary rounded-full px-4 py-2 text-sm font-semibold"
-                        >
-                          {copiedItem === "Image alt text" ? addonUi.copyDone : "Copy alt text"}
-                        </button>
+                            {copiedItem === "Image prompt" ? addonUi.copyDone : addonUi.copy}
+                          </button>
+                        </div>
+                        <p className="site-muted mt-3 text-sm leading-7">{result.imageAsset.prompt}</p>
                       </div>
+                    </div>
 
-                      {!result.imageAsset.imageUrl && imagePreviewSrc ? (
-                        <p className="site-muted mt-4 text-xs leading-6">{addonUi.sessionPreviewNote}</p>
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      {imagePreviewSrc ? (
+                        <a
+                          href={imagePreviewSrc}
+                          download={result.imageAsset.fileName}
+                          className="site-button-primary rounded-full px-4 py-2 text-sm font-semibold"
+                        >
+                          {addonUi.downloadImage}
+                        </a>
                       ) : null}
-                    </article>
-                  ) : null}
-                </div>
+                      <button
+                        type="button"
+                        onClick={() => void copyText("Image alt text", result.imageAsset?.alt ?? "")}
+                        className="site-button-secondary rounded-full px-4 py-2 text-sm font-semibold"
+                      >
+                        {copiedItem === "Image alt text" ? addonUi.copyDone : "Copy alt text"}
+                      </button>
+                    </div>
+
+                    {!result.imageAsset.imageUrl && imagePreviewSrc ? (
+                      <p className="site-muted mt-4 text-xs leading-6">{addonUi.sessionPreviewNote}</p>
+                    ) : null}
+                  </article>
+                ) : null}
               </div>
-            ) : (
-              <div className="mt-8 grid gap-5 lg:grid-cols-[1.08fr,0.92fr]">
+            </div>
+          ) : (
+            <section
+              className="site-panel-hero site-animate-rise overflow-hidden rounded-[2rem] border p-8"
+              style={{ ["--site-delay" as string]: "120ms" }}
+            >
+              <div className="grid items-start gap-5 lg:grid-cols-[1.08fr,0.92fr]">
                 <article className="site-panel-soft relative overflow-hidden rounded-[1.8rem] border p-6">
                   <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:34px_34px]" />
                   <div className="relative min-h-[20rem]">
@@ -1479,7 +1527,7 @@ function AiAssistantPageContent() {
                   </div>
                 </article>
 
-                <div className="grid gap-4">
+                <div className="grid items-start gap-4">
                   <article className="site-panel-soft rounded-[1.7rem] border p-5">
                     <p className="site-muted text-[11px] uppercase tracking-[0.18em]">{ui.primaryInput}</p>
                     <p className="mt-2 text-lg font-semibold">{primaryInputPreview}</p>
@@ -1503,8 +1551,8 @@ function AiAssistantPageContent() {
                   </article>
                 </div>
               </div>
-            )}
-          </section>
+            </section>
+          )}
         </div>
       </div>
     </div>

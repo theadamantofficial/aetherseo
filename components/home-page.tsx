@@ -190,7 +190,7 @@ export default function HomePage() {
       <div className="pointer-events-none absolute left-1/2 top-[420px] h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#3d6dff]/10 blur-3xl" />
 
       <div className="relative z-10 px-3 pt-4">
-        <PublicHeader language={uiLanguage} buildLanguagePath={(nextLanguage) => `/${nextLanguage}`} />
+        <PublicHeader language={uiLanguage} />
 
         <main className="mx-auto w-full max-w-7xl px-3 pb-16 pt-4 sm:px-6 md:pb-24">
         <section className="site-panel-hero site-animate-rise relative overflow-hidden rounded-[2.25rem] border border-white/10 px-6 py-8 shadow-[0_36px_120px_rgba(6,10,34,0.65)] sm:px-7 md:px-10 md:py-12 xl:px-14">

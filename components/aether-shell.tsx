@@ -236,9 +236,9 @@ export default function AetherShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="site-page h-screen overflow-hidden text-[#e9eeff] supports-[height:100dvh]:h-dvh">
-      <div className="mx-auto flex h-full w-full max-w-[1440px]">
-        <aside className="site-panel hidden h-full min-h-0 w-64 border-r p-5 lg:flex lg:flex-col lg:overflow-y-auto">
+    <div className="site-page min-h-screen text-[#e9eeff] supports-[height:100dvh]:min-h-dvh">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1440px] supports-[height:100dvh]:min-h-dvh">
+        <aside className="site-panel hidden w-64 border-r p-5 lg:flex lg:flex-col">
           <div>
             <div className="flex items-center gap-3">
               <Image
@@ -277,8 +277,8 @@ export default function AetherShell({ children }: { children: ReactNode }) {
           </nav>
         </aside>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="site-header-shell shrink-0 flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:h-16 md:flex-nowrap md:px-8">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="site-header-shell flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:h-16 md:flex-nowrap md:px-8">
             <div
               className="relative order-2 w-full max-w-full md:order-1 md:max-w-sm"
               onFocus={() => setIsSearchOpen(true)}
@@ -355,11 +355,11 @@ export default function AetherShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-5 md:px-8 md:py-6">
-            <div className="mx-auto w-full max-w-[1180px] pb-6">{children}</div>
+          <main className="site-page min-w-0 flex-1 px-4 py-5 md:px-8 md:py-8">
+            <div className="mx-auto w-full max-w-[1180px]">{children}</div>
           </main>
 
-          <footer className="z-10 shrink-0 border-t border-[var(--site-border)] px-4 py-4 backdrop-blur-xl md:px-8">
+          <footer className="border-t border-[var(--site-border)] px-4 pb-8 pt-6 md:px-8">
             <div className="site-panel mx-auto w-full max-w-[1180px] rounded-[1.75rem] border px-6 py-6 text-xs md:px-8">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>

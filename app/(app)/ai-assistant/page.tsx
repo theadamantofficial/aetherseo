@@ -1041,7 +1041,7 @@ function AiAssistantPageContent() {
       </section>
 
       <div className="grid items-start gap-6 xl:grid-cols-[360px,minmax(0,1fr)]">
-        <aside className="space-y-6 xl:sticky xl:top-2">
+        <aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
           <section className="site-panel site-animate-rise rounded-[1.8rem] border p-6">
             <p className="site-chip inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">
               {ui.workflowSelector}

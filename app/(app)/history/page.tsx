@@ -11,6 +11,15 @@ import { getDashboardForUser, type DashboardActivity } from "@/lib/firebase-data
 
 type FilterKey = "all" | "blog" | "audit" | "other";
 
+type HistoryRow = {
+  item: DashboardActivity;
+  rowKey: string;
+};
+
+function getActivityBaseKey(item: DashboardActivity): string {
+  return `${item.type}:${item.title}:${item.date}:${item.status}`;
+}
+
 const historyUiCopy: Record<
   AppUiLanguage,
   {
@@ -220,21 +229,39 @@ export default function HistoryPage() {
     };
   }, [router]);
 
-  const filteredItems = useMemo(() => {
+  const historyRows = useMemo<HistoryRow[]>(() => {
+    const duplicateCounts = new Map<string, number>();
+
+    return items.map((item) => {
+      const baseKey = getActivityBaseKey(item);
+      const duplicateIndex = duplicateCounts.get(baseKey) ?? 0;
+
+      duplicateCounts.set(baseKey, duplicateIndex + 1);
+
+      return {
+        item,
+        rowKey: `${baseKey}:${duplicateIndex}`,
+      };
+    });
+  }, [items]);
+
+  const filteredRows = useMemo(() => {
     if (filter === "all") {
-      return items;
+      return historyRows;
     }
 
     if (filter === "blog") {
-      return items.filter((item) => item.type === "blog");
+      return historyRows.filter(({ item }) => item.type === "blog");
     }
 
     if (filter === "audit") {
-      return items.filter((item) => item.type === "audit");
+      return historyRows.filter(({ item }) => item.type === "audit");
     }
 
-    return items.filter((item) => item.type === "report" || item.type === "system");
-  }, [filter, items]);
+    return historyRows.filter(
+      ({ item }) => item.type === "report" || item.type === "system",
+    );
+  }, [filter, historyRows]);
 
   if (loading) {
     return <SiteLoader size="lg" />;
@@ -282,10 +309,10 @@ export default function HistoryPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredItems.length ? (
-              filteredItems.map((item) => (
+            {filteredRows.length ? (
+              filteredRows.map(({ item, rowKey }) => (
                 <tr
-                  key={item.title + item.date}
+                  key={rowKey}
                   className="border-b border-[var(--site-border)] text-sm last:border-0"
                 >
                   <td className="p-4">{item.title}</td>

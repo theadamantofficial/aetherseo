@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLanguage } from "@/components/language-provider";
 import SiteLoader from "@/components/site-loader";
 import { auth } from "@/lib/firebase";
@@ -545,7 +545,7 @@ const addonUi = {
   seoImage: "SEO image generation",
   toolsTitle: "Paid add-ons",
   toolsBody:
-    "Unlock developer prompts and blog images as separate one-time purchases. Paid assistant access is still required for the run itself.",
+    "Unlock developer prompts and blog images as separate one-time purchases.",
   developerPromptPack: "Developer prompt pack",
   bestOutput: "Best output",
   alternative: "Alternative option",
@@ -575,11 +575,28 @@ function formatAuthErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function SparkDot({ className = "" }: { className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#83f6d7] shadow-[0_0_8px_rgba(131,246,215,0.7)] ${className}`}
+    />
+  );
+}
+
+function SectionEyebrow({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--site-muted)] opacity-70">
+      {children}
+    </p>
+  );
+}
+
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 text-sm">
+    <div className="flex items-center justify-between px-4 py-3 text-[13px]">
       <span className="text-[var(--site-muted)]">{label}</span>
-      <span className="font-medium">{value}</span>
+      <span className="font-semibold">{value}</span>
     </div>
   );
 }
@@ -627,20 +644,6 @@ function AiAssistantPageContent() {
   const primaryInputPreview = clampPreview(input || result?.input || activeAction.placeholder, 120);
   const linkedUrl = result?.url || url || ui.noUrl;
   const summaryPreview = clampPreview(result?.summary ?? activeAction.description, 180);
-  const emptyStateCards = [
-    {
-      label: ui.primaryInput,
-      value: primaryInputPreview,
-    },
-    {
-      label: addonUi.directUse,
-      value: "Get a best-use output, an alternative version, and implementation-ready recommendations in one run.",
-    },
-    {
-      label: addonUi.toolsTitle,
-      value: `${addonUi.developerPromptPack}: ${assistantAddonDefinitions["developer-prompt-pack"].priceLabel}. ${addonUi.seoImage}: ${assistantAddonDefinitions["seo-image"].priceLabel}.`,
-    },
-  ];
 
   useEffect(() => {
     const queryAction = searchParams.get("action");
@@ -962,224 +965,402 @@ function AiAssistantPageContent() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {checkoutDefinition ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-6">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="checkout-heading"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-md rounded-[22px] border border-[var(--site-border)] bg-[var(--site-surface)] p-7 shadow-[0_32px_80px_rgba(0,0,0,0.5)]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{checkoutDefinition.title}</p>
-                <h2 className="mt-2 text-xl font-semibold">{addonUi.checkoutTitle}</h2>
-                <p className="site-muted mt-2 text-sm">{addonUi.checkoutBody}</p>
+                <SectionEyebrow>{checkoutDefinition.title}</SectionEyebrow>
+                <h2
+                  id="checkout-heading"
+                  className="mt-2 text-[1.3rem] font-semibold leading-tight tracking-[-0.01em]"
+                >
+                  {addonUi.checkoutTitle}
+                </h2>
+                <p className="mt-2 text-[13px] leading-[1.7] text-[var(--site-muted)]">
+                  {addonUi.checkoutBody}
+                </p>
               </div>
-              <button type="button" onClick={() => { if (!isCheckoutBusy) setCheckoutAddon(null); }} className="site-button-secondary rounded-lg px-3 py-1.5 text-sm" disabled={isCheckoutBusy}>Close</button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isCheckoutBusy) setCheckoutAddon(null);
+                }}
+                disabled={isCheckoutBusy}
+                aria-label="Close checkout"
+                className="shrink-0 rounded-full border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-3 py-1.5 text-[12px] font-medium transition-colors duration-200 hover:border-[#877cff]/30 disabled:opacity-50"
+              >
+                Close
+              </button>
             </div>
-            <div className="mt-5 divide-y divide-[var(--site-border)] rounded-lg border border-[var(--site-border)]">
+
+            <div className="mt-5 divide-y divide-[var(--site-border)] rounded-[14px] border border-[var(--site-border)] bg-[var(--site-surface-soft)]">
               <SummaryRow label={addonUi.oneTimeCharge} value={checkoutDefinition.priceLabel} />
               <SummaryRow label="Credit added" value="1 use" />
               <SummaryRow label="Add-on" value={checkoutDefinition.title} />
             </div>
+
             <div className="mt-5 flex items-center justify-end gap-2">
-              <button type="button" onClick={() => setCheckoutAddon(null)} className="site-button-secondary rounded-lg px-4 py-2 text-sm font-medium" disabled={isCheckoutBusy}>Cancel</button>
-              <button type="button" onClick={() => void handleConfirmAddonCheckout()} className="site-button-primary rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60" disabled={isCheckoutBusy}>Continue to payment</button>
+              <button
+                type="button"
+                onClick={() => setCheckoutAddon(null)}
+                disabled={isCheckoutBusy}
+                className="site-button-secondary rounded-[12px] border px-4 py-2.5 text-[12px] font-semibold transition-all duration-200 hover:opacity-90 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmAddonCheckout()}
+                disabled={isCheckoutBusy}
+                className="site-button-primary rounded-[12px] px-5 py-2.5 text-[12px] font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(131,246,215,0.2)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Continue to payment
+              </button>
             </div>
           </div>
         </div>
       ) : null}
 
-      <section className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{ui.badge}</p>
-          <h1 className="mt-2 text-xl font-semibold">{ui.title}</h1>
-          <p className="site-muted mt-1 max-w-2xl text-sm">{ui.body}</p>
-        </div>
-        <div className="flex gap-3 text-sm">
-          <div className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{addonUi.promptCreditLabel}</p>
-            <p className="mt-1 text-xl font-semibold">{promptCredits}</p>
-          </div>
-          <div className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{addonUi.imageCreditLabel}</p>
-            <p className="mt-1 text-xl font-semibold">{imageCredits}</p>
-          </div>
-        </div>
-      </section>
+      <header className="animate-fade-up relative flex flex-wrap items-start justify-between gap-5 overflow-hidden rounded-[22px] border border-[var(--site-border)] bg-[var(--site-surface)] px-7 py-6 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[#705dff]/10 blur-3xl"
+        />
 
-      <div className="grid items-start gap-6 md:grid-cols-[280px,minmax(0,1fr)]">
-        <aside className="space-y-4">
-          <section className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-4">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{ui.workflowSelector}</p>
-            <div className="flex flex-wrap gap-1.5 md:flex-col md:gap-0.5">
+        <div className="relative">
+          <SectionEyebrow>{ui.badge}</SectionEyebrow>
+          <h1 className="mt-2 text-[1.2rem] font-semibold leading-tight tracking-[-0.01em]">
+            {ui.title}
+          </h1>
+          <p className="mt-1 max-w-2xl text-[13px] leading-[1.7] text-[var(--site-muted)]">
+            {ui.body}
+          </p>
+        </div>
+
+        <div aria-label="Add-on credit balances" className="relative flex gap-3">
+          {[
+            { label: addonUi.promptCreditLabel, value: promptCredits },
+            { label: addonUi.imageCreditLabel, value: imageCredits },
+          ].map((counter) => (
+            <div
+              key={counter.label}
+              className="rounded-[14px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-4 py-3 transition-colors duration-200 hover:border-[#877cff]/25"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--site-muted)] opacity-70">
+                {counter.label}
+              </p>
+              <p className="mt-1.5 text-[1.6rem] font-semibold leading-none tracking-[-0.02em]">
+                {counter.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </header>
+
+      <div className="grid items-start gap-4 md:grid-cols-[260px,minmax(0,1fr)]">
+        <aside aria-label="Assistant controls" className="space-y-3">
+          <nav
+            aria-label="Workflow selector"
+            className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-4"
+          >
+            <SectionEyebrow>{ui.workflowSelector}</SectionEyebrow>
+            <ul className="mt-3 flex flex-wrap gap-1.5 md:flex-col md:gap-0.5" role="list">
               {actionIds.map((id) => {
                 const item = ui.actions[id];
                 const isSelected = action === item.id;
                 return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setAction(item.id)}
-                    className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors md:w-full md:py-2 ${
-                      isSelected
-                        ? "bg-[var(--site-primary)] text-white"
-                        : "text-[var(--foreground)] hover:bg-[var(--site-surface-soft)]"
-                    }`}
-                  >
-                    <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full md:h-2 md:w-2 ${isSelected ? "bg-white" : "border border-[var(--site-muted)]"}`} />
-                    <span className="font-medium">{item.label}</span>
-                  </button>
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      onClick={() => setAction(item.id)}
+                      aria-current={isSelected ? "true" : undefined}
+                      className={`flex w-full items-center gap-2.5 rounded-[12px] px-3 py-2.5 text-[13px] font-medium transition-all duration-200 ${
+                        isSelected
+                          ? "bg-[var(--site-primary)] text-white shadow-[0_4px_12px_rgba(112,93,255,0.3)]"
+                          : "text-[var(--foreground)] hover:border-[#877cff]/20 hover:bg-[var(--site-surface-soft)]"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                          isSelected
+                            ? "bg-white shadow-[0_0_6px_rgba(255,255,255,0.6)]"
+                            : "border border-[var(--site-muted)]"
+                        }`}
+                      />
+                      {item.label}
+                    </button>
+                  </li>
                 );
               })}
-            </div>
-          </section>
+            </ul>
+          </nav>
 
-          <section className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-4">
-            <div className="space-y-3">
-              <div>
-                <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{ui.primaryInput}</p>
+          <section
+            aria-label="Run configuration"
+            className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-4"
+          >
+            <SectionEyebrow>{ui.primaryInput}</SectionEyebrow>
+
+            <div className="mt-3 space-y-3">
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-semibold text-[var(--foreground)] opacity-70">
+                  {activeAction.label}
+                </span>
                 <textarea
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   placeholder={activeAction.placeholder}
                   rows={3}
-                  className="site-input w-full rounded-lg px-3 py-2 text-sm outline-none"
+                  className="site-input w-full resize-none rounded-[12px] border px-3 py-2.5 text-[13px] outline-none transition-colors duration-200 focus:border-[#8d84ff]/55"
                 />
-              </div>
-              <div>
-                <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{activeAction.urlLabel}</p>
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-semibold text-[var(--foreground)] opacity-70">
+                  {activeAction.urlLabel}
+                </span>
                 <input
                   value={url}
                   onChange={(event) => setUrl(event.target.value)}
                   placeholder="https://example.com/page"
-                  className="site-input w-full rounded-lg px-3 py-2 text-sm outline-none"
+                  type="url"
+                  className="site-input w-full rounded-[12px] border px-3 py-2.5 text-[13px] outline-none transition-colors duration-200 focus:border-[#8d84ff]/55"
                 />
+              </label>
+
+              <div className="flex items-center gap-2 rounded-[10px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-3 py-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--site-muted)] opacity-70">
+                  {ui.outputLanguage}:
+                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.1em]">
+                  {activeLanguage}
+                </span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-[var(--site-muted)]">
-                <span className="font-medium uppercase">{ui.outputLanguage}:</span>
-                <span className="font-semibold uppercase text-[var(--foreground)]">{activeLanguage}</span>
-              </div>
+
               <button
                 type="button"
                 onClick={handleGenerate}
                 disabled={isBusy || !isAssistantUnlocked}
-                className="site-button-primary w-full rounded-lg px-4 py-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                className="site-button-primary w-full rounded-[12px] px-4 py-3 text-[13px] font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(131,246,215,0.2)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isBusy ? ui.generating : `${ui.runPrefix} ${activeAction.label}`}
               </button>
+
+              <p
+                aria-live="polite"
+                className={`text-[11px] leading-[1.6] ${status?.tone === "error" ? "text-[#ff9c9c]" : "text-[var(--site-muted)]"}`}
+              >
+                {status?.text ?? (isAssistantUnlocked ? ui.idleStatus : "AI assistant unlocks on paid plans.")}
+              </p>
             </div>
-            <p className={`mt-2 text-xs ${status?.tone === "error" ? "text-red-400" : "text-[var(--site-muted)]"}`}>
-              {status?.text ?? (isAssistantUnlocked ? ui.idleStatus : "AI assistant unlocks on paid plans.")}
-            </p>
           </section>
 
-          <section className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{addonUi.toolsTitle}</p>
-            <div className="mt-2 space-y-2">
+          <section
+            aria-label="Paid add-ons"
+            className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-4"
+          >
+            <SectionEyebrow>{addonUi.toolsTitle}</SectionEyebrow>
+            <p className="mt-1 text-[11px] leading-[1.55] text-[var(--site-muted)]">
+              {addonUi.toolsBody}
+            </p>
+
+            <ul className="mt-3 space-y-2" role="list">
               {([
                 { checked: includePromptPack, credits: promptCredits, definition: assistantAddonDefinitions["developer-prompt-pack"], key: "developer-prompt-pack" as const, label: addonUi.promptCreditLabel, setChecked: setIncludePromptPack, title: addonUi.developerPromptPack },
                 { checked: includeSeoImageAsset, credits: imageCredits, definition: assistantAddonDefinitions["seo-image"], key: "seo-image" as const, label: addonUi.imageCreditLabel, setChecked: setIncludeSeoImageAsset, title: addonUi.seoImage },
               ]).map((addon) => (
-                <div key={addon.key} className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3">
+                <li
+                  key={addon.key}
+                  className="rounded-[14px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3 transition-colors duration-200 hover:border-[#877cff]/25"
+                >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium">{addon.title}</p>
-                    <span className="text-xs font-medium text-[var(--site-muted)]">{addon.definition.priceLabel}</span>
+                    <p className="text-[12px] font-semibold">{addon.title}</p>
+                    <span className="text-[11px] text-[var(--site-muted)]">
+                      {addon.definition.priceLabel}
+                    </span>
                   </div>
-                  <div className="mt-1.5 flex items-center justify-between gap-2">
-                    <span className="text-base font-semibold">{addon.credits} <span className="text-xs font-normal text-[var(--site-muted)]">credits</span></span>
-                    <button type="button" onClick={() => setCheckoutAddon(addon.key)} className="site-button-secondary rounded-lg px-2.5 py-1 text-xs font-medium">{addonUi.purchaseCredit}</button>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="text-[1.1rem] font-semibold leading-none">
+                      {addon.credits}
+                      <span className="ml-1 text-[10px] font-normal text-[var(--site-muted)]">
+                        credits
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutAddon(addon.key)}
+                      className="site-button-secondary rounded-[10px] border px-2.5 py-1 text-[11px] font-semibold transition-all duration-200 hover:opacity-90"
+                    >
+                      {addonUi.purchaseCredit}
+                    </button>
                   </div>
-                  <label className={`mt-1.5 flex items-center gap-2 ${addon.credits > 0 ? "" : "opacity-50"}`}>
-                    <input type="checkbox" checked={addon.checked} onChange={(event) => addon.setChecked(event.target.checked)} disabled={addon.credits < 1} className="h-3.5 w-3.5 accent-[var(--site-primary)]" />
-                    <span className="text-xs">{addonUi.includeWithRun}</span>
+                  <label className={`mt-2 flex items-center gap-2 ${addon.credits > 0 ? "" : "opacity-40"}`}>
+                    <input
+                      type="checkbox"
+                      checked={addon.checked}
+                      onChange={(event) => addon.setChecked(event.target.checked)}
+                      disabled={addon.credits < 1}
+                      className="h-3.5 w-3.5 accent-[var(--site-primary)]"
+                    />
+                    <span className="text-[11px] text-[var(--site-muted)]">
+                      {addonUi.includeWithRun}
+                    </span>
                   </label>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
         </aside>
 
-        <div className="space-y-6" ref={resultRef}>
-          <section className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
-            <div className="grid gap-5 md:grid-cols-[minmax(0,1.1fr),minmax(200px,0.9fr)] md:items-start">
+        <div ref={resultRef} className="space-y-4">
+          <section
+            aria-labelledby="result-summary-heading"
+            className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-6"
+          >
+            <div className="grid gap-5 md:grid-cols-[minmax(0,1.15fr),minmax(180px,0.85fr)] md:items-start">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{result ? ui.latestResult : ui.latestModeLabel}</p>
-                <h2 className="mt-2 text-xl font-semibold">{result?.title ?? activeAction.label}</h2>
-                <p className="site-muted mt-2 text-sm leading-relaxed">{result?.summary ?? `${activeAction.description} ${ui.emptyBody}`}</p>
+                <SectionEyebrow>{result ? ui.latestResult : ui.latestModeLabel}</SectionEyebrow>
+                <h2
+                  id="result-summary-heading"
+                  className="mt-2 text-[1.2rem] font-semibold leading-tight tracking-[-0.01em]"
+                >
+                  {result?.title ?? activeAction.label}
+                </h2>
+                <p className="mt-2 text-[13px] leading-[1.7] text-[var(--site-muted)]">
+                  {result?.summary ?? `${activeAction.description} ${ui.emptyBody}`}
+                </p>
 
-                <div className="mt-4 rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-4">
-                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{ui.primaryInput}</p>
-                  <p className="mt-1.5 text-sm font-medium leading-relaxed">{primaryInputPreview}</p>
+                <div className="mt-4 rounded-[14px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-4">
+                  <SectionEyebrow>{ui.primaryInput}</SectionEyebrow>
+                  <p className="mt-1.5 text-[13px] font-medium leading-[1.6]">
+                    {primaryInputPreview}
+                  </p>
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
-                    <div className="rounded-lg border border-[var(--site-border)] p-3">
-                      <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{addonUi.directUse}</p>
-                      <p className="mt-1 text-sm leading-relaxed">{directUsePreview}</p>
+                    <div className="rounded-[10px] border border-[var(--site-border)] bg-[var(--site-surface)] p-3">
+                      <SectionEyebrow>{addonUi.directUse}</SectionEyebrow>
+                      <p className="mt-1.5 text-[12px] leading-[1.65]">{directUsePreview}</p>
                     </div>
-                    <div className="rounded-lg border border-[var(--site-border)] p-3">
-                      <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{ui.actionsLabel}</p>
-                      <p className="mt-1 text-sm font-medium">{resultActionLabel}</p>
-                      <p className="site-muted mt-1 text-xs">{linkedUrl}</p>
+                    <div className="rounded-[10px] border border-[var(--site-border)] bg-[var(--site-surface)] p-3">
+                      <SectionEyebrow>{ui.actionsLabel}</SectionEyebrow>
+                      <p className="mt-1.5 text-[12px] font-semibold">{resultActionLabel}</p>
+                      <p className="mt-1 text-[11px] text-[var(--site-muted)] truncate">{linkedUrl}</p>
                     </div>
                   </div>
                 </div>
               </div>
+
               <div className="grid gap-2 sm:grid-cols-3 md:grid-cols-1">
-                <div className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-3 py-3">
-                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{ui.outputLanguage}</p>
-                  <p className="mt-1 text-lg font-semibold uppercase">{activeLanguage}</p>
-                </div>
-                <div className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-3 py-3">
-                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{ui.sectionsTitle}</p>
-                  <p className="mt-1 text-lg font-semibold">{sectionCount}</p>
-                </div>
-                <div className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-3 py-3">
-                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{addonUi.toolsTitle}</p>
-                  <p className="mt-1 text-sm font-medium">{result?.promptPack || result?.imageAsset ? "Attached" : "Optional"}</p>
-                </div>
+                {[
+                  { label: ui.outputLanguage, value: activeLanguage.toUpperCase() },
+                  { label: ui.sectionsTitle, value: String(sectionCount) },
+                  { label: addonUi.toolsTitle, value: result?.promptPack || result?.imageAsset ? "Attached" : "Optional" },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="rounded-[12px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-3 py-3"
+                  >
+                    <SectionEyebrow>{stat.label}</SectionEyebrow>
+                    <p className="mt-1.5 text-[1.1rem] font-semibold leading-tight">{stat.value}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
 
           {warnings.length ? (
-            <section className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
-              <p className="text-sm font-medium">{addonUi.warnings}</p>
-              <ul className="site-muted mt-2 space-y-1 text-sm">{warnings.map((w) => <li key={w}>• {w}</li>)}</ul>
+            <section
+              aria-label="Generation notes"
+              className="rounded-[14px] border border-amber-500/25 bg-amber-500/5 p-4"
+            >
+              <p className="text-[13px] font-semibold">{addonUi.warnings}</p>
+              <ul className="mt-2 space-y-1 text-[12px] text-[var(--site-muted)]">
+                {warnings.map((warning) => (
+                  <li key={warning} className="flex items-start gap-2">
+                    <span aria-hidden="true">·</span>
+                    {warning}
+                  </li>
+                ))}
+              </ul>
             </section>
           ) : null}
 
           {result ? (
-            <div className="grid items-start gap-6 md:grid-cols-[1.08fr,0.92fr]">
+            <div className="grid items-start gap-4 md:grid-cols-[1.08fr,0.92fr]">
               <div className="space-y-4">
-                <article className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
-                  <div className="flex items-center justify-between gap-3">
+                <article className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
+                  <header className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{addonUi.directUse}</p>
-                      <h3 className="mt-1 text-lg font-semibold">{addonUi.bestOutput}</h3>
+                      <SectionEyebrow>{addonUi.directUse}</SectionEyebrow>
+                      <h3 className="mt-1 text-[15px] font-semibold">{addonUi.bestOutput}</h3>
                     </div>
-                    <span className="rounded-md bg-[var(--site-surface-soft)] px-2 py-1 text-xs font-medium text-[var(--site-muted)]">{resultActionLabel}</span>
-                  </div>
+                    <span className="rounded-full border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-3 py-1 text-[11px] font-medium text-[var(--site-muted)]">
+                      {resultActionLabel}
+                    </span>
+                  </header>
+
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {(readyToUse.length ? readyToUse : [{ label: addonUi.bestOutput, content: summaryPreview, bullets: [] }]).map((item, index) => (
-                      <article key={`${item.label}-${index}`} className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3">
-                        <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{index === 0 ? addonUi.bestOutput : addonUi.alternative}</p>
-                        <h4 className="mt-1 text-sm font-semibold">{item.label}</h4>
-                        <p className="site-muted mt-2 text-sm leading-relaxed">{item.content}</p>
+                    {(readyToUse.length
+                      ? readyToUse
+                      : [{ label: addonUi.bestOutput, content: summaryPreview, bullets: [] }]
+                    ).map((item, index) => (
+                      <article
+                        key={`${item.label}-${index}`}
+                        className="rounded-[12px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3"
+                      >
+                        <SectionEyebrow>{index === 0 ? addonUi.bestOutput : addonUi.alternative}</SectionEyebrow>
+                        <h4 className="mt-1.5 text-[13px] font-semibold">{item.label}</h4>
+                        <p className="mt-2 text-[12px] leading-[1.65] text-[var(--site-muted)]">
+                          {item.content}
+                        </p>
                         {item.bullets.length ? (
-                          <ul className="mt-3 space-y-1 text-sm">{item.bullets.map((b) => <li key={b} className="rounded-md border border-[var(--site-border)] px-2.5 py-1.5">{b}</li>)}</ul>
+                          <ul className="mt-3 space-y-1">
+                            {item.bullets.map((bullet) => (
+                              <li
+                                key={bullet}
+                                className="rounded-[8px] border border-[var(--site-border)] px-2.5 py-1.5 text-[12px]"
+                              >
+                                {bullet}
+                              </li>
+                            ))}
+                          </ul>
                         ) : null}
                       </article>
                     ))}
                   </div>
                 </article>
 
-                <article className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
-                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{addonUi.implementationPlan}</p>
-                  <h3 className="mt-1 text-lg font-semibold">{ui.sectionsTitle}</h3>
+                <article className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
+                  <SectionEyebrow>{addonUi.implementationPlan}</SectionEyebrow>
+                  <h3 className="mt-1 text-[15px] font-semibold">{ui.sectionsTitle}</h3>
                   <div className="mt-4 grid gap-3 lg:grid-cols-2">
                     {resultSections.map((section) => (
-                      <article key={section.heading} className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3">
-                        <h4 className="text-sm font-semibold">{section.heading}</h4>
-                        <p className="site-muted mt-2 text-sm leading-relaxed">{section.body}</p>
+                      <article
+                        key={section.heading}
+                        className="rounded-[12px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3 transition-all duration-200 hover:border-[#877cff]/25"
+                      >
+                        <h4 className="text-[13px] font-semibold">{section.heading}</h4>
+                        <p className="mt-2 text-[12px] leading-[1.65] text-[var(--site-muted)]">
+                          {section.body}
+                        </p>
                         {section.bullets.length ? (
-                          <ul className="mt-3 space-y-1 text-sm">{section.bullets.map((b) => <li key={b} className="rounded-md border border-[var(--site-border)] px-2.5 py-1.5">{b}</li>)}</ul>
+                          <ul className="mt-3 space-y-1">
+                            {section.bullets.map((bullet) => (
+                              <li
+                                key={bullet}
+                                className="flex items-start gap-2 rounded-[8px] border border-[var(--site-border)] px-2.5 py-1.5 text-[12px]"
+                              >
+                                <SparkDot className="mt-0.5" />
+                                {bullet}
+                              </li>
+                            ))}
+                          </ul>
                         ) : null}
                       </article>
                     ))}
@@ -1189,15 +1370,22 @@ function AiAssistantPageContent() {
 
               <div className="space-y-4">
                 {result?.alternative ? (
-                  <article className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
-                    <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{addonUi.alternative}</p>
-                    <h3 className="mt-1 text-lg font-semibold">{result.alternative.title}</h3>
-                    <p className="site-muted mt-2 text-sm leading-relaxed">{result.alternative.summary}</p>
+                  <article className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
+                    <SectionEyebrow>{addonUi.alternative}</SectionEyebrow>
+                    <h3 className="mt-1 text-[15px] font-semibold">{result.alternative.title}</h3>
+                    <p className="mt-2 text-[12px] leading-[1.7] text-[var(--site-muted)]">
+                      {result.alternative.summary}
+                    </p>
                     <div className="mt-3 space-y-2">
-                      {alternativeSections.map((s) => (
-                        <div key={s.heading} className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3">
-                          <p className="text-sm font-medium">{s.heading}</p>
-                          <p className="site-muted mt-1 text-sm leading-relaxed">{s.body}</p>
+                      {alternativeSections.map((section) => (
+                        <div
+                          key={section.heading}
+                          className="rounded-[12px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3"
+                        >
+                          <p className="text-[13px] font-semibold">{section.heading}</p>
+                          <p className="mt-1.5 text-[12px] leading-[1.65] text-[var(--site-muted)]">
+                            {section.body}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -1205,22 +1393,37 @@ function AiAssistantPageContent() {
                 ) : null}
 
                 {result?.promptPack ? (
-                  <article className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
-                    <div className="flex items-center justify-between gap-3">
+                  <article className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
+                    <header className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{addonUi.developerPrompts}</p>
-                        <h3 className="mt-1 text-lg font-semibold">{addonUi.developerPromptPack}</h3>
+                        <SectionEyebrow>{addonUi.developerPrompts}</SectionEyebrow>
+                        <h3 className="mt-1 text-[15px] font-semibold">{addonUi.developerPromptPack}</h3>
                       </div>
-                      <span className="text-xs font-medium text-[var(--site-muted)]">$2 add-on</span>
-                    </div>
+                      <span className="text-[11px] font-medium text-[var(--site-muted)]">$2 add-on</span>
+                    </header>
                     <div className="mt-4 space-y-3">
-                      {([{ key: "Brief", value: result.promptPack.brief }, { key: "Conductor", value: result.promptPack.conductor }, { key: "Cursor", value: result.promptPack.cursor }]).map((entry) => (
-                        <article key={entry.key} className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3">
+                      {([
+                        { key: "Brief", value: result.promptPack.brief },
+                        { key: "Conductor", value: result.promptPack.conductor },
+                        { key: "Cursor", value: result.promptPack.cursor },
+                      ]).map((entry) => (
+                        <article
+                          key={entry.key}
+                          className="rounded-[12px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3"
+                        >
                           <div className="flex items-center justify-between gap-3">
-                            <p className="text-sm font-medium">{entry.key}</p>
-                            <button type="button" onClick={() => void copyText(entry.key, entry.value)} className="site-button-secondary rounded-md px-2 py-1 text-xs font-medium">{copiedItem === entry.key ? addonUi.copyDone : addonUi.copy}</button>
+                            <p className="text-[13px] font-semibold">{entry.key}</p>
+                            <button
+                              type="button"
+                              onClick={() => void copyText(entry.key, entry.value)}
+                              className="site-button-secondary rounded-[8px] border px-2.5 py-1 text-[11px] font-medium transition-all duration-200 hover:opacity-90"
+                            >
+                              {copiedItem === entry.key ? addonUi.copyDone : addonUi.copy}
+                            </button>
                           </div>
-                          <p className="site-muted mt-2 text-sm leading-relaxed whitespace-pre-line">{entry.value}</p>
+                          <p className="mt-2 whitespace-pre-line text-[12px] leading-[1.65] text-[var(--site-muted)]">
+                            {entry.value}
+                          </p>
                         </article>
                       ))}
                     </div>
@@ -1228,62 +1431,135 @@ function AiAssistantPageContent() {
                 ) : null}
 
                 {result?.imageAsset ? (
-                  <article className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
-                    <div className="flex items-center justify-between gap-3">
+                  <article className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
+                    <header className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{addonUi.imageOutput}</p>
-                        <h3 className="mt-1 text-lg font-semibold">{result.imageAsset.title}</h3>
+                        <SectionEyebrow>{addonUi.imageOutput}</SectionEyebrow>
+                        <h3 className="mt-1 text-[15px] font-semibold">{result.imageAsset.title}</h3>
                       </div>
-                      <span className="text-xs font-medium text-[var(--site-muted)]">$5 add-on</span>
-                    </div>
-                    <div className="mt-4 overflow-hidden rounded-lg border border-[var(--site-border)]">
+                      <span className="text-[11px] font-medium text-[var(--site-muted)]">$5 add-on</span>
+                    </header>
+
+                    <div className="mt-4 overflow-hidden rounded-[14px] border border-[var(--site-border)]">
                       {imagePreviewSrc ? (
-                        <div className="relative aspect-[16/10] w-full"><Image src={imagePreviewSrc} alt={result.imageAsset.alt} fill sizes="(max-width: 768px) 100vw, 60vw" unoptimized className="object-cover" /></div>
+                        <div className="relative aspect-[16/10] w-full">
+                          <Image
+                            src={imagePreviewSrc}
+                            alt={result.imageAsset.alt}
+                            fill
+                            sizes="(max-width: 768px) 100vw, 60vw"
+                            unoptimized
+                            className="object-cover"
+                          />
+                        </div>
                       ) : (
-                        <div className="flex min-h-[12rem] items-center justify-center bg-[var(--site-surface-soft)] p-6 text-center text-sm text-[var(--site-muted)]">The image metadata is saved, but no preview is available yet.</div>
+                        <div className="flex min-h-[12rem] items-center justify-center bg-[var(--site-surface-soft)] p-6 text-center text-[13px] text-[var(--site-muted)]">
+                          The image metadata is saved, but no preview is available yet.
+                        </div>
                       )}
                     </div>
+
                     <div className="mt-3 space-y-2">
-                      <div className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3">
-                        <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">Alt text</p>
-                        <p className="mt-1 text-sm">{result.imageAsset.alt}</p>
-                      </div>
-                      <div className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3">
-                        <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">File name</p>
-                        <p className="mt-1 text-sm">{result.imageAsset.fileName}</p>
-                      </div>
-                      <div className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-medium">Generation prompt</p>
-                          <button type="button" onClick={() => void copyText("Image prompt", result.imageAsset?.prompt ?? "")} className="site-button-secondary rounded-md px-2 py-1 text-xs font-medium">{copiedItem === "Image prompt" ? addonUi.copyDone : addonUi.copy}</button>
+                      {[
+                        { label: "Alt text", value: result.imageAsset.alt, copyKey: "Image alt text" },
+                        { label: "File name", value: result.imageAsset.fileName, copyKey: "" },
+                      ].map((row) => (
+                        <div
+                          key={row.label}
+                          className="flex items-start justify-between gap-3 rounded-[12px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3"
+                        >
+                          <div>
+                            <SectionEyebrow>{row.label}</SectionEyebrow>
+                            <p className="mt-1 text-[12px]">{row.value}</p>
+                          </div>
+                          {row.copyKey ? (
+                            <button
+                              type="button"
+                              onClick={() => void copyText(row.copyKey, row.value)}
+                              className="site-button-secondary shrink-0 rounded-[8px] border px-2.5 py-1 text-[11px] font-medium transition-all duration-200 hover:opacity-90"
+                            >
+                              {copiedItem === row.copyKey ? addonUi.copyDone : addonUi.copy}
+                            </button>
+                          ) : null}
                         </div>
-                        <p className="site-muted mt-2 text-sm leading-relaxed">{result.imageAsset.prompt}</p>
+                      ))}
+
+                      <div className="rounded-[12px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-[13px] font-semibold">Generation prompt</p>
+                          <button
+                            type="button"
+                            onClick={() => void copyText("Image prompt", result.imageAsset?.prompt ?? "")}
+                            className="site-button-secondary rounded-[8px] border px-2.5 py-1 text-[11px] font-medium transition-all duration-200 hover:opacity-90"
+                          >
+                            {copiedItem === "Image prompt" ? addonUi.copyDone : addonUi.copy}
+                          </button>
+                        </div>
+                        <p className="mt-2 text-[12px] leading-[1.65] text-[var(--site-muted)]">
+                          {result.imageAsset.prompt}
+                        </p>
                       </div>
                     </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      {imagePreviewSrc ? <a href={imagePreviewSrc} download={result.imageAsset.fileName} className="site-button-primary rounded-lg px-3 py-1.5 text-sm font-medium">{addonUi.downloadImage}</a> : null}
-                      <button type="button" onClick={() => void copyText("Image alt text", result.imageAsset?.alt ?? "")} className="site-button-secondary rounded-lg px-3 py-1.5 text-sm font-medium">{copiedItem === "Image alt text" ? addonUi.copyDone : "Copy alt text"}</button>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      {imagePreviewSrc ? (
+                        <a
+                          href={imagePreviewSrc}
+                          download={result.imageAsset.fileName}
+                          className="site-button-primary rounded-[12px] px-4 py-2.5 text-[12px] font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(131,246,215,0.2)]"
+                        >
+                          {addonUi.downloadImage}
+                        </a>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => void copyText("Image alt text", result.imageAsset?.alt ?? "")}
+                        className="site-button-secondary rounded-[12px] border px-4 py-2.5 text-[12px] font-semibold transition-all duration-200 hover:opacity-90"
+                      >
+                        {copiedItem === "Image alt text" ? addonUi.copyDone : "Copy alt text"}
+                      </button>
                     </div>
-                    {!result.imageAsset.imageUrl && imagePreviewSrc ? <p className="site-muted mt-3 text-xs">{addonUi.sessionPreviewNote}</p> : null}
+
+                    {!result.imageAsset.imageUrl && imagePreviewSrc ? (
+                      <p className="mt-3 text-[11px] text-[var(--site-muted)]">
+                        {addonUi.sessionPreviewNote}
+                      </p>
+                    ) : null}
                   </article>
                 ) : null}
               </div>
             </div>
           ) : (
-            <section className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-6">
+            <section
+              aria-label="Empty state"
+              className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-6"
+            >
               <div className="grid items-start gap-5 lg:grid-cols-2">
-                <div className="flex min-h-[16rem] flex-col items-center justify-center rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-8 text-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-[var(--site-primary)]/20 bg-[var(--site-primary)]/10 text-sm font-semibold text-[var(--site-primary)]">
+                <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-[14px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-8 text-center">
+                  <div
+                    className="flex h-14 w-14 items-center justify-center rounded-[14px] border border-[#877cff]/30 bg-[var(--site-primary)]/10 text-[13px] font-semibold text-[var(--site-primary)]"
+                    aria-hidden="true"
+                  >
                     {activeAction.label.slice(0, 2)}
                   </div>
-                  <p className="mt-4 text-sm font-medium">{activeAction.label}</p>
-                  <p className="site-muted mt-2 max-w-xs text-sm">{ui.emptyBody}</p>
+                  <p className="mt-4 text-[14px] font-semibold">{activeAction.label}</p>
+                  <p className="mt-2 max-w-xs text-[13px] leading-[1.7] text-[var(--site-muted)]">
+                    {ui.emptyBody}
+                  </p>
                 </div>
+
                 <div className="space-y-3">
-                  {emptyStateCards.map((card) => (
-                    <article key={card.label} className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-4">
-                      <p className="text-xs font-medium uppercase tracking-wider text-[var(--site-muted)]">{card.label}</p>
-                      <p className="mt-1.5 text-sm leading-relaxed">{card.value}</p>
+                  {[
+                    { label: ui.primaryInput, value: clampPreview(activeAction.placeholder, 120) },
+                    { label: addonUi.directUse, value: "Get a best-use output, an alternative version, and implementation-ready recommendations in one run." },
+                    { label: addonUi.toolsTitle, value: `${addonUi.developerPromptPack}: ${assistantAddonDefinitions["developer-prompt-pack"].priceLabel}. ${addonUi.seoImage}: ${assistantAddonDefinitions["seo-image"].priceLabel}.` },
+                  ].map((card) => (
+                    <article
+                      key={card.label}
+                      className="rounded-[14px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-4 transition-all duration-200 hover:border-[#877cff]/25"
+                    >
+                      <SectionEyebrow>{card.label}</SectionEyebrow>
+                      <p className="mt-1.5 text-[13px] leading-[1.65]">{card.value}</p>
                     </article>
                   ))}
                 </div>

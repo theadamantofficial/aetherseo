@@ -53,6 +53,14 @@ export type DashboardActivity = {
   status: "Running" | "Completed" | "Draft" | "Active" | string;
 };
 
+export type GeneratedBlogImageAsset = {
+  alt: string;
+  fileName: string;
+  imageUrl: string | null;
+  prompt: string;
+  title: string;
+};
+
 export type GeneratedBlog = {
   id: string;
   keyword: string;
@@ -66,6 +74,7 @@ export type GeneratedBlog = {
   sectionTitle: string;
   sectionBody: string;
   bullets: string[];
+  imageAsset?: GeneratedBlogImageAsset | null;
   createdAt: string;
 };
 
@@ -116,13 +125,7 @@ export type AssistantPromptPack = {
   cursor: string;
 };
 
-export type AssistantImageAsset = {
-  alt: string;
-  fileName: string;
-  imageUrl: string | null;
-  prompt: string;
-  title: string;
-};
+export type AssistantImageAsset = GeneratedBlogImageAsset;
 
 export type AssistantRun = {
   id: string;

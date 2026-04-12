@@ -19,13 +19,10 @@ import {
 import { resolveAppUiLanguage, type AppUiLanguage } from "@/lib/app-ui-language";
 import { useTranslatedCopy } from "@/lib/use-translated-copy";
 
+/* ─── Types ──────────────────────────────────────────────────────────────── */
+
 type DashboardViewState =
-  | {
-      loading: true;
-      error: "" | "load_failed";
-      data: null;
-      profile: null;
-    }
+  | { loading: true; error: "" | "load_failed"; data: null; profile: null }
   | {
       loading: false;
       error: "" | "load_failed";
@@ -39,6 +36,8 @@ const initialState: DashboardViewState = {
   data: null,
   profile: null,
 };
+
+/* ─── i18n copy ──────────────────────────────────────────────────────────── */
 
 const dashboardUiCopy: Record<
   AppUiLanguage,
@@ -95,19 +94,13 @@ const dashboardUiCopy: Record<
     upgradePlan: "Upgrade Plan",
     recentActivity: "Recent Activity",
     viewHistory: "View History",
-    noActivity:
-      "No workspace activity yet. Generate a blog draft or run an audit to start building history.",
+    noActivity: "No workspace activity yet. Generate a blog draft or run an audit to start building history.",
     domainHealth: "Domain Health",
     noHealth: "No health metrics yet. Run an audit to populate technical health data.",
     recommendedActions: "Recommended Next Actions",
     noRecommendations: "Recommendations will appear here after you save an audit.",
     launchFixPlan: "Launch Fix Plan",
-    activityTypes: {
-      blog: "Blog",
-      audit: "Audit",
-      report: "Report",
-      system: "System",
-    },
+    activityTypes: { blog: "Blog", audit: "Audit", report: "Report", system: "System" },
   },
   hi: {
     loading: "Aapka workspace data load ho raha hai...",
@@ -137,12 +130,7 @@ const dashboardUiCopy: Record<
     recommendedActions: "Recommended Next Actions",
     noRecommendations: "Audit save karne ke baad recommendations yahan dikhengi.",
     launchFixPlan: "Fix Plan Shuru Karo",
-    activityTypes: {
-      blog: "Blog",
-      audit: "Audit",
-      report: "Report",
-      system: "System",
-    },
+    activityTypes: { blog: "Blog", audit: "Audit", report: "Report", system: "System" },
   },
   fr: {
     loading: "Chargement des donnees du workspace...",
@@ -156,31 +144,23 @@ const dashboardUiCopy: Record<
     createStandardDraft: "Creer un brouillon standard",
     createPaidDraft: "Creer un brouillon {tier}",
     auditTitle: "Audit complet du site web",
-    auditBody:
-      "Analysez votre domaine pour detecter les problemes SEO techniques et les goulots de performance.",
+    auditBody: "Analysez votre domaine pour detecter les problemes SEO techniques et les goulots de performance.",
     runBasicAudit: "Lancer un audit basique",
     runPaidAudit: "Lancer un audit {tier}",
     assistantTitle: "Assistant IA SEO",
-    assistantBody:
-      "Construisez briefs, metadata, schema, clusters de mots-cles et plans de correction depuis un seul workspace.",
+    assistantBody: "Construisez briefs, metadata, schema, clusters de mots-cles et plans de correction depuis un seul workspace.",
     assistantLockedBody: "L'assistant IA est reserve aux offres payantes. Passez a une offre superieure pour les briefs et plans de correction.",
     openAssistant: "Ouvrir l'assistant IA",
     upgradePlan: "Mettre a niveau",
     recentActivity: "Activite recente",
     viewHistory: "Voir l'historique",
-    noActivity:
-      "Aucune activite pour le moment. Generez un blog ou lancez un audit pour commencer.",
+    noActivity: "Aucune activite pour le moment. Generez un blog ou lancez un audit pour commencer.",
     domainHealth: "Sante du domaine",
     noHealth: "Aucune metrique de sante pour le moment. Lancez un audit pour les remplir.",
     recommendedActions: "Actions recommandees",
     noRecommendations: "Les recommandations apparaitront apres un audit enregistre.",
     launchFixPlan: "Lancer le plan de correction",
-    activityTypes: {
-      blog: "Blog",
-      audit: "Audit",
-      report: "Rapport",
-      system: "Systeme",
-    },
+    activityTypes: { blog: "Blog", audit: "Audit", report: "Rapport", system: "Systeme" },
   },
   de: {
     loading: "Workspace-Daten werden geladen...",
@@ -198,26 +178,19 @@ const dashboardUiCopy: Record<
     runBasicAudit: "Basis-Audit starten",
     runPaidAudit: "{tier} Audit starten",
     assistantTitle: "SEO AI Assistant",
-    assistantBody:
-      "Erstelle Briefings, Metadata, Schema, Keyword-Cluster und Fix-Plaene in einem Workspace.",
+    assistantBody: "Erstelle Briefings, Metadata, Schema, Keyword-Cluster und Fix-Plaene in einem Workspace.",
     assistantLockedBody: "Der AI Assistant ist nur in bezahlten Plaenen verfuegbar. Upgrade fuer Briefings und Fix-Plaene.",
     openAssistant: "AI Assistant oeffnen",
     upgradePlan: "Upgrade",
     recentActivity: "Letzte Aktivitaet",
     viewHistory: "Verlauf ansehen",
-    noActivity:
-      "Noch keine Aktivitaet. Erstelle einen Blog oder starte ein Audit, um Verlauf aufzubauen.",
+    noActivity: "Noch keine Aktivitaet. Erstelle einen Blog oder starte ein Audit, um Verlauf aufzubauen.",
     domainHealth: "Domain-Zustand",
     noHealth: "Noch keine Health-Metriken. Fuehre ein Audit aus, um Daten zu laden.",
     recommendedActions: "Empfohlene naechste Schritte",
     noRecommendations: "Empfehlungen erscheinen nach einem gespeicherten Audit.",
     launchFixPlan: "Fix-Plan starten",
-    activityTypes: {
-      blog: "Blog",
-      audit: "Audit",
-      report: "Bericht",
-      system: "System",
-    },
+    activityTypes: { blog: "Blog", audit: "Audit", report: "Bericht", system: "System" },
   },
   ja: {
     loading: "ワークスペースデータを読み込み中です...",
@@ -235,8 +208,7 @@ const dashboardUiCopy: Record<
     runBasicAudit: "基本監査を実行",
     runPaidAudit: "{tier} 監査を実行",
     assistantTitle: "SEO AI アシスタント",
-    assistantBody:
-      "ブリーフ、メタデータ、スキーマ、キーワードクラスタ、修正計画を一つのワークスペースで作成します。",
+    assistantBody: "ブリーフ、メタデータ、スキーマ、キーワードクラスタ、修正計画を一つのワークスペースで作成します。",
     assistantLockedBody: "AI アシスタントは有料プランで利用できます。ブリーフや修正プランを使うにはアップグレードしてください。",
     openAssistant: "AI アシスタントを開く",
     upgradePlan: "アップグレード",
@@ -248,12 +220,7 @@ const dashboardUiCopy: Record<
     recommendedActions: "推奨アクション",
     noRecommendations: "監査を保存すると推奨アクションがここに表示されます。",
     launchFixPlan: "修正プランを開始",
-    activityTypes: {
-      blog: "ブログ",
-      audit: "監査",
-      report: "レポート",
-      system: "システム",
-    },
+    activityTypes: { blog: "ブログ", audit: "監査", report: "レポート", system: "システム" },
   },
   ko: {
     loading: "워크스페이스 데이터를 불러오는 중...",
@@ -271,8 +238,7 @@ const dashboardUiCopy: Record<
     runBasicAudit: "기본 감사 실행",
     runPaidAudit: "{tier} 감사 실행",
     assistantTitle: "SEO AI Assistant",
-    assistantBody:
-      "브리프, 메타데이터, 스키마, 키워드 클러스터, 수정 계획을 한 워크스페이스에서 만드세요.",
+    assistantBody: "브리프, 메타데이터, 스키마, 키워드 클러스터, 수정 계획을 한 워크스페이스에서 만드세요.",
     assistantLockedBody: "AI 도우미는 유료 플랜에서만 사용할 수 있습니다. 브리프와 수정 계획을 위해 업그레이드하세요.",
     openAssistant: "AI Assistant 열기",
     upgradePlan: "업그레이드",
@@ -284,14 +250,31 @@ const dashboardUiCopy: Record<
     recommendedActions: "추천 다음 작업",
     noRecommendations: "감사를 저장하면 추천 작업이 여기에 표시됩니다.",
     launchFixPlan: "수정 계획 시작",
-    activityTypes: {
-      blog: "블로그",
-      audit: "감사",
-      report: "리포트",
-      system: "시스템",
-    },
+    activityTypes: { blog: "블로그", audit: "감사", report: "리포트", system: "시스템" },
   },
 };
+
+/* ─── Tiny primitives ────────────────────────────────────────────────────── */
+
+function SparkDot() {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#83f6d7]
+        shadow-[0_0_8px_rgba(131,246,215,0.7)]"
+    />
+  );
+}
+
+function SectionEyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--site-muted)] opacity-70">
+      {children}
+    </p>
+  );
+}
+
+/* ─── Page ───────────────────────────────────────────────────────────────── */
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -302,38 +285,17 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (!currentUser) {
-        router.replace("/auth");
-        return;
-      }
-
+      if (!currentUser) { router.replace("/auth"); return; }
       try {
         const userProfile = await getUserProfile(currentUser.uid);
-        if (!userProfile.plan) {
-          router.replace("/auth");
-          return;
-        }
-
+        if (!userProfile.plan) { router.replace("/auth"); return; }
         const data = await getDashboardForUser(currentUser.uid);
-        setState({
-          loading: false,
-          error: "",
-          profile: userProfile,
-          data,
-        });
+        setState({ loading: false, error: "", profile: userProfile, data });
       } catch {
-        setState({
-          loading: false,
-          error: "load_failed",
-          data: null,
-          profile: null,
-        });
+        setState({ loading: false, error: "load_failed", data: null, profile: null });
       }
     });
-
-    return () => {
-      unsubscribe();
-    };
+    return () => { unsubscribe(); };
   }, [router]);
 
   const dashboard = state.data;
@@ -341,6 +303,7 @@ export default function DashboardPage() {
   const isPaid = dashboard?.plan === "paid";
   const paidTierLabel = getPaidTierLabel(profile?.paidPlanTier);
   const latestAuditUrl = dashboard?.auditRuns?.[0]?.url ?? "";
+
   const translatedDashboard = useTranslatedCopy(
     dashboard
       ? {
@@ -351,17 +314,11 @@ export default function DashboardPage() {
           health: dashboard.health,
           recommendations: dashboard.recommendations,
         }
-      : {
-          title: "",
-          body: "",
-          cards: [],
-          activities: [],
-          health: [],
-          recommendations: [],
-        },
+      : { title: "", body: "", cards: [], activities: [], health: [], recommendations: [] },
     activeLanguage,
     `dashboard-surface-${dashboard?.plan ?? "empty"}-${profile?.paidPlanTier ?? "free"}`,
   );
+
   const draftLabel = isPaid
     ? ui.createPaidDraft.replace("{tier}", paidTierLabel ?? "Paid")
     : ui.createStandardDraft;
@@ -369,169 +326,438 @@ export default function DashboardPage() {
     ? ui.runPaidAudit.replace("{tier}", paidTierLabel ?? "Paid")
     : ui.runBasicAudit;
 
-  if (state.loading) {
-    return <SiteLoader size="lg" />;
-  }
+  /* ── Loading / error states ─────────────────────────────────────────── */
+
+  if (state.loading) return <SiteLoader size="lg" />;
 
   if (state.error) {
     return (
-      <div className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-6 text-sm">
+      <div
+        className="
+          rounded-[18px] border border-[var(--site-border)]
+          bg-[var(--site-surface)] p-6 text-[13px]
+          text-[var(--site-muted)]
+        "
+      >
         {ui.loadError}
       </div>
     );
   }
 
   if (!dashboard || !profile) {
-    return <div className="site-muted text-sm">{ui.empty}</div>;
+    return (
+      <p className="text-[13px] text-[var(--site-muted)]">{ui.empty}</p>
+    );
   }
 
-  const isFreeBlogLimitReached = dashboard.plan === "free" && dashboard.generatedBlogs.length >= 3;
+  /* ── Derived hrefs / labels ─────────────────────────────────────────── */
+
+  const isFreeBlogLimitReached  = dashboard.plan === "free" && dashboard.generatedBlogs.length >= 3;
   const isFreeAuditLimitReached = dashboard.plan === "free" && dashboard.auditRuns.length >= 1;
-  const blogHref = isFreeBlogLimitReached ? "/billing?upgrade=blog-limit" : "/generate-blog";
-  const auditHref = isFreeAuditLimitReached ? "/billing?upgrade=audit-limit" : "/website-audit";
-  const assistantHref = isPaid ? "/ai-assistant" : "/billing?upgrade=assistant-locked";
-  const draftButtonLabel = isFreeBlogLimitReached ? ui.upgradePlan : draftLabel;
-  const auditButtonLabel = isFreeAuditLimitReached ? ui.upgradePlan : auditLabel;
+  const blogHref        = isFreeBlogLimitReached  ? "/billing?upgrade=blog-limit"      : "/generate-blog";
+  const auditHref       = isFreeAuditLimitReached ? "/billing?upgrade=audit-limit"     : "/website-audit";
+  const assistantHref   = isPaid                  ? "/ai-assistant"                    : "/billing?upgrade=assistant-locked";
+  const draftButtonLabel     = isFreeBlogLimitReached  ? ui.upgradePlan : draftLabel;
+  const auditButtonLabel     = isFreeAuditLimitReached ? ui.upgradePlan : auditLabel;
   const assistantButtonLabel = isPaid ? ui.openAssistant : ui.upgradePlan;
 
+  /* ── Render ─────────────────────────────────────────────────────────── */
+
   return (
-    <div className="space-y-6">
-      <header className="flex items-center justify-between rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
-        <div>
-          <h1 className="text-xl font-semibold capitalize">{translatedDashboard.title}</h1>
-          <p className="site-muted mt-1 max-w-2xl text-sm">{translatedDashboard.body}</p>
+    <div className="space-y-4">
+
+      {/* ══════════════════════════════════════════════════════
+          HEADER
+      ══════════════════════════════════════════════════════ */}
+      <header
+        className="
+          animate-fade-up relative overflow-hidden
+          flex items-center justify-between gap-4
+          rounded-[22px]
+          border border-[var(--site-border)]
+          bg-[var(--site-surface)]
+          px-7 py-6
+          shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]
+        "
+      >
+        {/* Ambient glow */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[#705dff]/10 blur-3xl"
+        />
+
+        <div className="relative">
+          <h1 className="text-[1.2rem] font-semibold capitalize leading-tight tracking-[-0.01em]">
+            {translatedDashboard.title}
+          </h1>
+          <p className="mt-1 max-w-2xl text-[13px] leading-[1.7] text-[var(--site-muted)]">
+            {translatedDashboard.body}
+          </p>
         </div>
-        <span className="site-chip rounded-lg border px-2.5 py-1 text-xs font-medium">
+
+        <span
+          className="
+            relative shrink-0
+            rounded-full border border-[var(--site-border)]
+            bg-[var(--site-surface-soft)]
+            px-4 py-1.5
+            text-[11px] font-semibold
+            uppercase tracking-[0.16em]
+            text-[var(--site-muted)]
+          "
+        >
           {paidTierLabel ?? ui.freeTier}
         </span>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        {translatedDashboard.cards.map((card: DashboardCard) => (
-          <article key={card.label} className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-4">
-            <p className="site-muted text-xs font-medium uppercase tracking-wider">{card.label}</p>
-            <p className="mt-2 text-2xl font-semibold">{card.value}</p>
-            <p className="site-muted mt-1 text-sm">{card.description}</p>
+      {/* ══════════════════════════════════════════════════════
+          STAT CARDS
+      ══════════════════════════════════════════════════════ */}
+      <section
+        aria-label="Workspace statistics"
+        className="grid gap-3 md:grid-cols-3"
+      >
+        {translatedDashboard.cards.map((card: DashboardCard, i: number) => (
+          <article
+            key={card.label}
+            style={{ animationDelay: `${i * 60}ms` }}
+            className="
+              animate-fade-up group
+              rounded-[18px]
+              border border-[var(--site-border)]
+              bg-[var(--site-surface)]
+              p-5
+              transition-all duration-300
+              hover:-translate-y-0.5
+              hover:border-[#877cff]/30
+            "
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--site-muted)] opacity-60">
+              {card.label}
+            </p>
+            <p className="mt-3 text-[2rem] font-semibold leading-none tracking-[-0.02em]">
+              {card.value}
+            </p>
+            <p className="mt-2 text-[12px] leading-[1.6] text-[var(--site-muted)]">
+              {card.description}
+            </p>
           </article>
         ))}
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <article className="flex h-full flex-col rounded-xl border border-[var(--site-primary)]/20 bg-[var(--site-surface)] p-5">
+      {/* ══════════════════════════════════════════════════════
+          ACTION CARDS
+      ══════════════════════════════════════════════════════ */}
+      <section
+        aria-label="Workspace actions"
+        className="grid gap-3 md:grid-cols-3"
+      >
+        {/* Generate */}
+        <article
+          className="
+            flex h-full flex-col
+            rounded-[18px]
+            border border-[#877cff]/30
+            bg-[var(--site-surface)]
+            p-6
+            transition-all duration-300
+            hover:-translate-y-0.5
+            hover:border-[#877cff]/50
+            hover:shadow-[0_12px_32px_rgba(0,0,0,0.2)]
+          "
+        >
           <div className="flex-1">
-            <h2 className="text-lg font-semibold">{ui.generateTitle}</h2>
-            <p className="site-muted mt-2 text-sm leading-relaxed">{ui.generateBody}</p>
+            <SectionEyebrow>Content</SectionEyebrow>
+            <h2 className="mt-2 text-[1.1rem] font-semibold leading-tight">
+              {ui.generateTitle}
+            </h2>
+            <p className="mt-2 text-[13px] leading-[1.7] text-[var(--site-muted)]">
+              {ui.generateBody}
+            </p>
           </div>
           <Link
             href={blogHref}
-            className="site-button-primary mt-4 inline-flex self-start rounded-lg px-3.5 py-2 text-sm font-medium"
+            className="
+              site-button-primary
+              mt-6 inline-flex self-start
+              rounded-[12px] px-4 py-2.5
+              text-[12px] font-semibold
+              transition-all duration-200
+              hover:-translate-y-0.5
+              hover:shadow-[0_6px_20px_rgba(131,246,215,0.2)]
+            "
           >
             {draftButtonLabel}
           </Link>
         </article>
-        <article className="flex h-full flex-col rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
+
+        {/* Audit */}
+        <article
+          className="
+            flex h-full flex-col
+            rounded-[18px]
+            border border-[var(--site-border)]
+            bg-[var(--site-surface)]
+            p-6
+            transition-all duration-300
+            hover:-translate-y-0.5
+            hover:border-[#877cff]/30
+            hover:shadow-[0_12px_32px_rgba(0,0,0,0.2)]
+          "
+        >
           <div className="flex-1">
-            <h2 className="text-lg font-semibold">{ui.auditTitle}</h2>
-            <p className="site-muted mt-2 text-sm leading-relaxed">{ui.auditBody}</p>
+            <SectionEyebrow>Audit</SectionEyebrow>
+            <h2 className="mt-2 text-[1.1rem] font-semibold leading-tight">
+              {ui.auditTitle}
+            </h2>
+            <p className="mt-2 text-[13px] leading-[1.7] text-[var(--site-muted)]">
+              {ui.auditBody}
+            </p>
           </div>
           <Link
             href={auditHref}
-            className="site-button-primary mt-4 inline-flex self-start rounded-lg px-3.5 py-2 text-sm font-medium"
+            className="
+              site-button-primary
+              mt-6 inline-flex self-start
+              rounded-[12px] px-4 py-2.5
+              text-[12px] font-semibold
+              transition-all duration-200
+              hover:-translate-y-0.5
+              hover:shadow-[0_6px_20px_rgba(131,246,215,0.2)]
+            "
           >
             {auditButtonLabel}
           </Link>
         </article>
-        <article className="flex h-full flex-col rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
+
+        {/* Assistant */}
+        <article
+          className={`
+            flex h-full flex-col
+            rounded-[18px]
+            border bg-[var(--site-surface)]
+            p-6
+            transition-all duration-300
+            hover:-translate-y-0.5
+            hover:shadow-[0_12px_32px_rgba(0,0,0,0.2)]
+            ${isPaid
+              ? "border-[#83f6d7]/20 hover:border-[#83f6d7]/40"
+              : "border-[var(--site-border)] opacity-75 hover:border-[#877cff]/25 hover:opacity-90"
+            }
+          `}
+        >
           <div className="flex-1">
-            <h2 className="text-lg font-semibold">{ui.assistantTitle}</h2>
-            <p className="site-muted mt-2 text-sm leading-relaxed">{isPaid ? ui.assistantBody : ui.assistantLockedBody}</p>
+            <SectionEyebrow>Assistant</SectionEyebrow>
+            <h2 className="mt-2 text-[1.1rem] font-semibold leading-tight">
+              {ui.assistantTitle}
+            </h2>
+            <p className="mt-2 text-[13px] leading-[1.7] text-[var(--site-muted)]">
+              {isPaid ? ui.assistantBody : ui.assistantLockedBody}
+            </p>
           </div>
           <Link
             href={assistantHref}
-            className="site-button-secondary mt-4 inline-flex self-start rounded-lg border px-3.5 py-2 text-sm font-medium"
+            className="
+              site-button-secondary
+              mt-6 inline-flex self-start
+              rounded-[12px] border px-4 py-2.5
+              text-[12px] font-semibold
+              transition-all duration-200
+              hover:-translate-y-0.5 hover:opacity-90
+            "
           >
             {assistantButtonLabel}
           </Link>
         </article>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <article className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5 lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold">{ui.recentActivity}</h3>
-            <Link href="/history" className="site-link-accent text-sm font-medium">
-              {ui.viewHistory}
+      {/* ══════════════════════════════════════════════════════
+          ACTIVITY + DOMAIN HEALTH
+      ══════════════════════════════════════════════════════ */}
+      <section
+        aria-label="Activity and domain health"
+        className="grid gap-3 lg:grid-cols-3"
+      >
+        {/* Recent Activity */}
+        <article
+          className="
+            rounded-[18px]
+            border border-[var(--site-border)]
+            bg-[var(--site-surface)]
+            p-6
+            lg:col-span-2
+          "
+        >
+          <header className="mb-5 flex items-center justify-between">
+            <h2 className="text-[15px] font-semibold">{ui.recentActivity}</h2>
+            <Link
+              href="/history"
+              className="site-link-accent text-[12px] font-semibold"
+            >
+              {ui.viewHistory} →
             </Link>
-          </div>
-          <div className="divide-y divide-[var(--site-border)] text-sm">
-            {translatedDashboard.activities.length ? (
-              translatedDashboard.activities.map((activity: DashboardActivity, activityIndex: number) => (
-                <div
-                  key={`${activityIndex}-${activity.title}-${activity.date}`}
-                  className="flex items-center justify-between py-2.5"
-                >
-                  <p>
-                    <span className="site-muted">{ui.activityTypes[activity.type] ?? activity.type}:</span>{" "}
-                    {activity.title}
-                  </p>
-                  <span className="shrink-0 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
-                    {activity.status}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="py-4 text-sm text-[var(--site-muted)]">{ui.noActivity}</div>
-            )}
-          </div>
+          </header>
+
+          {translatedDashboard.activities.length ? (
+            <ul
+              aria-label="Activity list"
+              className="divide-y divide-[var(--site-border)]"
+            >
+              {translatedDashboard.activities.map(
+                (activity: DashboardActivity, idx: number) => (
+                  <li
+                    key={`${idx}-${activity.title}-${activity.date}`}
+                    className="flex items-center justify-between gap-4 py-3"
+                  >
+                    <p className="text-[13px]">
+                      <span className="text-[var(--site-muted)]">
+                        {ui.activityTypes[activity.type] ?? activity.type}:
+                      </span>{" "}
+                      {activity.title}
+                    </p>
+                    <span
+                      className="
+                        shrink-0 rounded-full
+                        bg-emerald-500/10
+                        px-2.5 py-1
+                        text-[11px] font-semibold
+                        text-emerald-400
+                      "
+                    >
+                      {activity.status}
+                    </span>
+                  </li>
+                ),
+              )}
+            </ul>
+          ) : (
+            <p className="rounded-[14px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-4 text-[13px] text-[var(--site-muted)]">
+              {ui.noActivity}
+            </p>
+          )}
         </article>
-        <article className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
-          <h3 className="text-lg font-semibold">{ui.domainHealth}</h3>
-          <div className="mt-4 divide-y divide-[var(--site-border)] text-sm">
-            {translatedDashboard.health.length ? (
-              translatedDashboard.health.map((metric: { label: string; value: string }) => (
-                <div key={metric.label} className="flex justify-between py-2.5">
-                  <span className="site-muted">{metric.label}</span>
-                  <span className="font-medium">{metric.value}</span>
-                </div>
-              ))
-            ) : (
-              <div className="py-4 text-sm text-[var(--site-muted)]">{ui.noHealth}</div>
-            )}
-          </div>
+
+        {/* Domain Health */}
+        <article
+          className="
+            rounded-[18px]
+            border border-[var(--site-border)]
+            bg-[var(--site-surface)]
+            p-6
+          "
+        >
+          <h2 className="mb-5 text-[15px] font-semibold">{ui.domainHealth}</h2>
+
+          {translatedDashboard.health.length ? (
+            <ul
+              aria-label="Domain health metrics"
+              className="divide-y divide-[var(--site-border)]"
+            >
+              {translatedDashboard.health.map(
+                (metric: { label: string; value: string }) => (
+                  <li
+                    key={metric.label}
+                    className="flex items-center justify-between gap-3 py-3"
+                  >
+                    <span className="text-[13px] text-[var(--site-muted)]">
+                      {metric.label}
+                    </span>
+                    <span className="text-[13px] font-semibold">
+                      {metric.value}
+                    </span>
+                  </li>
+                ),
+              )}
+            </ul>
+          ) : (
+            <p className="rounded-[14px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-4 text-[13px] text-[var(--site-muted)]">
+              {ui.noHealth}
+            </p>
+          )}
         </article>
       </section>
 
-      <section className="rounded-xl border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">{ui.recommendedActions}</h3>
-          <Link href={assistantHref} className="site-link-accent text-sm font-medium">
-            {assistantButtonLabel}
+      {/* ══════════════════════════════════════════════════════
+          RECOMMENDED ACTIONS
+      ══════════════════════════════════════════════════════ */}
+      <section
+        aria-labelledby="recommendations-heading"
+        className="
+          rounded-[18px]
+          border border-[var(--site-border)]
+          bg-[var(--site-surface)]
+          p-6
+        "
+      >
+        <header className="mb-5 flex items-center justify-between gap-4">
+          <h2
+            id="recommendations-heading"
+            className="text-[15px] font-semibold"
+          >
+            {ui.recommendedActions}
+          </h2>
+          <Link
+            href={assistantHref}
+            className="site-link-accent text-[12px] font-semibold"
+          >
+            {assistantButtonLabel} →
           </Link>
-        </div>
+        </header>
+
         {translatedDashboard.recommendations.length ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {translatedDashboard.recommendations.map((recommendation: string) => {
+          <ul
+            aria-label="Recommended actions"
+            className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+          >
+            {translatedDashboard.recommendations.map((rec: string) => {
               const href = isPaid
                 ? latestAuditUrl
-                  ? `/ai-assistant?action=fix-plan&input=${encodeURIComponent(recommendation)}&url=${encodeURIComponent(latestAuditUrl)}`
-                  : `/ai-assistant?action=fix-plan&input=${encodeURIComponent(recommendation)}`
+                  ? `/ai-assistant?action=fix-plan&input=${encodeURIComponent(rec)}&url=${encodeURIComponent(latestAuditUrl)}`
+                  : `/ai-assistant?action=fix-plan&input=${encodeURIComponent(rec)}`
                 : "/billing?upgrade=assistant-locked";
               const actionLabel = isPaid ? ui.launchFixPlan : ui.upgradePlan;
 
               return (
-                <article key={recommendation} className="rounded-lg border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-4">
-                  <p className="text-sm font-medium">{recommendation}</p>
-                  <Link href={href} className="site-link-accent mt-3 inline-flex text-sm font-medium">
-                    {actionLabel} &rarr;
-                  </Link>
-                </article>
+                <li key={rec}>
+                  <article
+                    className="
+                      flex h-full flex-col
+                      rounded-[14px]
+                      border border-[var(--site-border)]
+                      bg-[var(--site-surface-soft)]
+                      p-4
+                      transition-all duration-200
+                      hover:-translate-y-0.5
+                      hover:border-[#877cff]/30
+                    "
+                  >
+                    <div className="flex items-start gap-2.5 flex-1">
+                      <SparkDot />
+                      <p className="text-[13px] font-medium leading-[1.55]">{rec}</p>
+                    </div>
+                    <Link
+                      href={href}
+                      className="site-link-accent mt-4 inline-flex text-[12px] font-semibold"
+                    >
+                      {actionLabel} →
+                    </Link>
+                  </article>
+                </li>
               );
             })}
-          </div>
+          </ul>
         ) : (
-          <div className="rounded-lg bg-[var(--site-surface-soft)] p-4 text-sm text-[var(--site-muted)]">
+          <p
+            className="
+              rounded-[14px]
+              border border-[var(--site-border)]
+              bg-[var(--site-surface-soft)]
+              p-4
+              text-[13px] text-[var(--site-muted)]
+            "
+          >
             {ui.noRecommendations}
-          </div>
+          </p>
         )}
       </section>
     </div>

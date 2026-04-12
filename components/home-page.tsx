@@ -9,110 +9,142 @@ import { type PublishedBlogPost } from "@/lib/blog-post-utils";
 import { landingCopy } from "@/lib/site-language";
 import { useTranslatedCopy } from "@/lib/use-translated-copy";
 
+/* ─── Tiny reusable primitives ─────────────────────────────────────────── */
+
 function SparkDot() {
-  return <span className="h-2 w-2 rounded-full bg-[#83f6d7] shadow-[0_0_16px_rgba(131,246,215,0.6)]" />;
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-block h-1.5 w-1.5 rounded-full bg-[#83f6d7]
+        shadow-[0_0_8px_rgba(131,246,215,0.7)]"
+    />
+  );
 }
+
+function SectionEyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--site-muted)] opacity-70">
+      {children}
+    </p>
+  );
+}
+
+/* ─── Page ──────────────────────────────────────────────────────────────── */
 
 export default function HomePage() {
   const { language, uiLanguage } = useLanguage();
-  const copy = useTranslatedCopy(landingCopy[uiLanguage], language, `home-page-copy-${uiLanguage}`);
+  const copy = useTranslatedCopy(
+    landingCopy[uiLanguage],
+    language,
+    `home-page-copy-${uiLanguage}`,
+  );
   const [posts, setPosts] = useState<PublishedBlogPost[]>([]);
-  const [contactState, setContactState] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [contactState, setContactState] = useState<
+    "idle" | "sending" | "success" | "error"
+  >("idle");
 
-  const ui = useTranslatedCopy({
-    en: {
-      live: "Live command center",
-      readiness: "Readiness",
-      workspaceHealth: "Workspace health",
-      contentCluster: "Content brief cluster",
-      domainAudit: "Domain audit",
-      historyFeed: "History feed",
-      contentClusterBody: "Ready for generation",
-      domainAuditBody: "Metadata gap detected",
-      historyFeedBody: "7 actions logged this week",
-      oneWorkspace: "1 workspace",
-      oneWorkspaceBody: "One place for content, audit, and history.",
-      fastHandoff: "Fast handoff",
-      fastHandoffBody: "A cleaner flow for founders and operators.",
-      planAware: "Plan-aware",
-      planAwareBody: "Free and paid experiences stay separated.",
-      active: "Active",
-      structured: "Structured for focused execution",
-      guided: "Guided",
-      open: "Open",
-      readArticle: "Read article",
-      sending: "Sending",
-    },
-    es: {
-      live: "Centro en vivo",
-      readiness: "Estado",
-      workspaceHealth: "Salud del espacio",
-      contentCluster: "Cluster de contenidos",
-      domainAudit: "Auditoria de dominio",
-      historyFeed: "Feed historico",
-      contentClusterBody: "Listo para generar",
-      domainAuditBody: "Brecha de metadata detectada",
-      historyFeedBody: "7 acciones registradas esta semana",
-      oneWorkspace: "1 espacio",
-      oneWorkspaceBody: "Un lugar para contenido, auditoria e historial.",
-      fastHandoff: "Transferencia rapida",
-      fastHandoffBody: "Flujo mas limpio para founders y operadores.",
-      planAware: "Consciente del plan",
-      planAwareBody: "Las experiencias free y paid quedan separadas.",
-      active: "Activo",
-      structured: "Estructurado para ejecucion enfocada",
-      guided: "Guiado",
-      open: "Abrir",
-      readArticle: "Leer articulo",
-      sending: "Enviando",
-    },
-    fr: {
-      live: "Centre en direct",
-      readiness: "Etat",
-      workspaceHealth: "Sante de l'espace",
-      contentCluster: "Cluster de contenu",
-      domainAudit: "Audit du domaine",
-      historyFeed: "Flux historique",
-      contentClusterBody: "Pret pour generation",
-      domainAuditBody: "Ecart de metadata detecte",
-      historyFeedBody: "7 actions enregistrees cette semaine",
-      oneWorkspace: "1 espace",
-      oneWorkspaceBody: "Un seul endroit pour contenu, audit et historique.",
-      fastHandoff: "Passage rapide",
-      fastHandoffBody: "Flux plus propre pour fondateurs et operateurs.",
-      planAware: "Lie a l'offre",
-      planAwareBody: "Les experiences gratuites et payantes restent separees.",
-      active: "Actif",
-      structured: "Structure pour une execution concentree",
-      guided: "Guide",
-      open: "Ouvrir",
-      readArticle: "Lire l'article",
-      sending: "Envoi",
-    },
-    hi: {
-      live: "Live command center",
-      readiness: "Readiness",
-      workspaceHealth: "Workspace health",
-      contentCluster: "Content brief cluster",
-      domainAudit: "Domain audit",
-      historyFeed: "History feed",
-      contentClusterBody: "Generation ke liye ready",
-      domainAuditBody: "Metadata gap detect hua",
-      historyFeedBody: "Is hafte 7 actions log hui",
-      oneWorkspace: "1 workspace",
-      oneWorkspaceBody: "Content, audit aur history ke liye ek jagah.",
-      fastHandoff: "Fast handoff",
-      fastHandoffBody: "Founders aur operators ke liye cleaner flow.",
-      planAware: "Plan-aware",
-      planAwareBody: "Free aur paid experiences alag rehti hain.",
-      active: "Active",
-      structured: "Focused execution ke liye structured",
-      guided: "Guided",
-      open: "Open",
-      readArticle: "Article padho",
-      sending: "Sending",
-    },
-  }[uiLanguage], language, `home-page-ui-${uiLanguage}`);
+  const ui = useTranslatedCopy(
+    {
+      en: {
+        live: "Live command center",
+        readiness: "Readiness",
+        workspaceHealth: "Workspace health",
+        contentCluster: "Content brief cluster",
+        domainAudit: "Domain audit",
+        historyFeed: "History feed",
+        contentClusterBody: "Ready for generation",
+        domainAuditBody: "Metadata gap detected",
+        historyFeedBody: "7 actions logged this week",
+        oneWorkspace: "1 workspace",
+        oneWorkspaceBody: "One place for content, audit, and history.",
+        fastHandoff: "Fast handoff",
+        fastHandoffBody: "A cleaner flow for founders and operators.",
+        planAware: "Plan-aware",
+        planAwareBody: "Free and paid experiences stay separated.",
+        active: "Active",
+        structured: "Structured for focused execution",
+        guided: "Guided",
+        open: "Open",
+        readArticle: "Read article",
+        sending: "Sending…",
+      },
+      es: {
+        live: "Centro en vivo",
+        readiness: "Estado",
+        workspaceHealth: "Salud del espacio",
+        contentCluster: "Cluster de contenidos",
+        domainAudit: "Auditoria de dominio",
+        historyFeed: "Feed historico",
+        contentClusterBody: "Listo para generar",
+        domainAuditBody: "Brecha de metadata detectada",
+        historyFeedBody: "7 acciones registradas esta semana",
+        oneWorkspace: "1 espacio",
+        oneWorkspaceBody: "Un lugar para contenido, auditoria e historial.",
+        fastHandoff: "Transferencia rapida",
+        fastHandoffBody: "Flujo mas limpio para founders y operadores.",
+        planAware: "Consciente del plan",
+        planAwareBody: "Las experiencias free y paid quedan separadas.",
+        active: "Activo",
+        structured: "Estructurado para ejecucion enfocada",
+        guided: "Guiado",
+        open: "Abrir",
+        readArticle: "Leer articulo",
+        sending: "Enviando…",
+      },
+      fr: {
+        live: "Centre en direct",
+        readiness: "Etat",
+        workspaceHealth: "Sante de l'espace",
+        contentCluster: "Cluster de contenu",
+        domainAudit: "Audit du domaine",
+        historyFeed: "Flux historique",
+        contentClusterBody: "Pret pour generation",
+        domainAuditBody: "Ecart de metadata detecte",
+        historyFeedBody: "7 actions enregistrees cette semaine",
+        oneWorkspace: "1 espace",
+        oneWorkspaceBody:
+          "Un seul endroit pour contenu, audit et historique.",
+        fastHandoff: "Passage rapide",
+        fastHandoffBody:
+          "Flux plus propre pour fondateurs et operateurs.",
+        planAware: "Lie a l'offre",
+        planAwareBody:
+          "Les experiences gratuites et payantes restent separees.",
+        active: "Actif",
+        structured: "Structure pour une execution concentree",
+        guided: "Guide",
+        open: "Ouvrir",
+        readArticle: "Lire l'article",
+        sending: "Envoi…",
+      },
+      hi: {
+        live: "Live command center",
+        readiness: "Readiness",
+        workspaceHealth: "Workspace health",
+        contentCluster: "Content brief cluster",
+        domainAudit: "Domain audit",
+        historyFeed: "History feed",
+        contentClusterBody: "Generation ke liye ready",
+        domainAuditBody: "Metadata gap detect hua",
+        historyFeedBody: "Is hafte 7 actions log hui",
+        oneWorkspace: "1 workspace",
+        oneWorkspaceBody: "Content, audit aur history ke liye ek jagah.",
+        fastHandoff: "Fast handoff",
+        fastHandoffBody:
+          "Founders aur operators ke liye cleaner flow.",
+        planAware: "Plan-aware",
+        planAwareBody: "Free aur paid experiences alag rehti hain.",
+        active: "Active",
+        structured: "Focused execution ke liye structured",
+        guided: "Guided",
+        open: "Open",
+        readArticle: "Article padho",
+        sending: "Sending…",
+      },
+    }[uiLanguage],
+    language,
+    `home-page-ui-${uiLanguage}`,
+  );
 
   const contactStatus =
     contactState === "success"
@@ -123,60 +155,43 @@ export default function HomePage() {
 
   useEffect(() => {
     let isMounted = true;
-
     async function loadPosts() {
       try {
-        const response = await fetch(`/api/public-blog-posts?language=${uiLanguage}&limit=3`, {
-          cache: "no-store",
-        });
-        const payload = (await response.json()) as { posts?: PublishedBlogPost[] };
-        const nextPosts = payload.posts || [];
-
-        if (isMounted) {
-          setPosts(nextPosts);
-        }
+        const res = await fetch(
+          `/api/public-blog-posts?language=${uiLanguage}&limit=3`,
+          { cache: "no-store" },
+        );
+        const payload = (await res.json()) as {
+          posts?: PublishedBlogPost[];
+        };
+        if (isMounted) setPosts(payload.posts ?? []);
       } catch {
-        if (isMounted) {
-          setPosts([]);
-        }
+        if (isMounted) setPosts([]);
       }
     }
-
     void loadPosts();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [uiLanguage]);
 
-  async function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-
+  async function handleContactSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     setContactState("sending");
-
     try {
-      const response = await fetch("/api/contact", {
+      const res = await fetch("/api/contact", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: String(formData.get("name") ?? ""),
-          email: String(formData.get("email") ?? ""),
-          company: String(formData.get("company") ?? ""),
-          goal: String(formData.get("goal") ?? ""),
-          details: String(formData.get("details") ?? ""),
+          name: String(fd.get("name") ?? ""),
+          email: String(fd.get("email") ?? ""),
+          company: String(fd.get("company") ?? ""),
+          goal: String(fd.get("goal") ?? ""),
+          details: String(fd.get("details") ?? ""),
           language,
         }),
       });
-
-      if (!response.ok) {
-        throw new Error("Discord webhook failed");
-      }
-
+      if (!res.ok) throw new Error("failed");
       form.reset();
       setContactState("success");
     } catch {
@@ -186,368 +201,938 @@ export default function HomePage() {
 
   return (
     <div className="site-page min-h-screen overflow-x-hidden text-[var(--foreground)]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(circle_at_top_left,rgba(116,96,255,0.24),transparent_32%),radial-gradient(circle_at_top_right,rgba(62,165,255,0.16),transparent_28%)]" />
-      <div className="pointer-events-none absolute left-1/2 top-[420px] h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#3d6dff]/10 blur-3xl" />
+
+      {/* ── Ambient background glows ──────────────────────────── */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0"
+      >
+        <div className="absolute -top-32 left-[-10%] h-[600px] w-[600px] rounded-full bg-[#705dff]/10 blur-[120px]" />
+        <div className="absolute right-[-5%] top-[20%] h-[400px] w-[400px] rounded-full bg-[#3d8dff]/8 blur-[100px]" />
+        <div className="absolute bottom-[10%] left-[30%] h-[300px] w-[300px] rounded-full bg-[#83f6d7]/5 blur-[80px]" />
+      </div>
 
       <div className="relative z-10 px-3 pt-4">
         <PublicHeader language={uiLanguage} />
 
-        <main className="mx-auto w-full max-w-7xl px-3 pb-16 pt-4 sm:px-6 md:pb-24">
-        <section className="site-panel-hero site-animate-rise relative overflow-hidden rounded-[2.25rem] border border-[var(--site-border)] px-6 py-8 shadow-[var(--site-depth-shadow)] sm:px-7 md:px-10 md:py-12 xl:px-14">
-          <div className="site-animate-float pointer-events-none absolute -left-24 top-6 h-52 w-52 rounded-full bg-[#705dff]/20 blur-3xl" />
-          <div className="site-animate-float pointer-events-none absolute bottom-0 right-0 h-72 w-72 rounded-full bg-[#3d8dff]/14 blur-3xl" />
+        <main
+          className="mx-auto w-full max-w-7xl px-3 pb-24 pt-4 sm:px-6"
+        >
 
-          <div className="grid items-center gap-10">
-            <div>
-              <div className="site-chip inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs uppercase tracking-[0.18em]">
-                <SparkDot />
-                {copy.hero.badge}
-              </div>
+          {/* ══════════════════════════════════════════════════════
+              HERO
+          ══════════════════════════════════════════════════════ */}
+          <section
+            aria-label="Hero"
+            className="
+              animate-fade-up
+              relative overflow-hidden rounded-[2.5rem]
+              border border-[var(--site-border)]
+              bg-[var(--site-surface)]
+              px-7 py-10
+              shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_32px_80px_rgba(0,0,0,0.28)]
+              md:px-12 md:py-14 xl:px-16
+            "
+          >
+            {/* Noise texture overlay */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-[0.025]"
+              style={{
+                backgroundImage:
+                  "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E\")",
+                backgroundRepeat: "repeat",
+                backgroundSize: "128px 128px",
+              }}
+            />
 
-              <h2 className="mt-6 max-w-4xl text-5xl font-semibold leading-[0.95] md:text-6xl xl:text-7xl">
-                {copy.hero.title}
-              </h2>
+            {/* Gradient orb inside hero */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-24 -top-24 h-[480px] w-[480px] rounded-full bg-[#705dff]/12 blur-[90px]"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -bottom-16 left-[10%] h-[300px] w-[300px] rounded-full bg-[#3d8dff]/8 blur-[70px]"
+            />
 
-              <p className="site-muted mt-6 max-w-2xl text-base leading-7 md:text-lg">{copy.hero.body}</p>
-
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link
-                  href="/auth"
-                  className="site-button-primary rounded-2xl px-6 py-3 text-sm font-semibold transition hover:-translate-y-0.5"
-                >
-                  {copy.hero.primaryCta}
-                </Link>
-                <a
-                  href="#workflow"
-                  className="site-button-secondary rounded-2xl border px-6 py-3 text-sm font-semibold transition hover:opacity-90"
-                >
-                  {copy.hero.workflowCta}
-                </a>
-                <a
-                  href="#platform"
-                  className="site-button-secondary rounded-2xl border px-6 py-3 text-sm font-semibold transition hover:opacity-90"
-                >
-                  {copy.hero.platformCta}
-                </a>
-              </div>
-
-              <div className="mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {copy.heroSignals.map((signal) => (
-                  <article key={signal.title} className="site-panel-soft site-hover-lift site-animate-rise group rounded-2xl border p-4 transition duration-300 hover:border-[#877cff]/40">
-                    <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{signal.title}</p>
-                    <p className="site-muted mt-3 text-sm leading-6 group-hover:opacity-90">{signal.body}</p>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        </section>
-
-        <section className="site-animate-rise mt-8 grid gap-3 md:grid-cols-4">
-          {copy.trustBar.map((item) => (
-            <div key={item} className="site-chip site-hover-lift rounded-full border px-5 py-4 text-center text-sm backdrop-blur">
-              {item}
-            </div>
-          ))}
-        </section>
-
-        <section id="platform" className="site-animate-rise scroll-mt-28 mt-16">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <p className="site-accent-text text-xs uppercase tracking-[0.2em]">{copy.platform.eyebrow}</p>
-              <h3 className="mt-2 max-w-3xl text-4xl font-semibold md:text-5xl">{copy.platform.title}</h3>
-            </div>
-            <p className="site-muted max-w-xl text-sm leading-7">{copy.platform.body}</p>
-          </div>
-
-          <div className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {copy.platform.modules.map((module) => (
-              <article
-                key={module.title}
-                className="site-panel site-hover-lift group relative overflow-hidden rounded-[1.75rem] border p-6 transition duration-300 hover:border-[#8b82ff]/35"
-              >
-                <div className="absolute -right-10 top-4 h-24 w-24 rounded-full bg-[#6c5cff]/10 blur-2xl transition duration-300 group-hover:bg-[#6c5cff]/18" />
-                <p className="site-accent-text relative text-xs uppercase tracking-[0.18em]">{module.eyebrow}</p>
-                <h4 className="relative mt-4 text-2xl font-semibold leading-tight">{module.title}</h4>
-                <p className="site-muted relative mt-4 text-sm leading-7">{module.body}</p>
-                <div className="relative mt-8 flex items-center gap-2 text-sm font-medium text-[var(--site-muted)]">
-                  <SparkDot />
-                  {ui.structured}
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section id="workflow" className="site-panel-hero site-animate-rise scroll-mt-28 mt-16 grid gap-6 rounded-[2rem] border p-6 md:p-8 xl:grid-cols-[0.9fr,1.1fr]">
-          <article className="site-panel-soft rounded-[1.75rem] border p-6">
-            <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.workflow.eyebrow}</p>
-            <h3 className="mt-3 text-4xl font-semibold">{copy.workflow.title}</h3>
-            <p className="site-muted mt-4 max-w-xl text-sm leading-7">{copy.workflow.body}</p>
-
-            <div className="mt-8 space-y-3">
-              {copy.workflow.checklist.map((line) => (
-                <div key={line} className="site-panel-soft flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm">
-                  <SparkDot />
-                  <span>{line}</span>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            {copy.workflow.steps.map((item) => (
-              <article
-                key={item.step}
-                className="site-panel-soft site-hover-lift group rounded-[1.6rem] border p-5 transition duration-300 hover:border-[#8a80ff]/35"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{item.step}</p>
-                  <span className="site-chip rounded-full border px-3 py-1 text-xs">{ui.guided}</span>
-                </div>
-                <h4 className="mt-5 text-2xl font-semibold">{item.title}</h4>
-                <p className="site-muted mt-3 text-sm leading-7 group-hover:opacity-90">{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="site-animate-rise mt-16">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.blog.eyebrow}</p>
-              <h3 className="mt-3 max-w-3xl text-4xl font-semibold md:text-5xl">{copy.blog.title}</h3>
-            </div>
-            <div className="max-w-xl">
-              <p className="site-muted text-sm leading-7">{copy.blog.body}</p>
-              <Link href={`/${uiLanguage}/blog`} className="site-link-accent mt-4 inline-flex text-sm font-semibold">
-                {copy.blog.cta}
-              </Link>
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-4 lg:grid-cols-3">
-            {posts.length === 0 ? (
-              <article className="site-panel rounded-[1.75rem] border p-6 lg:col-span-3">
-                <h4 className="text-2xl font-semibold leading-tight">No live articles yet</h4>
-                <p className="site-muted mt-4 max-w-2xl text-sm leading-7">
-                  The public blog feed is now live-data only. Publish the first article from the blog admin console and it will appear here.
-                </p>
-                <Link href="/aether-lab-ops" className="site-link-accent mt-6 inline-flex text-sm font-semibold">
-                  Open publishing console
-                </Link>
-              </article>
-            ) : (
-              posts.map((post) => (
-                <article
-                  key={post.slug}
-                  className="site-panel site-hover-lift rounded-[1.75rem] border p-6"
-                >
-                  <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-[var(--site-muted)]">
-                    <span>{post.category}</span>
-                    <span>{post.readTime}</span>
-                  </div>
-                  <h4 className="mt-4 text-2xl font-semibold leading-tight">{post.title}</h4>
-                  <p className="site-muted mt-4 text-sm leading-7">{post.excerpt}</p>
-                  <p className="site-muted mt-6 text-xs">
-                    {new Date(post.publishedAt).toLocaleDateString()}
-                  </p>
-                  <Link href={`/${uiLanguage}/blog/${post.slug}`} className="site-link-accent mt-6 inline-flex text-sm font-semibold">
-                    {ui.readArticle}
-                  </Link>
-                </article>
-              ))
-            )}
-          </div>
-        </section>
-
-        <section id="plans" className="site-animate-rise scroll-mt-28 mt-16 grid gap-4 xl:grid-cols-2">
-          <article className="site-panel site-hover-lift rounded-[1.9rem] border p-7">
-            <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.plans.free.eyebrow}</p>
-            <h3 className="mt-3 text-4xl font-semibold">{copy.plans.free.title}</h3>
-            <p className="site-muted mt-4 max-w-xl text-sm leading-7">{copy.plans.free.body}</p>
-            <div className="mt-8 space-y-3">
-              {copy.plans.free.features.map((feature) => (
-                <div key={feature} className="site-panel-soft rounded-2xl border px-4 py-3 text-sm">
-                  {feature}
-                </div>
-              ))}
-            </div>
-            <Link href="/auth?plan=free" className="site-button-secondary mt-8 inline-flex rounded-2xl border px-5 py-3 text-sm font-semibold transition hover:opacity-90">
-              {copy.plans.free.cta}
-            </Link>
-          </article>
-
-          <article className="site-panel-vibrant site-hover-lift relative overflow-hidden rounded-[1.9rem] border p-7">
-            <div className="absolute -right-10 top-0 h-40 w-40 rounded-full bg-[var(--site-primary)]/10 blur-3xl" />
-            <p className="site-accent-text relative text-xs uppercase tracking-[0.18em]">{copy.plans.paid.eyebrow}</p>
-            <h3 className="relative mt-3 text-4xl font-semibold">{copy.plans.paid.title}</h3>
-            <p className="site-muted relative mt-4 max-w-xl text-sm leading-7">{copy.plans.paid.body}</p>
-            <div className="relative mt-8 grid gap-3 sm:grid-cols-2">
-              {copy.plans.paid.features.map((feature) => (
-                <div key={feature} className="rounded-2xl border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-4 py-3 text-sm">
-                  {feature}
-                </div>
-              ))}
-            </div>
-            <Link
-              href="/choose-plan"
-              className="site-button-primary relative mt-8 inline-flex rounded-2xl border px-5 py-3 text-sm font-black uppercase tracking-[0.02em] transition hover:opacity-95 active:opacity-90"
+            {/* Badge */}
+            <div
+              className="
+                relative inline-flex items-center gap-2
+                rounded-full border border-[var(--site-border)]
+                bg-[var(--site-surface-soft)]
+                px-4 py-2 text-[10px] font-semibold uppercase
+                tracking-[0.2em] text-[var(--site-muted)]
+                backdrop-blur-sm
+              "
             >
-              <span>{copy.plans.paid.cta}</span>
-            </Link>
-          </article>
-        </section>
+              <SparkDot />
+              {copy.hero.badge}
+            </div>
 
-        <section id="faq" className="site-animate-rise scroll-mt-28 mt-16 grid gap-6 xl:grid-cols-[0.75fr,1.25fr]">
-          <article>
-            <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.faq.eyebrow}</p>
-            <h3 className="mt-3 text-4xl font-semibold">{copy.faq.title}</h3>
-            <p className="site-muted mt-4 max-w-lg text-sm leading-7">{copy.faq.body}</p>
-          </article>
+            {/* Headline */}
+            <h1
+              className="
+                relative mt-6 max-w-5xl
+                text-[clamp(2.6rem,6vw,4.5rem)]
+                font-semibold leading-[0.93]
+                tracking-[-0.03em] text-[var(--foreground)]
+              "
+            >
+              {copy.hero.title}
+            </h1>
 
-          <div className="space-y-4">
-            {copy.faq.items.map((item) => (
-              <details key={item.question} className="site-panel-soft site-hover-lift group rounded-[1.6rem] border p-5 transition">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">
-                  <span>{item.question}</span>
-                  <span className="site-chip rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em]">{ui.open}</span>
-                </summary>
-                <p className="site-muted mt-4 max-w-3xl text-sm leading-7">{item.answer}</p>
-              </details>
-            ))}
-          </div>
-        </section>
+            <p className="relative mt-5 max-w-2xl text-[15px] leading-[1.75] text-[var(--site-muted)]">
+              {copy.hero.body}
+            </p>
 
-        <section className="site-animate-rise mt-16 grid gap-6 xl:grid-cols-[0.88fr,1.12fr]">
-          <article className="site-panel site-hover-lift rounded-[2rem] border p-7">
-            <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.contact.eyebrow}</p>
-            <h3 className="mt-3 text-4xl font-semibold md:text-5xl">{copy.contact.title}</h3>
-            <p className="site-muted mt-4 max-w-xl text-sm leading-7">{copy.contact.body}</p>
+            {/* CTA row */}
+            <div className="relative mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/auth"
+                className="
+                  site-button-primary
+                  rounded-[14px] px-6 py-3
+                  text-[13px] font-semibold
+                  transition-all duration-200
+                  hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(131,246,215,0.18)]
+                  active:translate-y-0
+                "
+              >
+                {copy.hero.primaryCta}
+              </Link>
+              <a
+                href="#workflow"
+                className="
+                  site-button-secondary
+                  rounded-[14px] border px-6 py-3
+                  text-[13px] font-semibold
+                  transition-all duration-200
+                  hover:-translate-y-0.5 hover:opacity-90
+                "
+              >
+                {copy.hero.workflowCta}
+              </a>
+              <a
+                href="#platform"
+                className="
+                  site-button-secondary
+                  rounded-[14px] border px-6 py-3
+                  text-[13px] font-semibold
+                  transition-all duration-200
+                  hover:-translate-y-0.5 hover:opacity-90
+                "
+              >
+                {copy.hero.platformCta}
+              </a>
+            </div>
 
-            <div className="mt-8 space-y-4">
-              {[
-                copy.platform.modules[0]?.title,
-                copy.workflow.steps[0]?.title,
-                copy.plans.paid.title,
-              ].map((item, index) => (
-                <div
-                  key={`${item}-${index}`}
-                  className="site-panel-soft rounded-[1.4rem] border px-4 py-4 text-sm"
+            {/* Signal cards */}
+            <div className="relative mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {copy.heroSignals.map((signal, i) => (
+                <article
+                  key={signal.title}
+                  style={{ animationDelay: `${i * 80}ms` }}
+                  className="
+                    animate-fade-up
+                    group rounded-[18px]
+                    border border-[var(--site-border)]
+                    bg-[var(--site-surface-soft)]
+                    p-5
+                    transition-all duration-300
+                    hover:-translate-y-0.5
+                    hover:border-[#877cff]/40
+                    hover:bg-[var(--site-surface)]
+                  "
                 >
-                  <div className="flex items-center gap-3">
-                    <SparkDot />
-                    <span>{item}</span>
-                  </div>
-                </div>
+                  <p className="site-accent-text text-[10px] font-semibold uppercase tracking-[0.2em]">
+                    {signal.title}
+                  </p>
+                  <p className="mt-3 text-[13px] leading-[1.7] text-[var(--site-muted)]">
+                    {signal.body}
+                  </p>
+                </article>
               ))}
             </div>
-          </article>
+          </section>
 
-          <form onSubmit={handleContactSubmit} className="site-panel site-hover-lift rounded-[2rem] border p-7 shadow-[0_26px_80px_rgba(10,18,52,0.34)]">
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[var(--foreground)]">{copy.contact.fields.name}</span>
-                <input
-                  name="name"
-                  type="text"
-                  required
-                  autoComplete="name"
-                  placeholder={copy.contact.placeholders.name}
-                  className="site-input w-full rounded-2xl border px-4 py-3 text-sm outline-none transition focus:border-[#8d84ff]/55"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[var(--foreground)]">{copy.contact.fields.email}</span>
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  placeholder={copy.contact.placeholders.email}
-                  className="site-input w-full rounded-2xl border px-4 py-3 text-sm outline-none transition focus:border-[#8d84ff]/55"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[var(--foreground)]">{copy.contact.fields.company}</span>
-                <input
-                  name="company"
-                  type="text"
-                  autoComplete="organization"
-                  placeholder={copy.contact.placeholders.company}
-                  className="site-input w-full rounded-2xl border px-4 py-3 text-sm outline-none transition focus:border-[#8d84ff]/55"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[var(--foreground)]">{copy.contact.fields.goal}</span>
-                <input
-                  name="goal"
-                  type="text"
-                  required
-                  placeholder={copy.contact.placeholders.goal}
-                  className="site-input w-full rounded-2xl border px-4 py-3 text-sm outline-none transition focus:border-[#8d84ff]/55"
-                />
-              </label>
-            </div>
-
-            <label className="mt-4 block">
-              <span className="mb-2 block text-sm font-medium text-[var(--foreground)]">{copy.contact.fields.details}</span>
-              <textarea
-                name="details"
-                rows={6}
-                placeholder={copy.contact.placeholders.details}
-                className="site-input w-full resize-none rounded-[1.5rem] border px-4 py-3 text-sm outline-none transition focus:border-[#8d84ff]/55"
-              />
-            </label>
-
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-              <p
-                className={`text-sm ${
-                  contactState === "success"
-                    ? "text-[#83f6d7]"
-                    : contactState === "error"
-                      ? "text-[#ff9c9c]"
-                      : "text-[var(--site-muted)]"
-                }`}
+          {/* ══════════════════════════════════════════════════════
+              TRUST BAR
+          ══════════════════════════════════════════════════════ */}
+          <div
+            aria-label="Trust signals"
+            className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"
+          >
+            {copy.trustBar.map((item) => (
+              <div
+                key={item}
+                className="
+                  rounded-full border border-[var(--site-border)]
+                  bg-[var(--site-surface)]
+                  px-5 py-3
+                  text-center text-[12px] font-medium
+                  text-[var(--site-muted)]
+                  backdrop-blur-sm
+                  transition-colors duration-200
+                  hover:border-[#877cff]/30
+                "
               >
-                {contactStatus}
+                {item}
+              </div>
+            ))}
+          </div>
+
+          {/* ══════════════════════════════════════════════════════
+              PLATFORM
+          ══════════════════════════════════════════════════════ */}
+          <section
+            id="platform"
+            aria-labelledby="platform-heading"
+            className="mt-20 scroll-mt-28"
+          >
+            <header className="flex flex-wrap items-end justify-between gap-6">
+              <div>
+                <SectionEyebrow>{copy.platform.eyebrow}</SectionEyebrow>
+                <h2
+                  id="platform-heading"
+                  className="mt-2 max-w-3xl text-[clamp(1.8rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.02em]"
+                >
+                  {copy.platform.title}
+                </h2>
+              </div>
+              <p className="max-w-sm text-[13px] leading-[1.75] text-[var(--site-muted)]">
+                {copy.platform.body}
+              </p>
+            </header>
+
+            <div className="mt-7 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {copy.platform.modules.map((mod, i) => (
+                <article
+                  key={mod.title}
+                  style={{ animationDelay: `${i * 60}ms` }}
+                  className="
+                    animate-fade-up group relative overflow-hidden
+                    rounded-[22px]
+                    border border-[var(--site-border)]
+                    bg-[var(--site-surface)]
+                    p-6
+                    transition-all duration-300
+                    hover:-translate-y-1
+                    hover:border-[#8b82ff]/35
+                    hover:shadow-[0_16px_40px_rgba(0,0,0,0.22)]
+                  "
+                >
+                  {/* Card glow */}
+                  <div
+                    aria-hidden="true"
+                    className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#6c5cff]/10 blur-2xl transition-all duration-300 group-hover:bg-[#6c5cff]/20"
+                  />
+
+                  <p className="site-accent-text relative text-[10px] font-semibold uppercase tracking-[0.2em]">
+                    {mod.eyebrow}
+                  </p>
+                  <h3 className="relative mt-4 text-[1.3rem] font-semibold leading-tight">
+                    {mod.title}
+                  </h3>
+                  <p className="relative mt-3 text-[13px] leading-[1.7] text-[var(--site-muted)]">
+                    {mod.body}
+                  </p>
+
+                  <div className="relative mt-8 flex items-center gap-2 text-[11px] font-medium text-[var(--site-muted)] opacity-60">
+                    <SparkDot />
+                    {ui.structured}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════════════════════════
+              WORKFLOW
+          ══════════════════════════════════════════════════════ */}
+          <section
+            id="workflow"
+            aria-labelledby="workflow-heading"
+            className="
+              mt-20 scroll-mt-28
+              grid gap-4 rounded-[2.2rem]
+              border border-[var(--site-border)]
+              bg-[var(--site-surface)]
+              p-5 md:p-8
+              xl:grid-cols-[0.9fr,1.1fr]
+            "
+          >
+            {/* Left: description + checklist */}
+            <article
+              className="
+                rounded-[1.6rem]
+                border border-[var(--site-border)]
+                bg-[var(--site-surface-soft)]
+                p-6
+              "
+            >
+              <SectionEyebrow>{copy.workflow.eyebrow}</SectionEyebrow>
+              <h2
+                id="workflow-heading"
+                className="mt-3 text-[clamp(1.6rem,3vw,2.4rem)] font-semibold leading-[1.05] tracking-[-0.02em]"
+              >
+                {copy.workflow.title}
+              </h2>
+              <p className="mt-4 max-w-xl text-[13px] leading-[1.75] text-[var(--site-muted)]">
+                {copy.workflow.body}
               </p>
 
-              <button
-                type="submit"
-                disabled={contactState === "sending"}
-                className="site-button-primary rounded-2xl px-6 py-3 text-sm font-black uppercase tracking-[0.02em] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+              <ul
+                aria-label="Workflow checklist"
+                className="mt-8 space-y-2"
               >
-                {contactState === "sending" ? ui.sending : copy.contact.submit}
-              </button>
+                {copy.workflow.checklist.map((line) => (
+                  <li
+                    key={line}
+                    className="
+                      flex items-center gap-3
+                      rounded-[14px]
+                      border border-[var(--site-border)]
+                      bg-[var(--site-surface)]
+                      px-4 py-3
+                      text-[13px]
+                      transition-colors duration-200
+                      hover:border-[#877cff]/30
+                    "
+                  >
+                    <SparkDot />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+
+            {/* Right: step cards */}
+            <div className="grid grid-cols-2 gap-3">
+              {copy.workflow.steps.map((item, i) => (
+                <article
+                  key={item.step}
+                  style={{ animationDelay: `${i * 60}ms` }}
+                  className="
+                    animate-fade-up group
+                    rounded-[1.5rem]
+                    border border-[var(--site-border)]
+                    bg-[var(--site-surface-soft)]
+                    p-5
+                    transition-all duration-300
+                    hover:-translate-y-0.5
+                    hover:border-[#8a80ff]/35
+                  "
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="site-accent-text text-[10px] font-semibold uppercase tracking-[0.2em]">
+                      {item.step}
+                    </p>
+                    <span
+                      className="
+                        rounded-full border border-[var(--site-border)]
+                        bg-[var(--site-surface)]
+                        px-2.5 py-1
+                        text-[10px] font-medium
+                        text-[var(--site-muted)]
+                      "
+                    >
+                      {ui.guided}
+                    </span>
+                  </div>
+                  <h3 className="mt-5 text-[1.2rem] font-semibold leading-tight">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-[12px] leading-[1.65] text-[var(--site-muted)]">
+                    {item.body}
+                  </p>
+                </article>
+              ))}
             </div>
-          </form>
-        </section>
+          </section>
 
-        <section className="site-panel-vibrant site-animate-rise mt-16 overflow-hidden rounded-[2rem] border px-7 py-10 text-center shadow-[0_26px_80px_rgba(10,18,52,0.48)] md:px-10">
-          <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.cta.eyebrow}</p>
-          <h3 className="mt-4 text-4xl font-semibold md:text-5xl">{copy.cta.title}</h3>
-          <p className="site-muted mx-auto mt-4 max-w-2xl text-sm leading-7">{copy.cta.body}</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link
-              href="/auth"
-              className="site-button-primary rounded-2xl border px-6 py-3 text-sm font-black uppercase tracking-[0.02em] transition hover:opacity-95 active:opacity-90"
+          {/* ══════════════════════════════════════════════════════
+              BLOG
+          ══════════════════════════════════════════════════════ */}
+          <section
+            aria-labelledby="blog-heading"
+            className="mt-20"
+          >
+            <header className="flex flex-wrap items-end justify-between gap-6">
+              <div>
+                <SectionEyebrow>{copy.blog.eyebrow}</SectionEyebrow>
+                <h2
+                  id="blog-heading"
+                  className="mt-3 max-w-3xl text-[clamp(1.8rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.02em]"
+                >
+                  {copy.blog.title}
+                </h2>
+              </div>
+              <div className="max-w-sm">
+                <p className="text-[13px] leading-[1.75] text-[var(--site-muted)]">
+                  {copy.blog.body}
+                </p>
+                <Link
+                  href={`/${uiLanguage}/blog`}
+                  className="site-link-accent mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold"
+                >
+                  {copy.blog.cta}
+                  <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+                </Link>
+              </div>
+            </header>
+
+            <div className="mt-8 grid gap-3 lg:grid-cols-3">
+              {posts.length === 0 ? (
+                <article
+                  className="
+                    rounded-[22px]
+                    border border-[var(--site-border)]
+                    bg-[var(--site-surface)]
+                    p-7 lg:col-span-3
+                  "
+                >
+                  <h3 className="text-[1.3rem] font-semibold leading-tight">
+                    No live articles yet
+                  </h3>
+                  <p className="mt-3 max-w-2xl text-[13px] leading-[1.75] text-[var(--site-muted)]">
+                    The public blog feed is live-data only. Publish the first article from the blog admin console and it will appear here.
+                  </p>
+                  <Link
+                    href="/aether-lab-ops"
+                    className="site-link-accent mt-5 inline-flex text-[13px] font-semibold"
+                  >
+                    Open publishing console
+                  </Link>
+                </article>
+              ) : (
+                posts.map((post) => (
+                  <article
+                    key={post.slug}
+                    className="
+                      group flex flex-col
+                      rounded-[22px]
+                      border border-[var(--site-border)]
+                      bg-[var(--site-surface)]
+                      p-6
+                      transition-all duration-300
+                      hover:-translate-y-1
+                      hover:border-[#877cff]/30
+                      hover:shadow-[0_16px_40px_rgba(0,0,0,0.2)]
+                    "
+                  >
+                    <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--site-muted)] opacity-60">
+                      <span>{post.category}</span>
+                      <span>{post.readTime}</span>
+                    </div>
+                    <h3 className="mt-4 text-[1.2rem] font-semibold leading-tight">
+                      {post.title}
+                    </h3>
+                    <p className="mt-3 flex-1 text-[13px] leading-[1.7] text-[var(--site-muted)]">
+                      {post.excerpt}
+                    </p>
+                    <time
+                      dateTime={post.publishedAt}
+                      className="mt-5 text-[11px] text-[var(--site-muted)] opacity-50"
+                    >
+                      {new Date(post.publishedAt).toLocaleDateString()}
+                    </time>
+                    <Link
+                      href={`/${uiLanguage}/blog/${post.slug}`}
+                      className="site-link-accent mt-4 inline-flex text-[13px] font-semibold"
+                    >
+                      {ui.readArticle}
+                    </Link>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════════════════════════
+              PLANS
+          ══════════════════════════════════════════════════════ */}
+          <section
+            id="plans"
+            aria-labelledby="plans-heading"
+            className="mt-20 scroll-mt-28"
+          >
+            <SectionEyebrow>{copy.plans.free.eyebrow}</SectionEyebrow>
+            <h2
+              id="plans-heading"
+              className="sr-only"
             >
-              <span>{copy.cta.primary}</span>
-            </Link>
-            <a href="#platform" className="site-button-secondary rounded-2xl border px-6 py-3 text-sm font-semibold transition hover:opacity-95">
-              {copy.cta.secondary}
-            </a>
-          </div>
-        </section>
+              Pricing plans
+            </h2>
 
-        <div className="site-animate-rise">
-          <PublicFooter language={uiLanguage} />
-        </div>
+            <div className="mt-4 grid gap-4 xl:grid-cols-2">
+              {/* Free */}
+              <article
+                className="
+                  group rounded-[22px]
+                  border border-[var(--site-border)]
+                  bg-[var(--site-surface)]
+                  p-8
+                  transition-all duration-300
+                  hover:-translate-y-0.5
+                  hover:border-[#877cff]/25
+                "
+              >
+                <SectionEyebrow>{copy.plans.free.eyebrow}</SectionEyebrow>
+                <h3 className="mt-2 text-[clamp(1.6rem,3vw,2.2rem)] font-semibold leading-tight tracking-[-0.02em]">
+                  {copy.plans.free.title}
+                </h3>
+                <p className="mt-3 max-w-md text-[13px] leading-[1.75] text-[var(--site-muted)]">
+                  {copy.plans.free.body}
+                </p>
+                <ul
+                  aria-label="Free plan features"
+                  className="mt-7 space-y-2"
+                >
+                  {copy.plans.free.features.map((feat) => (
+                    <li
+                      key={feat}
+                      className="
+                        rounded-[14px]
+                        border border-[var(--site-border)]
+                        bg-[var(--site-surface-soft)]
+                        px-4 py-3
+                        text-[13px]
+                      "
+                    >
+                      {feat}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/auth?plan=free"
+                  className="
+                    site-button-secondary
+                    mt-8 inline-flex rounded-[14px]
+                    border px-5 py-3
+                    text-[13px] font-semibold
+                    transition-all duration-200
+                    hover:-translate-y-0.5 hover:opacity-90
+                  "
+                >
+                  {copy.plans.free.cta}
+                </Link>
+              </article>
+
+              {/* Paid */}
+              <article
+                className="
+                  relative overflow-hidden
+                  rounded-[22px]
+                  border border-[#877cff]/30
+                  bg-[var(--site-surface)]
+                  p-8
+                  shadow-[0_0_0_1px_rgba(135,124,255,0.08)_inset]
+                  transition-all duration-300
+                  hover:-translate-y-0.5
+                  hover:shadow-[0_20px_60px_rgba(0,0,0,0.28)]
+                "
+              >
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[var(--site-primary)]/12 blur-3xl"
+                />
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute bottom-0 left-[20%] h-32 w-32 rounded-full bg-[#3d8dff]/8 blur-2xl"
+                />
+
+                <SectionEyebrow>{copy.plans.paid.eyebrow}</SectionEyebrow>
+                <h3 className="relative mt-2 text-[clamp(1.6rem,3vw,2.2rem)] font-semibold leading-tight tracking-[-0.02em]">
+                  {copy.plans.paid.title}
+                </h3>
+                <p className="relative mt-3 max-w-md text-[13px] leading-[1.75] text-[var(--site-muted)]">
+                  {copy.plans.paid.body}
+                </p>
+                <ul
+                  aria-label="Paid plan features"
+                  className="relative mt-7 grid gap-2 sm:grid-cols-2"
+                >
+                  {copy.plans.paid.features.map((feat) => (
+                    <li
+                      key={feat}
+                      className="
+                        rounded-[14px]
+                        border border-[var(--site-border)]
+                        bg-[var(--site-surface-soft)]
+                        px-4 py-3
+                        text-[13px]
+                      "
+                    >
+                      {feat}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/choose-plan"
+                  className="
+                    site-button-primary
+                    relative mt-8 inline-flex
+                    rounded-[14px] border px-6 py-3
+                    text-[13px] font-black
+                    uppercase tracking-[0.04em]
+                    transition-all duration-200
+                    hover:-translate-y-0.5
+                    hover:shadow-[0_8px_24px_rgba(131,246,215,0.2)]
+                  "
+                >
+                  {copy.plans.paid.cta}
+                </Link>
+              </article>
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════════════════════════
+              FAQ
+          ══════════════════════════════════════════════════════ */}
+          <section
+            id="faq"
+            aria-labelledby="faq-heading"
+            className="mt-20 scroll-mt-28 grid gap-10 xl:grid-cols-[0.75fr,1.25fr]"
+          >
+            <header>
+              <SectionEyebrow>{copy.faq.eyebrow}</SectionEyebrow>
+              <h2
+                id="faq-heading"
+                className="mt-3 text-[clamp(1.8rem,4vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]"
+              >
+                {copy.faq.title}
+              </h2>
+              <p className="mt-4 max-w-md text-[13px] leading-[1.75] text-[var(--site-muted)]">
+                {copy.faq.body}
+              </p>
+            </header>
+
+            <div className="space-y-2">
+              {copy.faq.items.map((item) => (
+                <details
+                  key={item.question}
+                  className="
+                    group rounded-[18px]
+                    border border-[var(--site-border)]
+                    bg-[var(--site-surface)]
+                    p-5
+                    transition-all duration-300
+                    hover:border-[#877cff]/25
+                    open:border-[#877cff]/30
+                  "
+                >
+                  <summary className="
+                    flex cursor-pointer list-none
+                    items-center justify-between gap-4
+                    text-[15px] font-semibold
+                    [&::-webkit-details-marker]:hidden
+                  ">
+                    <span>{item.question}</span>
+                    <span
+                      className="
+                        shrink-0 rounded-full
+                        border border-[var(--site-border)]
+                        bg-[var(--site-surface-soft)]
+                        px-3 py-1
+                        text-[10px] font-semibold
+                        uppercase tracking-[0.18em]
+                        text-[var(--site-muted)]
+                      "
+                    >
+                      {ui.open}
+                    </span>
+                  </summary>
+                  <p className="mt-4 max-w-3xl text-[13px] leading-[1.75] text-[var(--site-muted)]">
+                    {item.answer}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════════════════════════
+              CONTACT
+          ══════════════════════════════════════════════════════ */}
+          <section
+            aria-labelledby="contact-heading"
+            className="mt-20 grid gap-4 xl:grid-cols-[0.88fr,1.12fr]"
+          >
+            {/* Info panel */}
+            <article
+              className="
+                rounded-[22px]
+                border border-[var(--site-border)]
+                bg-[var(--site-surface)]
+                p-8
+                transition-all duration-300
+                hover:border-[#877cff]/25
+              "
+            >
+              <SectionEyebrow>{copy.contact.eyebrow}</SectionEyebrow>
+              <h2
+                id="contact-heading"
+                className="mt-3 text-[clamp(1.8rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.02em] md:text-5xl"
+              >
+                {copy.contact.title}
+              </h2>
+              <p className="mt-4 max-w-md text-[13px] leading-[1.75] text-[var(--site-muted)]">
+                {copy.contact.body}
+              </p>
+
+              <ul aria-label="Contact highlights" className="mt-8 space-y-2">
+                {[
+                  copy.platform.modules[0]?.title,
+                  copy.workflow.steps[0]?.title,
+                  copy.plans.paid.title,
+                ].map((item, idx) => (
+                  <li
+                    key={`${item}-${idx}`}
+                    className="
+                      flex items-center gap-3
+                      rounded-[14px]
+                      border border-[var(--site-border)]
+                      bg-[var(--site-surface-soft)]
+                      px-4 py-4
+                      text-[13px]
+                    "
+                  >
+                    <SparkDot />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+
+            {/* Form */}
+            <form
+              onSubmit={handleContactSubmit}
+              aria-label="Contact form"
+              className="
+                rounded-[22px]
+                border border-[var(--site-border)]
+                bg-[var(--site-surface)]
+                p-8
+                shadow-[0_28px_80px_rgba(0,0,0,0.3)]
+              "
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Name */}
+                <label className="block">
+                  <span className="mb-2 block text-[12px] font-semibold text-[var(--foreground)]">
+                    {copy.contact.fields.name}
+                  </span>
+                  <input
+                    name="name"
+                    type="text"
+                    required
+                    autoComplete="name"
+                    placeholder={copy.contact.placeholders.name}
+                    className="
+                      site-input w-full
+                      rounded-[14px] border
+                      px-4 py-3
+                      text-[13px] outline-none
+                      transition-colors duration-200
+                      focus:border-[#8d84ff]/55
+                    "
+                  />
+                </label>
+
+                {/* Email */}
+                <label className="block">
+                  <span className="mb-2 block text-[12px] font-semibold text-[var(--foreground)]">
+                    {copy.contact.fields.email}
+                  </span>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    placeholder={copy.contact.placeholders.email}
+                    className="
+                      site-input w-full
+                      rounded-[14px] border
+                      px-4 py-3
+                      text-[13px] outline-none
+                      transition-colors duration-200
+                      focus:border-[#8d84ff]/55
+                    "
+                  />
+                </label>
+
+                {/* Company */}
+                <label className="block">
+                  <span className="mb-2 block text-[12px] font-semibold text-[var(--foreground)]">
+                    {copy.contact.fields.company}
+                  </span>
+                  <input
+                    name="company"
+                    type="text"
+                    autoComplete="organization"
+                    placeholder={copy.contact.placeholders.company}
+                    className="
+                      site-input w-full
+                      rounded-[14px] border
+                      px-4 py-3
+                      text-[13px] outline-none
+                      transition-colors duration-200
+                      focus:border-[#8d84ff]/55
+                    "
+                  />
+                </label>
+
+                {/* Goal */}
+                <label className="block">
+                  <span className="mb-2 block text-[12px] font-semibold text-[var(--foreground)]">
+                    {copy.contact.fields.goal}
+                  </span>
+                  <input
+                    name="goal"
+                    type="text"
+                    required
+                    placeholder={copy.contact.placeholders.goal}
+                    className="
+                      site-input w-full
+                      rounded-[14px] border
+                      px-4 py-3
+                      text-[13px] outline-none
+                      transition-colors duration-200
+                      focus:border-[#8d84ff]/55
+                    "
+                  />
+                </label>
+              </div>
+
+              {/* Details */}
+              <label className="mt-4 block">
+                <span className="mb-2 block text-[12px] font-semibold text-[var(--foreground)]">
+                  {copy.contact.fields.details}
+                </span>
+                <textarea
+                  name="details"
+                  rows={5}
+                  placeholder={copy.contact.placeholders.details}
+                  className="
+                    site-input w-full resize-none
+                    rounded-[18px] border
+                    px-4 py-3
+                    text-[13px] outline-none
+                    transition-colors duration-200
+                    focus:border-[#8d84ff]/55
+                  "
+                />
+              </label>
+
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+                <p
+                  aria-live="polite"
+                  className={`text-[12px] transition-colors duration-300 ${
+                    contactState === "success"
+                      ? "text-[#83f6d7]"
+                      : contactState === "error"
+                        ? "text-[#ff9c9c]"
+                        : "text-[var(--site-muted)]"
+                  }`}
+                >
+                  {contactStatus}
+                </p>
+
+                <button
+                  type="submit"
+                  disabled={contactState === "sending"}
+                  className="
+                    site-button-primary
+                    rounded-[14px] px-6 py-3
+                    text-[13px] font-black
+                    uppercase tracking-[0.04em]
+                    transition-all duration-200
+                    hover:-translate-y-0.5
+                    hover:shadow-[0_8px_24px_rgba(131,246,215,0.2)]
+                    disabled:cursor-not-allowed disabled:opacity-60
+                  "
+                >
+                  {contactState === "sending"
+                    ? ui.sending
+                    : copy.contact.submit}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* ══════════════════════════════════════════════════════
+              FINAL CTA BANNER
+          ══════════════════════════════════════════════════════ */}
+          <section
+            aria-labelledby="cta-heading"
+            className="
+              relative mt-16 overflow-hidden
+              rounded-[2.2rem]
+              border border-[#877cff]/25
+              bg-[var(--site-surface)]
+              px-8 py-14
+              text-center
+              shadow-[0_32px_80px_rgba(0,0,0,0.4)]
+              md:px-12
+            "
+          >
+            {/* Ambient glows */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -left-16 top-0 h-56 w-56 rounded-full bg-[#705dff]/15 blur-3xl"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-16 bottom-0 h-56 w-56 rounded-full bg-[#3d8dff]/12 blur-3xl"
+            />
+
+            <SectionEyebrow>{copy.cta.eyebrow}</SectionEyebrow>
+            <h2
+              id="cta-heading"
+              className="relative mt-4 text-[clamp(1.8rem,4vw,3.2rem)] font-semibold leading-[1.05] tracking-[-0.02em] md:text-5xl"
+            >
+              {copy.cta.title}
+            </h2>
+            <p className="relative mx-auto mt-4 max-w-2xl text-[13px] leading-[1.75] text-[var(--site-muted)]">
+              {copy.cta.body}
+            </p>
+
+            <div className="relative mt-8 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/auth"
+                className="
+                  site-button-primary
+                  rounded-[14px] border px-7 py-3.5
+                  text-[13px] font-black
+                  uppercase tracking-[0.04em]
+                  transition-all duration-200
+                  hover:-translate-y-0.5
+                  hover:shadow-[0_8px_28px_rgba(131,246,215,0.22)]
+                  active:translate-y-0
+                "
+              >
+                {copy.cta.primary}
+              </Link>
+              <a
+                href="#platform"
+                className="
+                  site-button-secondary
+                  rounded-[14px] border px-7 py-3.5
+                  text-[13px] font-semibold
+                  transition-all duration-200
+                  hover:-translate-y-0.5 hover:opacity-90
+                "
+              >
+                {copy.cta.secondary}
+              </a>
+            </div>
+          </section>
+
+          {/* Footer */}
+          <div className="mt-16">
+            <PublicFooter language={uiLanguage} />
+          </div>
         </main>
       </div>
     </div>

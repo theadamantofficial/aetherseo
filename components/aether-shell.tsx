@@ -430,7 +430,7 @@ export default function AetherShell({ children }: { children: ReactNode }) {
           <footer className="border-t border-[var(--site-border)] px-4 py-4 md:px-8">
             <div className="mx-auto flex w-full max-w-[1100px] flex-wrap items-center justify-between gap-4 text-xs">
               <div className="flex items-center gap-4">
-                <span className="site-muted">© 2026 TheAdamant</span>
+                <span className="site-muted">© 2026 The Adamant</span>
                 <Link href={`/${uiLanguage}/privacy-policy`} className="site-muted hover:text-[var(--foreground)]">Privacy Policy</Link>
                 <Link href={`/${uiLanguage}/terms-of-service`} className="site-muted hover:text-[var(--foreground)]">Terms of Service</Link>
               </div>

@@ -439,28 +439,28 @@ export const termsCopy: Record<SiteLanguage, LegalDocumentCopy> = {
 export const footerCopy: Record<SiteLanguage, FooterCopy> = {
   en: {
     product: "Aether SEO",
-    parent: "TheAdamant",
+    parent: "The Adamant",
     rights: "All rights reserved.",
     privacy: "Privacy Policy",
     terms: "Terms of Service",
   },
   es: {
     product: "Aether SEO",
-    parent: "TheAdamant",
+    parent: "The Adamant",
     rights: "Todos los derechos reservados.",
     privacy: "Politica de privacidad",
     terms: "Terminos del servicio",
   },
   fr: {
     product: "Aether SEO",
-    parent: "TheAdamant",
+    parent: "The Adamant",
     rights: "Tous droits reserves.",
     privacy: "Politique de confidentialite",
     terms: "Conditions d'utilisation",
   },
   hi: {
     product: "Aether SEO",
-    parent: "TheAdamant",
+    parent: "The Adamant",
     rights: "All rights reserved.",
     privacy: "Privacy Policy",
     terms: "Terms of Service",

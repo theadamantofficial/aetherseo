@@ -30,6 +30,7 @@ const baseNavItems: NavItem[] = [
   { key: "dashboard", href: "/dashboard" },
   { key: "analytics", href: "/analytics" },
   { key: "aiAssistant", href: "/ai-assistant" },
+  { key: "plagiarismCheck", href: "/plagiarism-check" },
   { key: "generateBlog", href: "/generate-blog" },
   { key: "websiteAudit", href: "/website-audit" },
   { key: "history", href: "/history" },
@@ -41,6 +42,7 @@ const searchEntries: SearchEntry[] = [
   { href: "/dashboard", key: "dashboard", keywords: ["home", "overview", "workspace"] },
   { href: "/analytics", key: "analytics", keywords: ["metrics", "performance", "reports"] },
   { href: "/ai-assistant", key: "aiAssistant", keywords: ["assistant", "seo", "brief", "metadata"] },
+  { href: "/plagiarism-check", key: "plagiarismCheck", keywords: ["plagiarism", "originality", "rewrite", "duplicate"] },
   { href: "/generate-blog", key: "generateBlog", keywords: ["blog", "draft", "content", "writer"] },
   { href: "/website-audit", key: "websiteAudit", keywords: ["audit", "technical", "score", "domain"] },
   { href: "/history", key: "history", keywords: ["archive", "activity", "timeline"] },
@@ -54,6 +56,7 @@ const preferredShellCopy = {
       dashboard: "Dashboard",
       analytics: "Analysen",
       aiAssistant: "KI-Assistent",
+      plagiarismCheck: "Plagiatscheck",
       generateBlog: "Blog erstellen",
       websiteAudit: "Website-Audit",
       history: "Verlauf",
@@ -79,6 +82,7 @@ const preferredShellCopy = {
       dashboard: "ダッシュボード",
       analytics: "分析",
       aiAssistant: "AIアシスタント",
+      plagiarismCheck: "盗用チェック",
       generateBlog: "ブログ生成",
       websiteAudit: "サイト監査",
       history: "履歴",
@@ -104,6 +108,7 @@ const preferredShellCopy = {
       dashboard: "대시보드",
       analytics: "분석",
       aiAssistant: "AI 도우미",
+      plagiarismCheck: "표절 검사",
       generateBlog: "블로그 생성",
       websiteAudit: "웹사이트 감사",
       history: "기록",
@@ -136,6 +141,8 @@ const signOutLabelByLanguage: Record<string, string> = {
   ko: "로그아웃",
 };
 
+const paidOnlyNavKeys = new Set<NavItem["key"]>(["aiAssistant", "plagiarismCheck"]);
+
 /**
  * Render a consistent app shell for all logged-in pages.
  * @param props - Shell children rendered in the main panel.
@@ -158,14 +165,14 @@ export default function AetherShell({ children }: { children: ReactNode }) {
       : shellCopy[uiLanguage];
   const signOutLabel =
     "signOut" in copy ? copy.signOut : signOutLabelByLanguage[uiLanguage] ?? "Sign out";
-  const canUseAssistant = billingPlan === "paid";
+  const canUsePaidTools = billingPlan === "paid";
   const navItems = useMemo(
-    () => baseNavItems.filter((item) => canUseAssistant || item.key !== "aiAssistant"),
-    [canUseAssistant],
+    () => baseNavItems.filter((item) => canUsePaidTools || !paidOnlyNavKeys.has(item.key)),
+    [canUsePaidTools],
   );
   const availableSearchEntries = useMemo(
-    () => searchEntries.filter((entry) => canUseAssistant || entry.key !== "aiAssistant"),
-    [canUseAssistant],
+    () => searchEntries.filter((entry) => canUsePaidTools || !paidOnlyNavKeys.has(entry.key)),
+    [canUsePaidTools],
   );
   const searchResults = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -449,7 +456,7 @@ export default function AetherShell({ children }: { children: ReactNode }) {
                 >
                   {copy.newAction}
                 </button>
-                {canUseAssistant ? (
+                {canUsePaidTools ? (
                   <Link href="/ai-assistant" className="site-button-secondary rounded-lg px-2.5 py-1 text-xs font-medium">
                     {copy.aiAssistant}
                   </Link>

@@ -12,6 +12,13 @@ import {
 import type { User } from "firebase/auth";
 import { firestore } from "./firebase";
 import { PAID_PLAN_DEFINITIONS } from "./paid-plans";
+import type {
+  PlagiarismLockedSuggestion,
+  PlagiarismMatch,
+  PlagiarismPagePreview,
+  PlagiarismPdfExport,
+  PlagiarismRun,
+} from "./plagiarism-scan";
 
 export type BillingPlan = "free" | "paid";
 export type PaidPlanTier = "starter" | "pro" | "agency";
@@ -168,6 +175,7 @@ export type DashboardData = {
   generatedBlogs: GeneratedBlog[];
   auditRuns: AuditRun[];
   assistantRuns: AssistantRun[];
+  plagiarismRuns: PlagiarismRun[];
   updatedAt?: Timestamp | null;
 };
 
@@ -275,76 +283,6 @@ function isPaidPlanTier(value: unknown): value is PaidPlanTier {
   return value === "starter" || value === "pro" || value === "agency";
 }
 
-const BASE_DASHBOARDS: Record<BillingPlan, Omit<DashboardData, "uid" | "updatedAt">> = {
-  free: {
-    plan: "free",
-    title: "Free workspace dashboard",
-    body: "Your current SEO plan has capped access to keep you focused on high-quality setup tasks.",
-    usage: {
-      label: "Blogs generated",
-      current: 2,
-      max: 3,
-      text: "Need more credits this cycle.",
-    },
-    cards: [
-      { label: "Monthly usage", value: "2 / 3", description: "Blog draft allowance used" },
-      { label: "Organic traffic", value: "7.4k", description: "+14.2% this month" },
-      { label: "Top keywords", value: "96", description: "Visibility score +1.9%" },
-    ],
-    health: [
-      { label: "Page speed", value: "89", description: "Mostly stable", tone: "good" },
-      { label: "Technical debt", value: "8", description: "4 items need fixing", tone: "warning" },
-      { label: "Dead links", value: "0", description: "No critical blocks", tone: "good" },
-    ],
-    recommendations: [
-      "Enable robots coverage checks for your largest pages",
-      "Add one blog topic with supporting internal links",
-    ],
-    activities: [
-      { title: "Blog generated: Product Landing Keywords", type: "blog", date: "Oct 24, 2024", status: "Completed" },
-      { title: "Website Audit: rankly.ai", type: "audit", date: "Oct 18, 2024", status: "Active" },
-      { title: "Meta fixes: Campaign page", type: "system", date: "Oct 13, 2024", status: "Draft" },
-    ],
-    generatedBlogs: [],
-    auditRuns: [],
-    assistantRuns: [],
-  },
-  paid: {
-    plan: "paid",
-    title: "Paid workspace dashboard",
-    body: "All free-level insights plus deeper recommendations and unlimited monthly runs.",
-    usage: {
-      label: "Monthly run count",
-      current: 36,
-      max: 250,
-      text: "You have broad access with usage headroom.",
-    },
-    cards: [
-      { label: "Traffic growth", value: "42.1%", description: "This month vs last month" },
-      { label: "Generated artifacts", value: "58", description: "Blogs, audits and reports" },
-      { label: "Conversion score", value: "A+", description: "Landing funnel quality score" },
-    ],
-    health: [
-      { label: "Page speed", value: "97", description: "Excellent", tone: "good" },
-      { label: "Backlinks", value: "1,340", description: "Healthy index growth", tone: "good" },
-      { label: "Issues", value: "1", description: "Priority action remaining", tone: "warning" },
-    ],
-    recommendations: [
-      "Enable scheduled weekly audits for core pages",
-      "Generate a 90-day editorial calendar from ranking gaps",
-      "Prioritize cluster pages with low CTR tags",
-    ],
-    activities: [
-      { title: "Audit: Agency landing performance", type: "audit", date: "Oct 30, 2024", status: "Completed" },
-      { title: "Blog generated: AI in Search", type: "blog", date: "Oct 29, 2024", status: "Completed" },
-      { title: "Report pack: North America", type: "report", date: "Oct 27, 2024", status: "Active" },
-    ],
-    generatedBlogs: [],
-    auditRuns: [],
-    assistantRuns: [],
-  },
-};
-
 export function getPaidTierMeta(tier: PaidPlanTier | null | undefined): PaidPlanTierMeta | null {
   return tier ? PAID_PLAN_TIER_META[tier] : null;
 }
@@ -366,7 +304,7 @@ function getDashboardTemplate(
   plan: BillingPlan,
   paidPlanTier: PaidPlanTier | null = null,
 ): Omit<DashboardData, "uid" | "updatedAt"> {
-  const derivedState = buildDynamicDashboardState(plan, paidPlanTier, [], [], []);
+  const derivedState = buildDynamicDashboardState(plan, paidPlanTier, [], [], [], []);
 
   return {
     plan,
@@ -380,6 +318,7 @@ function getDashboardTemplate(
     generatedBlogs: [],
     auditRuns: [],
     assistantRuns: [],
+    plagiarismRuns: [],
   };
 }
 
@@ -541,6 +480,218 @@ function normalizeAssistantRun(value: unknown): AssistantRun | null {
   };
 }
 
+function normalizePlagiarismMatch(value: unknown): PlagiarismMatch | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const match = value as {
+    alternative?: unknown;
+    keywordAlternatives?: unknown;
+    line?: unknown;
+    reason?: unknown;
+    risk?: unknown;
+  };
+
+  if (
+    typeof match.line !== "string" ||
+    typeof match.risk !== "string" ||
+    typeof match.reason !== "string" ||
+    typeof match.alternative !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    line: match.line,
+    risk:
+      match.risk === "High" || match.risk === "Medium" || match.risk === "Low"
+        ? match.risk
+        : "Medium",
+    reason: match.reason,
+    alternative: match.alternative,
+    keywordAlternatives: sanitizeArray<string>(match.keywordAlternatives, []).filter(
+      (keyword) => typeof keyword === "string",
+    ),
+  };
+}
+
+function normalizePlagiarismPreview(value: unknown): PlagiarismPagePreview | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const preview = value as {
+    canonicalUrl?: unknown;
+    excerpt?: unknown;
+    faviconUrl?: unknown;
+    firstHeading?: unknown;
+    host?: unknown;
+    imageUrl?: unknown;
+    metaDescription?: unknown;
+    sentenceCount?: unknown;
+    title?: unknown;
+    wordCount?: unknown;
+  };
+
+  if (
+    typeof preview.canonicalUrl !== "string" ||
+    typeof preview.excerpt !== "string" ||
+    typeof preview.firstHeading !== "string" ||
+    typeof preview.host !== "string" ||
+    typeof preview.metaDescription !== "string" ||
+    typeof preview.title !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    canonicalUrl: preview.canonicalUrl,
+    excerpt: preview.excerpt,
+    faviconUrl: typeof preview.faviconUrl === "string" ? preview.faviconUrl : null,
+    firstHeading: preview.firstHeading,
+    host: preview.host,
+    imageUrl: typeof preview.imageUrl === "string" ? preview.imageUrl : null,
+    metaDescription: preview.metaDescription,
+    sentenceCount:
+      typeof preview.sentenceCount === "number" && Number.isFinite(preview.sentenceCount)
+        ? Math.max(0, Math.round(preview.sentenceCount))
+        : 0,
+    title: preview.title,
+    wordCount:
+      typeof preview.wordCount === "number" && Number.isFinite(preview.wordCount)
+        ? Math.max(0, Math.round(preview.wordCount))
+        : 0,
+  };
+}
+
+function normalizePlagiarismLockedSuggestion(value: unknown): PlagiarismLockedSuggestion | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const suggestion = value as {
+    body?: unknown;
+    creditCost?: unknown;
+    creditType?: unknown;
+    title?: unknown;
+  };
+
+  if (
+    typeof suggestion.title !== "string" ||
+    typeof suggestion.body !== "string" ||
+    typeof suggestion.creditCost !== "number"
+  ) {
+    return null;
+  }
+
+  return {
+    title: suggestion.title,
+    body: suggestion.body,
+    creditCost: Number.isFinite(suggestion.creditCost) ? Math.max(0, Math.round(suggestion.creditCost)) : 0,
+    creditType: suggestion.creditType === "image" ? "image" : "prompt",
+  };
+}
+
+function normalizePlagiarismPdfExport(value: unknown): PlagiarismPdfExport | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const pdfExport = value as {
+    fileName?: unknown;
+    highlights?: unknown;
+    subtitle?: unknown;
+    title?: unknown;
+  };
+
+  if (
+    typeof pdfExport.fileName !== "string" ||
+    typeof pdfExport.subtitle !== "string" ||
+    typeof pdfExport.title !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    fileName: pdfExport.fileName,
+    highlights: sanitizeArray<string>(pdfExport.highlights, []).filter((item) => typeof item === "string"),
+    subtitle: pdfExport.subtitle,
+    title: pdfExport.title,
+  };
+}
+
+function normalizePlagiarismRun(value: unknown): PlagiarismRun | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const run = value as {
+    altTextSuggestions?: unknown;
+    alternativeDraft?: unknown;
+    createdAt?: unknown;
+    id?: unknown;
+    keywords?: unknown;
+    language?: unknown;
+    lockedSuggestions?: unknown;
+    matches?: unknown;
+    pdfExport?: unknown;
+    preview?: unknown;
+    riskLabel?: unknown;
+    score?: unknown;
+    summary?: unknown;
+    title?: unknown;
+    url?: unknown;
+    warnings?: unknown;
+  };
+
+  if (
+    typeof run.id !== "string" ||
+    typeof run.url !== "string" ||
+    typeof run.language !== "string" ||
+    typeof run.title !== "string" ||
+    typeof run.summary !== "string" ||
+    typeof run.riskLabel !== "string" ||
+    typeof run.score !== "number" ||
+    typeof run.createdAt !== "string"
+  ) {
+    return null;
+  }
+
+  const preview = normalizePlagiarismPreview(run.preview);
+  const pdfExport = normalizePlagiarismPdfExport(run.pdfExport);
+  if (!preview || !pdfExport) {
+    return null;
+  }
+
+  return {
+    id: run.id,
+    url: run.url,
+    language: run.language,
+    title: run.title,
+    summary: run.summary,
+    score: Number.isFinite(run.score) ? Math.max(0, Math.min(100, Math.round(run.score))) : 0,
+    riskLabel: run.riskLabel,
+    preview,
+    matches: sanitizeArray<unknown>(run.matches, [])
+      .map((match) => normalizePlagiarismMatch(match))
+      .filter((match): match is PlagiarismMatch => Boolean(match)),
+    alternativeDraft: sanitizeArray<string>(run.alternativeDraft, []).filter(
+      (paragraph) => typeof paragraph === "string",
+    ),
+    keywords: sanitizeArray<string>(run.keywords, []).filter((keyword) => typeof keyword === "string"),
+    altTextSuggestions: sanitizeArray<string>(run.altTextSuggestions, []).filter(
+      (suggestion) => typeof suggestion === "string",
+    ),
+    lockedSuggestions: sanitizeArray<unknown>(run.lockedSuggestions, [])
+      .map((suggestion) => normalizePlagiarismLockedSuggestion(suggestion))
+      .filter((suggestion): suggestion is PlagiarismLockedSuggestion => Boolean(suggestion)),
+    pdfExport,
+    warnings: sanitizeArray<string>(run.warnings, []).filter((warning) => typeof warning === "string"),
+    createdAt: run.createdAt,
+  };
+}
+
 function normalizeDashboard(
   value: unknown,
   plan: BillingPlan,
@@ -554,12 +705,16 @@ function normalizeDashboard(
   const assistantRuns = sanitizeArray<unknown>(raw.assistantRuns, fallback.assistantRuns)
     .map((run) => normalizeAssistantRun(run))
     .filter((run): run is AssistantRun => Boolean(run));
+  const plagiarismRuns = sanitizeArray<unknown>(raw.plagiarismRuns, fallback.plagiarismRuns)
+    .map((run) => normalizePlagiarismRun(run))
+    .filter((run): run is PlagiarismRun => Boolean(run));
   const derivedState = buildDynamicDashboardState(
     plan,
     paidPlanTier,
     generatedBlogs,
     auditRuns,
     assistantRuns,
+    plagiarismRuns,
   );
 
   return {
@@ -575,6 +730,7 @@ function normalizeDashboard(
     generatedBlogs,
     auditRuns,
     assistantRuns,
+    plagiarismRuns,
     updatedAt: raw.updatedAt ?? null,
   };
 }
@@ -634,16 +790,20 @@ function buildDynamicDashboardState(
   generatedBlogs: GeneratedBlog[],
   auditRuns: AuditRun[],
   assistantRuns: AssistantRun[],
+  plagiarismRuns: PlagiarismRun[],
 ) {
   const limits = getPlanLimits(plan, paidPlanTier);
   const workspaceLabel = getWorkspaceLabel(plan, paidPlanTier);
   const blogCount = generatedBlogs.length;
   const auditCount = auditRuns.length;
-  const assistantCount = assistantRuns.length;
+  const assistantCount = assistantRuns.length + plagiarismRuns.length;
   const actionCount = blogCount + auditCount + assistantCount;
   const latestBlog = generatedBlogs[0] ?? null;
   const latestAudit = auditRuns[0] ?? null;
-  const latestAssistant = assistantRuns[0] ?? null;
+  const latestAssistant =
+    [...assistantRuns, ...plagiarismRuns].sort(
+      (left, right) => parseDashboardDate(right.createdAt) - parseDashboardDate(left.createdAt),
+    )[0] ?? null;
   const issues = latestAudit?.issues ?? [];
   const criticalIssues = issues.filter((issue) => issue.severity === "Critical").length;
   const warningIssues = issues.filter((issue) => issue.severity === "Warning").length;
@@ -665,6 +825,12 @@ function buildDynamicDashboardState(
       title: assistant.title,
       type: "system" as const,
       date: assistant.createdAt,
+      status: "Completed",
+    })),
+    ...plagiarismRuns.map((scan) => ({
+      title: scan.title,
+      type: "system" as const,
+      date: scan.createdAt,
       status: "Completed",
     })),
   ]
@@ -991,6 +1157,7 @@ export async function upsertDashboardData(
       generatedBlogs: [],
       auditRuns: [],
       assistantRuns: [],
+      plagiarismRuns: [],
       updatedAt: serverTimestamp(),
     };
     await setDoc(ref, payload);
@@ -1166,6 +1333,55 @@ export async function saveAssistantRunForUser(
       uid,
       plan: profile.plan,
       assistantRuns: nextAssistantRuns,
+    },
+    profile.plan,
+    uid,
+    profile.paidPlanTier,
+  );
+}
+
+export async function savePlagiarismRunForUser(
+  uid: string,
+  plagiarismRun: Omit<PlagiarismRun, "id" | "createdAt"> &
+    Partial<Pick<PlagiarismRun, "id" | "createdAt">>,
+): Promise<DashboardData> {
+  const profile = await getUserProfile(uid);
+  if (!profile.plan) {
+    throw new Error("Missing plan selection");
+  }
+
+  const ref = doc(firestore, DASHBOARD_COLLECTION, uid);
+  const current = await getDashboardForUser(uid);
+
+  if (profile.plan === "free") {
+    throw new Error("AI plagiarism check is available on paid plans only. Upgrade to continue.");
+  }
+
+  const nextPlagiarismRun: PlagiarismRun = {
+    id: plagiarismRun.id ?? createItemId("plagiarism"),
+    createdAt: plagiarismRun.createdAt ?? new Date().toLocaleDateString("en-US", {
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+    }),
+    ...plagiarismRun,
+  };
+  const nextPlagiarismRuns = [nextPlagiarismRun, ...current.plagiarismRuns].slice(0, 12);
+  const payload = {
+    uid,
+    plan: profile.plan,
+    plagiarismRuns: nextPlagiarismRuns,
+    updatedAt: serverTimestamp(),
+  };
+
+  await setDoc(ref, payload, { merge: true });
+
+  return normalizeDashboard(
+    {
+      ...current,
+      uid,
+      plan: profile.plan,
+      plagiarismRuns: nextPlagiarismRuns,
     },
     profile.plan,
     uid,

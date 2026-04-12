@@ -187,6 +187,7 @@ export type ShellCopy = {
     dashboard: string;
     analytics: string;
     aiAssistant: string;
+    plagiarismCheck: string;
     generateBlog: string;
     websiteAudit: string;
     history: string;
@@ -1087,6 +1088,7 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
       dashboard: "Dashboard",
       analytics: "Analytics",
       aiAssistant: "AI Assistant",
+      plagiarismCheck: "Plagiarism Check",
       generateBlog: "Generate Blog",
       websiteAudit: "Website Audit",
       history: "History",
@@ -1111,6 +1113,7 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
       dashboard: "Dashboard",
       analytics: "Analitica",
       aiAssistant: "Asistente IA",
+      plagiarismCheck: "Revision de plagio",
       generateBlog: "Generar blog",
       websiteAudit: "Auditoria web",
       history: "Historial",
@@ -1135,6 +1138,7 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
       dashboard: "Dashboard",
       analytics: "Analytique",
       aiAssistant: "Assistant IA",
+      plagiarismCheck: "Controle de plagiat",
       generateBlog: "Generer un blog",
       websiteAudit: "Audit web",
       history: "Historique",
@@ -1159,6 +1163,7 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
       dashboard: "Dashboard",
       analytics: "Analytics",
       aiAssistant: "AI assistant",
+      plagiarismCheck: "Plagiarism check",
       generateBlog: "Blog generate karo",
       websiteAudit: "Website audit",
       history: "History",

@@ -40,6 +40,7 @@ type UiCopy = {
   exportError: string;
   exportHint: string;
   exportReady: string;
+
   generating: string;
   idle: string;
   iframeLabel: string;

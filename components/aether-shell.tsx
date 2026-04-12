@@ -1,11 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import type { ReactNode } from "react";
+import AetherBrand from "@/components/aether-brand";
+import MobileHeaderToggle from "@/components/mobile-header-toggle";
 import SiteLoader from "@/components/site-loader";
 import SitePreferences from "@/components/site-preferences";
 import { useLanguage } from "@/components/language-provider";
@@ -149,6 +150,7 @@ export default function AetherShell({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const copy =
     language === "de" || language === "ja" || language === "ko"
@@ -209,6 +211,11 @@ export default function AetherShell({ children }: { children: ReactNode }) {
     };
   }, [router]);
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setIsSearchOpen(false);
+  }, [pathname]);
+
   function focusSearch() {
     setIsSearchOpen(true);
     searchInputRef.current?.focus();
@@ -237,22 +244,14 @@ export default function AetherShell({ children }: { children: ReactNode }) {
       <div className="mx-auto flex min-h-screen w-full max-w-[1440px] supports-[height:100dvh]:min-h-dvh">
         <aside className="hidden w-60 border-r border-[var(--site-border)] bg-[var(--site-surface)] lg:flex lg:flex-col">
           <div className="px-5 pt-5 pb-4">
-            <div className="flex items-center gap-3">
-              <Image
-                src="/aether-logo-mark.png"
-                alt="Aether SEO"
-                width={40}
-                height={40}
-                priority
-                className="h-10 w-10 rounded-lg object-cover"
-              />
-              <div>
-                <p className="text-sm font-semibold tracking-[-0.02em]">Aether SEO</p>
-                <p className="site-muted text-[10px] uppercase tracking-[0.18em]">
-                  AI MEETS SEO
-                </p>
-              </div>
-            </div>
+            <AetherBrand
+              href="/dashboard"
+              className="rounded-[1.2rem] px-0 py-0 hover:opacity-100"
+              priority
+              titleClassName="text-sm tracking-[-0.02em] sm:text-sm md:text-sm"
+              subtitleClassName="text-[10px] tracking-[0.18em] sm:text-[10px]"
+              logoClassName="h-10 w-10 sm:h-10 sm:w-10"
+            />
           </div>
 
           <nav className="flex-1 space-y-0.5 px-3">
@@ -288,83 +287,140 @@ export default function AetherShell({ children }: { children: ReactNode }) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-14 items-center justify-between gap-3 border-b border-[var(--site-border)] bg-[var(--site-surface)] px-4 md:px-6">
-            <div
-              className="relative w-full max-w-sm"
-              onFocus={() => setIsSearchOpen(true)}
-              onBlur={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                  setIsSearchOpen(false);
-                }
-              }}
-            >
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (searchResults[0]) {
-                    openSearchResult(searchResults[0].href);
+          <header className="relative border-b border-[var(--site-border)] bg-[var(--site-surface)] px-4 py-3 md:px-6">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center justify-between gap-3 lg:hidden">
+                <AetherBrand
+                  href="/dashboard"
+                  className="flex-1"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  priority
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsMobileMenuOpen((current) => !current)}
+                  className="site-button-secondary flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+                  aria-expanded={isMobileMenuOpen}
+                  aria-controls="app-mobile-menu"
+                  aria-label={isMobileMenuOpen ? "Close navigation" : "Open navigation"}
+                >
+                  <MobileHeaderToggle isOpen={isMobileMenuOpen} />
+                </button>
+              </div>
+
+              <div
+                className="relative w-full lg:max-w-sm"
+                onFocus={() => setIsSearchOpen(true)}
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                    setIsSearchOpen(false);
                   }
                 }}
               >
-                <input
-                  ref={searchInputRef}
-                  type="search"
-                  value={searchTerm}
-                  onChange={(event) => {
-                    setSearchTerm(event.target.value);
-                    setIsSearchOpen(true);
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (searchResults[0]) {
+                      openSearchResult(searchResults[0].href);
+                    }
                   }}
-                  placeholder={copy.searchPlaceholder}
-                  className="site-input w-full rounded-lg px-3 py-1.5 text-sm outline-none"
-                />
-              </form>
-              {isSearchOpen ? (
-                <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-lg border border-[var(--site-border)] bg-[var(--site-surface)] p-1 shadow-[var(--site-depth-shadow)]">
-                  {searchResults.length ? (
-                    searchResults.map((entry) => {
-                      const isActive = pathname === entry.href;
+                >
+                  <input
+                    ref={searchInputRef}
+                    type="search"
+                    value={searchTerm}
+                    onChange={(event) => {
+                      setSearchTerm(event.target.value);
+                      setIsSearchOpen(true);
+                    }}
+                    placeholder={copy.searchPlaceholder}
+                    className="site-input w-full rounded-lg px-3 py-1.5 text-sm outline-none"
+                  />
+                </form>
+                {isSearchOpen ? (
+                  <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-lg border border-[var(--site-border)] bg-[var(--site-surface)] p-1 shadow-[var(--site-depth-shadow)]">
+                    {searchResults.length ? (
+                      searchResults.map((entry) => {
+                        const isActive = pathname === entry.href;
 
-                      return (
-                        <button
-                          key={entry.href}
-                          type="button"
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            openSearchResult(entry.href);
-                          }}
-                          className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${
-                            isActive
-                              ? "bg-[var(--site-primary)] text-white"
-                              : "text-[var(--foreground)] hover:bg-[var(--site-surface-soft)]"
-                          }`}
-                        >
-                          <span>{copy.nav[entry.key]}</span>
-                          <span className="site-muted text-xs">{entry.href}</span>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="site-muted px-2.5 py-1.5 text-sm">
-                      No matches found.
-                    </div>
-                  )}
-                </div>
-              ) : null}
-            </div>
+                        return (
+                          <button
+                            key={entry.href}
+                            type="button"
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              openSearchResult(entry.href);
+                            }}
+                            className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${
+                              isActive
+                                ? "bg-[var(--site-primary)] text-white"
+                                : "text-[var(--foreground)] hover:bg-[var(--site-surface-soft)]"
+                            }`}
+                          >
+                            <span>{copy.nav[entry.key]}</span>
+                            <span className="site-muted text-xs">{entry.href}</span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="site-muted px-2.5 py-1.5 text-sm">
+                        No matches found.
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
 
-            <div className="flex items-center gap-3">
-              <SitePreferences />
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="site-button-secondary rounded-lg px-3 py-1.5 text-sm font-medium"
-              >
-                {signOutLabel}
-              </button>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--site-surface-soft)] text-[11px] font-bold lg:hidden">
-                {(profile?.displayName || "YA").slice(0, 2).toUpperCase()}
+              <div className="hidden items-center gap-3 lg:flex">
+                <SitePreferences />
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="site-button-secondary rounded-lg px-3 py-1.5 text-sm font-medium"
+                >
+                  {signOutLabel}
+                </button>
               </div>
             </div>
+
+            {isMobileMenuOpen ? (
+              <div
+                id="app-mobile-menu"
+                className="site-mobile-menu absolute inset-x-4 top-[calc(100%+0.55rem)] z-30 rounded-[1.35rem] px-3 py-3 lg:hidden"
+              >
+                <nav className="space-y-1">
+                  {navItems.map((item) => {
+                    const isActive = pathname === item.href;
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`block rounded-[0.95rem] px-3 py-2.5 text-sm font-medium transition ${
+                          isActive
+                            ? "bg-[var(--site-primary)] text-white"
+                            : "site-mobile-menu-link"
+                        }`}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        {copy.nav[item.key]}
+                      </Link>
+                    );
+                  })}
+                </nav>
+                <SitePreferences className="mt-3 w-full grid-cols-1" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    void handleSignOut();
+                  }}
+                  className="site-button-secondary mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-[1rem] px-4 py-2.5 text-sm font-medium"
+                >
+                  {signOutLabel}
+                </button>
+              </div>
+            ) : null}
           </header>
 
           <main className="min-w-0 flex-1 bg-[var(--background)] px-4 py-6 md:px-8 md:py-8">

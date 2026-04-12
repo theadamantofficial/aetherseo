@@ -1,8 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import AetherBrand from "@/components/aether-brand";
+import MobileHeaderToggle from "@/components/mobile-header-toggle";
 import SitePreferences from "@/components/site-preferences";
 import { useLanguage } from "@/components/language-provider";
 import { landingCopy, type SiteLanguage } from "@/lib/site-language";
@@ -11,22 +12,6 @@ import { useTranslatedCopy } from "@/lib/use-translated-copy";
 type PublicHeaderProps = {
   language: SiteLanguage;
 };
-
-function MobileHeaderToggle({ isOpen }: { isOpen: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" aria-hidden="true">
-      {isOpen ? (
-        <path d="m6 6 12 12M18 6 6 18" strokeWidth="1.8" strokeLinecap="round" />
-      ) : (
-        <>
-          <path d="M4 7h16" strokeWidth="1.8" strokeLinecap="round" />
-          <path d="M4 12h16" strokeWidth="1.8" strokeLinecap="round" />
-          <path d="M10 17h10" strokeWidth="1.8" strokeLinecap="round" />
-        </>
-      )}
-    </svg>
-  );
-}
 
 export default function PublicHeader({
   language,
@@ -39,26 +24,11 @@ export default function PublicHeader({
     <div className="sticky top-2 z-50 mb-6 px-1 sm:top-4 sm:mb-10">
       <header className="site-header-shell site-animate-header relative mx-auto flex w-full max-w-7xl flex-col gap-3 rounded-[1.5rem] px-3 py-3 sm:rounded-[2rem] sm:px-5 lg:flex-row lg:flex-wrap lg:items-center lg:gap-3 lg:px-3 lg:py-3">
         <div className="flex w-full items-center justify-between gap-3 lg:w-auto lg:flex-none">
-          <Link
+          <AetherBrand
             href={`/${language}`}
-            className="flex min-w-0 items-center gap-3 rounded-full px-1 py-1 transition hover:opacity-90"
             onClick={() => setIsMobileMenuOpen(false)}
-          >
-            <Image
-              src="/aether-logo-mark.png"
-              alt="Aether SEO"
-              width={44}
-              height={44}
-              priority
-              className="h-10 w-10 rounded-full object-cover sm:h-11 sm:w-11"
-            />
-            <span className="min-w-0">
-              <h1 className="truncate text-[15px] font-semibold sm:text-base md:text-lg">Aether SEO</h1>
-              <p className="site-muted text-[9px] uppercase tracking-[0.24em] sm:text-[11px] sm:tracking-[0.24em]">
-                AI MEETS SEO
-              </p>
-            </span>
-          </Link>
+            priority
+          />
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen((current) => !current)}

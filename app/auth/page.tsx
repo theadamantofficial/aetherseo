@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
@@ -12,7 +11,9 @@ import {
   signInWithEmailLink,
   signInWithPopup,
 } from "firebase/auth";
+import AetherBrand from "@/components/aether-brand";
 import { useLanguage } from "@/components/language-provider";
+import MobileHeaderToggle from "@/components/mobile-header-toggle";
 import SiteLoader from "@/components/site-loader";
 import SitePreferences from "@/components/site-preferences";
 import { appleProvider, auth, googleProvider } from "@/lib/firebase";
@@ -244,6 +245,7 @@ function AuthPageContent() {
   const [status, setStatus] = useState<string | null>(null);
   const [isBusy, setBusy] = useState(false);
   const [userUid, setUserUid] = useState("");
+  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const paidTierPresentation = getPaidTierPresentation(selectedPaidTier);
 
   useEffect(() => {
@@ -477,27 +479,47 @@ function AuthPageContent() {
       <div className="pointer-events-none absolute bottom-10 right-10 h-64 w-64 rounded-full bg-[#2294ff]/10 blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl">
-        <header className="site-header-shell site-animate-header mb-8 flex items-center justify-between gap-4 rounded-[2rem] px-3 py-3">
-          <Link href={`/${uiLanguage}`} className="flex items-center gap-3 rounded-full px-2 py-1.5">
-            <Image
-              src="/aether-logo-mark.png"
-              alt="Aether SEO"
-              width={44}
-              height={44}
+        <header className="site-header-shell site-animate-header relative z-40 mb-8 flex flex-col gap-3 rounded-[1.5rem] px-3 py-3 sm:rounded-[2rem] sm:px-5 md:flex-row md:items-center md:justify-between md:gap-4 md:px-3 md:py-3">
+          <div className="flex w-full items-center justify-between gap-3 md:w-auto md:flex-none">
+            <AetherBrand
+              href={`/${uiLanguage}`}
+              onClick={() => setIsHeaderMenuOpen(false)}
               priority
-              className="h-11 w-11 rounded-full object-cover"
             />
-            <span>
-              <p className="text-base font-semibold md:text-lg">Aether SEO</p>
-              <p className="site-muted text-[11px] uppercase tracking-[0.22em]">AI MEETS SEO</p>
-            </span>
-          </Link>
-          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsHeaderMenuOpen((current) => !current)}
+              className="site-button-secondary flex h-11 w-11 shrink-0 items-center justify-center rounded-full md:hidden"
+              aria-expanded={isHeaderMenuOpen}
+              aria-controls="auth-mobile-menu"
+              aria-label={isHeaderMenuOpen ? "Close menu" : "Open menu"}
+            >
+              <MobileHeaderToggle isOpen={isHeaderMenuOpen} />
+            </button>
+          </div>
+
+          <div className="hidden md:flex md:items-center md:gap-3">
             <SitePreferences className="shrink-0" />
             <Link href={`/${uiLanguage}`} className="site-button-secondary rounded-full px-4 py-2.5 text-sm font-medium">
               {copy.backHome}
             </Link>
           </div>
+
+          {isHeaderMenuOpen ? (
+            <div
+              id="auth-mobile-menu"
+              className="site-mobile-menu absolute inset-x-3 top-[calc(100%+0.55rem)] z-30 rounded-[1.35rem] px-3 py-3 md:hidden sm:inset-x-5"
+            >
+              <SitePreferences className="w-full grid-cols-1" />
+              <Link
+                href={`/${uiLanguage}`}
+                className="site-button-secondary mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-[1rem] px-4 py-2.5 text-sm font-medium"
+                onClick={() => setIsHeaderMenuOpen(false)}
+              >
+                {copy.backHome}
+              </Link>
+            </div>
+          ) : null}
         </header>
 
         <div className="grid w-full gap-6 lg:grid-cols-[0.95fr,1.05fr]">

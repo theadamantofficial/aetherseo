@@ -1,11 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
+import AetherBrand from "@/components/aether-brand";
 import { useLanguage } from "@/components/language-provider";
+import MobileHeaderToggle from "@/components/mobile-header-toggle";
 import SiteLoader from "@/components/site-loader";
 import SitePreferences from "@/components/site-preferences";
 import { auth } from "@/lib/firebase";
@@ -319,22 +320,6 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MobileHeaderToggle({ isOpen }: { isOpen: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" aria-hidden="true">
-      {isOpen ? (
-        <path d="m6 6 12 12M18 6 6 18" strokeWidth="1.8" strokeLinecap="round" />
-      ) : (
-        <>
-          <path d="M4 7h16" strokeWidth="1.8" strokeLinecap="round" />
-          <path d="M4 12h16" strokeWidth="1.8" strokeLinecap="round" />
-          <path d="M10 17h10" strokeWidth="1.8" strokeLinecap="round" />
-        </>
-      )}
-    </svg>
-  );
-}
-
 function ChoosePlanPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -606,26 +591,11 @@ function ChoosePlanPageContent() {
       <div className="relative mx-auto max-w-6xl">
         <header className="site-header-shell relative mb-8 flex flex-col gap-3 rounded-[1.5rem] px-3 py-3 sm:rounded-[2rem] sm:px-5 md:flex-row md:items-center md:justify-between md:gap-4 md:px-3 md:py-3">
           <div className="flex w-full items-center justify-between gap-3 md:w-auto md:flex-none">
-            <Link
+            <AetherBrand
               href={`/${uiLanguage}`}
-              className="flex min-w-0 items-center gap-3 rounded-full px-1 py-1"
               onClick={() => setIsHeaderMenuOpen(false)}
-            >
-              <Image
-                src="/aether-logo-mark.png"
-                alt="Aether SEO"
-                width={44}
-                height={44}
-                priority
-                className="h-10 w-10 rounded-full object-cover sm:h-11 sm:w-11"
-              />
-              <span className="min-w-0">
-                <p className="truncate text-[15px] font-semibold sm:text-base md:text-lg">Aether SEO</p>
-                <p className="site-muted text-[9px] uppercase tracking-[0.24em] sm:text-[11px]">
-                  AI MEETS SEO
-                </p>
-              </span>
-            </Link>
+              priority
+            />
             <button
               type="button"
               onClick={() => setIsHeaderMenuOpen((current) => !current)}

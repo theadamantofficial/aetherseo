@@ -37,7 +37,10 @@ type UiCopy = {
   emptyBody: string;
   emptyTitle: string;
   exportButton: string;
+  exportError: string;
   exportHint: string;
+  exportReady: string;
+
   generating: string;
   idle: string;
   iframeLabel: string;
@@ -75,7 +78,9 @@ const baseCopy: UiCopy = {
     "Enter a public page URL to extract its visible text, review likely plagiarism-risk lines, and generate paste-ready alternatives.",
   emptyTitle: "No plagiarism scan yet",
   exportButton: "Export PDF",
+  exportError: "Could not open the print dialog. Try again and choose Save as PDF when the dialog appears.",
   exportHint: "Branded PDF export includes a watermark and a structured rewrite summary.",
+  exportReady: "Print dialog opened. Choose Save as PDF to finish the export.",
   generating: "Running AI plagiarism check...",
   idle: "This is a risk-based AI review of the page copy, not verified external source proof.",
   iframeLabel: "Live page preview",
@@ -182,18 +187,45 @@ const plagiarismUiCopy: Record<AppUiLanguage, UiCopy> = {
 };
 
 function ScoreTone({ risk }: { risk: PlagiarismRiskLevel }) {
-  const className =
+  const style =
     risk === "High"
-      ? "border-rose-500/30 bg-rose-500/10 text-rose-200"
+      ? {
+          backgroundColor: "color-mix(in srgb, var(--site-surface-soft) 76%, #fb7185 24%)",
+          borderColor: "color-mix(in srgb, var(--site-border) 52%, #e11d48 48%)",
+          color: "color-mix(in srgb, var(--foreground) 82%, #881337 18%)",
+        }
       : risk === "Medium"
-        ? "border-amber-500/30 bg-amber-500/10 text-amber-100"
-        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-100";
+        ? {
+            backgroundColor: "color-mix(in srgb, var(--site-surface-soft) 76%, #fbbf24 24%)",
+            borderColor: "color-mix(in srgb, var(--site-border) 52%, #d97706 48%)",
+            color: "color-mix(in srgb, var(--foreground) 82%, #92400e 18%)",
+          }
+        : {
+            backgroundColor: "color-mix(in srgb, var(--site-surface-soft) 76%, #34d399 24%)",
+            borderColor: "color-mix(in srgb, var(--site-border) 52%, #059669 48%)",
+            color: "color-mix(in srgb, var(--foreground) 82%, #065f46 18%)",
+          };
 
   return (
-    <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${className}`}>
+    <span
+      className="rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+      style={style}
+    >
       {risk}
     </span>
   );
+}
+
+function getRiskLabelColor(label: string) {
+  if (label.startsWith("High")) {
+    return "color-mix(in srgb, var(--foreground) 82%, #881337 18%)";
+  }
+
+  if (label.startsWith("Medium")) {
+    return "color-mix(in srgb, var(--foreground) 82%, #92400e 18%)";
+  }
+
+  return "color-mix(in srgb, var(--foreground) 82%, #065f46 18%)";
 }
 
 function SectionEyebrow({ children }: { children: ReactNode }) {
@@ -204,20 +236,34 @@ function SectionEyebrow({ children }: { children: ReactNode }) {
   );
 }
 
+type MetricSummary = {
+  helper: string;
+  helperTone: "muted" | "risk";
+  label: string;
+  value: string;
+};
+
 function MetricCard({
   label,
   value,
   helper,
+  helperTone = "muted",
 }: {
   helper: string;
+  helperTone?: "muted" | "risk";
   label: string;
   value: string;
 }) {
+  const helperStyle =
+    helperTone === "risk"
+      ? { color: getRiskLabelColor(helper) }
+      : { color: "var(--site-muted)" };
+
   return (
     <article className="rounded-[20px] border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--site-muted)]">{label}</p>
       <p className="mt-3 text-3xl font-semibold tracking-[-0.03em]">{value}</p>
-      <p className="mt-2 text-sm leading-6 text-[var(--site-muted)]">{helper}</p>
+      <p className="mt-2 text-sm leading-6" style={helperStyle}>{helper}</p>
     </article>
   );
 }
@@ -400,22 +446,24 @@ export default function PlagiarismCheckPage() {
   const activeLanguage = resolveAppUiLanguage(language, uiLanguage);
   const ui = plagiarismUiCopy[activeLanguage];
   const previewUrl = result?.preview.canonicalUrl || result?.url || url;
-  const metrics = useMemo(
-    () => [
+  const metrics = useMemo<MetricSummary[]>(() => [
       {
         label: ui.scoreLabel,
         value: result ? String(result.score) : "--",
         helper: result?.riskLabel ?? ui.idle,
+        helperTone: result ? "risk" : "muted",
       },
       {
         label: "Words scanned",
         value: result ? String(result.preview.wordCount) : "--",
         helper: result ? `${result.preview.sentenceCount} extracted sentences reviewed.` : ui.previewNote,
+        helperTone: "muted",
       },
       {
         label: "Flagged lines",
         value: result ? String(result.matches.length) : "--",
         helper: result ? "Each line includes an alternative version you can paste immediately." : ui.exportHint,
+        helperTone: "muted",
       },
     ],
     [result, ui.exportHint, ui.idle, ui.previewNote, ui.scoreLabel],
@@ -518,19 +566,52 @@ export default function PlagiarismCheckPage() {
       return;
     }
 
-    const printWindow = window.open("", "_blank", "noopener,noreferrer");
-    if (!printWindow) {
-      setStatus({ tone: "error", text: "Popup blocked. Allow popups to export the PDF." });
+    const printFrame = document.createElement("iframe");
+    printFrame.setAttribute("aria-hidden", "true");
+    printFrame.setAttribute("tabindex", "-1");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+    printFrame.style.opacity = "0";
+    document.body.appendChild(printFrame);
+
+    const cleanup = () => {
+      window.setTimeout(() => {
+        printFrame.remove();
+      }, 0);
+    };
+
+    const frameWindow = printFrame.contentWindow;
+    if (!frameWindow) {
+      cleanup();
+      setStatus({ tone: "error", text: ui.exportError });
       return;
     }
 
-    printWindow.document.open();
-    printWindow.document.write(createPrintMarkup(result));
-    printWindow.document.close();
-    printWindow.focus();
+    frameWindow.document.open();
+    frameWindow.document.write(createPrintMarkup(result));
+    frameWindow.document.close();
+
+    const handleAfterPrint = () => {
+      cleanup();
+      frameWindow.removeEventListener("afterprint", handleAfterPrint);
+    };
+
+    frameWindow.addEventListener("afterprint", handleAfterPrint);
     window.setTimeout(() => {
-      printWindow.print();
+      try {
+        frameWindow.focus();
+        frameWindow.print();
+        setStatus({ tone: "muted", text: ui.exportReady });
+      } catch {
+        cleanup();
+        setStatus({ tone: "error", text: ui.exportError });
+      }
     }, 250);
+    window.setTimeout(cleanup, 2000);
   }
 
   if (!isReady) {
@@ -613,6 +694,7 @@ export default function PlagiarismCheckPage() {
           <MetricCard
             key={metric.label}
             helper={metric.helper}
+            helperTone={metric.helperTone}
             label={metric.label}
             value={metric.value}
           />

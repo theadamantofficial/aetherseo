@@ -4,8 +4,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
+  ConfirmationResult,
+  RecaptchaVerifier,
   User,
   isSignInWithEmailLink,
+  linkWithPhoneNumber,
   onAuthStateChanged,
   sendSignInLinkToEmail,
   signInWithEmailLink,
@@ -16,7 +19,7 @@ import { useLanguage } from "@/components/language-provider";
 import MobileHeaderToggle from "@/components/mobile-header-toggle";
 import SiteLoader from "@/components/site-loader";
 import SitePreferences from "@/components/site-preferences";
-import { appleProvider, auth, googleProvider } from "@/lib/firebase";
+import { auth, googleProvider } from "@/lib/firebase";
 import {
   isSupportedPaidTier,
   setUserPlan,
@@ -32,325 +35,417 @@ const PHONE_STORAGE = "rankly-phone-draft";
 const PLAN_STORAGE = "rankly-plan-choice";
 const PAID_TIER_STORAGE = "rankly-paid-tier-choice";
 const DEFAULT_PLAN: BillingPlan = "free";
+const PHONE_OTP_ENABLED = false;
 
-const planCards: Array<{ id: BillingPlan; accent: string }> = [
-  { id: "free", accent: "#82f0d6" },
-  { id: "paid", accent: "#9fa6ff" },
+const planCards: Array<{ id: BillingPlan; label: string }> = [
+  { id: "free", label: "Free" },
+  { id: "paid", label: "Paid" },
 ];
 
-function getPaidTierPresentation(tier: PaidPlanTier | null) {
-  if (tier === "starter") {
-    return {
-      label: "Starter",
-      title: "Starter paid workspace",
-      body: "50 blogs per month, 20 audits, faster generation, and no watermark.",
-    };
-  }
+type AuthErrorLike = {
+  code?: unknown;
+  message?: unknown;
+};
 
-  if (tier === "pro") {
-    return {
-      label: "Pro",
-      title: "Pro paid workspace",
-      body: "200 blogs, 100 audits, priority AI, advanced SEO suggestions, history, and export.",
-    };
-  }
-
-  if (tier === "agency") {
-    return {
-      label: "Agency",
-      title: "Agency paid workspace",
-      body: "Fair-usage publishing, team access, API access, and automation features.",
-    };
-  }
-
-  return {
-    label: null,
-    title: null,
-    body: null,
+type GrecaptchaWindow = Window & {
+  grecaptcha?: {
+    reset: (widgetId?: number) => void;
   };
+};
+
+/* ─── helpers ─── */
+
+function getPaidTierPresentation(tier: PaidPlanTier | null) {
+  if (tier === "starter") return { label: "Starter", title: "Starter workspace", body: "50 blogs/mo, 20 audits, faster generation, no watermark." };
+  if (tier === "pro")     return { label: "Pro",     title: "Pro workspace",     body: "200 blogs, 100 audits, priority AI, advanced SEO, history, export." };
+  if (tier === "agency")  return { label: "Agency",  title: "Agency workspace",  body: "Fair-usage publishing, team access, API access, automation." };
+  return { label: null, title: null, body: null };
 }
 
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-      <path
-        d="M21.81 12.24c0-.72-.06-1.25-.19-1.81H12.2v3.44h5.53c-.11.86-.72 2.15-2.07 3.02l-.02.12 2.78 2.11.19.02c1.75-1.58 3.2-4.37 3.2-7.9Z"
-        fill="#4285F4"
-      />
-      <path
-        d="M12.2 21.88c2.71 0 4.99-.87 6.66-2.37l-3.17-2.25c-.85.58-1.98.99-3.49.99-2.65 0-4.9-1.71-5.71-4.08l-.11.01-2.89 2.19-.04.1c1.66 3.22 5.08 5.41 8.75 5.41Z"
-        fill="#34A853"
-      />
-      <path
-        d="M6.49 14.17c-.21-.58-.33-1.21-.33-1.87s.12-1.29.32-1.87l-.01-.13-2.93-2.22-.1.04a9.64 9.64 0 0 0 0 8.35l3.05-2.3Z"
-        fill="#FBBC05"
-      />
-      <path
-        d="M12.2 6.35c1.9 0 3.19.8 3.92 1.47l2.86-2.74C17.18 3.45 14.91 2.7 12.2 2.7a9.52 9.52 0 0 0-8.76 5.42l3.03 2.31c.81-2.37 3.07-4.08 5.73-4.08Z"
-        fill="#EA4335"
-      />
-    </svg>
-  );
+function formatAuthErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === "object" && error !== null) {
+    const authError = error as AuthErrorLike;
+    const code = typeof authError.code === "string" ? authError.code : null;
+    const msg  = typeof authError.message === "string" ? authError.message : null;
+    if (code && msg) return `${fallback} (${code}: ${msg})`;
+    if (msg) return `${fallback} (${msg})`;
+  }
+  return fallback;
 }
 
-function AppleIcon() {
+const readLS = (key: string) => (typeof window !== "undefined" ? window.localStorage.getItem(key) : null);
+const setLS  = (key: string, val: string) => { if (typeof window !== "undefined") window.localStorage.setItem(key, val); };
+const delLS  = (key: string) => { if (typeof window !== "undefined") window.localStorage.removeItem(key); };
+
+function readStoredPhone(): string  { return readLS(PHONE_STORAGE) ?? ""; }
+function readStoredPlan(): BillingPlan { return readLS(PLAN_STORAGE) === "paid" ? "paid" : DEFAULT_PLAN; }
+function readStoredPaidTier(): PaidPlanTier | null {
+  const v = readLS(PAID_TIER_STORAGE);
+  return v && isSupportedPaidTier(v) ? v : null;
+}
+
+function normalizePhone(input: string): string {
+  const t = input.trim();
+  if (!t) return "";
+  const digits = t.replace(/\D/g, "");
+  return t.startsWith("+") ? `+${digits}` : digits;
+}
+function isValidPhone(input: string) { return /^\+[1-9]\d{7,14}$/.test(input); }
+
+function persistDraft(phone: string, plan: BillingPlan, paidTier: PaidPlanTier | null = null) {
+  if (phone.trim()) {
+    setLS(PHONE_STORAGE, phone.trim());
+  } else {
+    delLS(PHONE_STORAGE);
+  }
+
+  setLS(PLAN_STORAGE, plan);
+
+  if (paidTier && plan === "paid") {
+    setLS(PAID_TIER_STORAGE, paidTier);
+  } else {
+    delLS(PAID_TIER_STORAGE);
+  }
+}
+
+function clearDraft() {
+  [EMAIL_LINK_STORAGE, PHONE_STORAGE, PLAN_STORAGE, PAID_TIER_STORAGE].forEach(delLS);
+}
+
+/* ─── icons ─── */
+
+function GoogleIcon({ size = 16 }: { size?: number }) {
   return (
-    <svg viewBox="-1.5 0 20 20" className="h-5 w-5 fill-current" aria-hidden="true">
-      <path d="M11.5708873,3.19296 C12.2999598,2.34797 12.7914012,1.17098 12.6569121,0 C11.6062792,0.04 10.3352055,0.67099 9.5818643,1.51498 C8.905374,2.26397 8.3148354,3.46095 8.4735932,4.60894 C9.6455696,4.69593 10.8418148,4.03894 11.5708873,3.19296 M14.1989864,10.62485 C14.2283111,13.65181 16.9696641,14.65879 17,14.67179 C16.9777537,14.74279 16.562152,16.10677 15.5560117,17.51675 C14.6853718,18.73474 13.7823735,19.94772 12.3596204,19.97372 C10.9621472,19.99872 10.5121648,19.17973 8.9134635,19.17973 C7.3157735,19.17973 6.8162425,19.94772 5.4935978,19.99872 C4.1203933,20.04772 3.0738052,18.68074 2.197098,17.46676 C0.4032359,14.98379 -0.9669351,10.44985 0.8734421,7.3899 C1.7875635,5.87092 3.4206455,4.90793 5.1942837,4.88393 C6.5422083,4.85893 7.8153044,5.75292 8.6394294,5.75292 C9.4635543,5.75292 11.0106846,4.67793 12.6366882,4.83593 C13.3172232,4.86293 15.2283842,5.09893 16.4549652,6.8199 C16.355868,6.8789 14.1747177,8.09489 14.1989864,10.62485" />
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M21.81 12.24c0-.72-.06-1.25-.19-1.81H12.2v3.44h5.53c-.11.86-.72 2.15-2.07 3.02l2.97 2.23C20.36 17.68 21.81 15.2 21.81 12.24Z" fill="#4285F4"/>
+      <path d="M12.2 21.88c2.71 0 4.99-.87 6.66-2.37l-2.97-2.23c-.85.58-1.98.99-3.69.99-2.83 0-5.22-1.88-6.08-4.42l-3.06 2.31C4.74 19.77 8.17 21.88 12.2 21.88Z" fill="#34A853"/>
+      <path d="M6.12 13.85c-.22-.65-.34-1.34-.34-2.05s.12-1.4.34-2.05L3.06 7.44A9.64 9.64 0 0 0 2.56 11.8c0 1.59.37 3.1 1.03 4.36l3.06-2.31Z" fill="#FBBC05"/>
+      <path d="M12.2 5.38c1.68 0 3.19.58 4.38 1.71l3.27-3.17C17.79 2.13 15.17 1.12 12.2 1.12 8.17 1.12 4.74 3.23 3.06 6.44l3.06 2.31C6.98 6.2 9.37 5.38 12.2 5.38Z" fill="#EA4335"/>
     </svg>
   );
 }
 
 function MailIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" aria-hidden="true">
-      <path d="M3.75 6.75h16.5v10.5H3.75z" strokeWidth="1.7" />
-      <path d="m4.5 7.5 7.5 6 7.5-6" strokeWidth="1.7" />
+    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 7 9-7"/>
     </svg>
   );
 }
 
 function PhoneIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" aria-hidden="true">
-      <path
-        d="M7.75 3.75h8.5a1 1 0 0 1 1 1v14.5a1 1 0 0 1-1 1h-8.5a1 1 0 0 1-1-1V4.75a1 1 0 0 1 1-1Z"
-        strokeWidth="1.7"
-      />
-      <path d="M10 17.75h4" strokeWidth="1.7" />
+    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/>
     </svg>
   );
 }
 
-function SparkIcon() {
+function LockIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
-      <path d="m12 2.5 2.2 5.3 5.3 2.2-5.3 2.2L12 17.5l-2.2-5.3-5.3-2.2 5.3-2.2L12 2.5Z" />
+    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
     </svg>
   );
 }
 
-function getProviderLabel(currentUser: User | null): string | null {
-  if (!currentUser) {
-    return null;
-  }
-
-  const linkedProvider = currentUser.providerData.find((provider) =>
-    ["google.com", "apple.com", "password"].includes(provider.providerId),
+function CheckIcon() {
+  return (
+    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+      <path d="M20 6 9 17l-5-5"/>
+    </svg>
   );
-
-  if (!linkedProvider) {
-    return null;
-  }
-
-  if (linkedProvider.providerId === "google.com") {
-    return "google";
-  }
-
-  if (linkedProvider.providerId === "apple.com") {
-    return "apple";
-  }
-
-  return "email";
 }
 
-function formatAuthErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === "object" && error !== null) {
-    const maybeCode = "code" in error && typeof error.code === "string" ? error.code : null;
-    const maybeMessage = "message" in error && typeof error.message === "string" ? error.message : null;
+/* ─── step indicator ─── */
 
-    if (maybeCode && maybeMessage) {
-      return `${fallback} (${maybeCode}: ${maybeMessage})`;
-    }
+type StepState = "pending" | "active" | "done";
 
-    if (maybeMessage) {
-      return `${fallback} (${maybeMessage})`;
-    }
-  }
-
-  return fallback;
+function StepDot({ state, number }: { state: StepState; number: number }) {
+  const base = "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border text-[10px] font-medium";
+  if (state === "done")    return <span className={`${base} border-emerald-300 bg-emerald-50 text-emerald-700`}><CheckIcon /></span>;
+  if (state === "active")  return <span className={`${base} border-neutral-900 bg-neutral-900 text-white`}>{number}</span>;
+  return <span className={`${base} border-neutral-200 text-neutral-400`}>{number}</span>;
 }
 
-function readStoredPhone(): string {
-  if (typeof window === "undefined") {
-    return "";
-  }
+/* ─── sub-components ─── */
 
-  return window.localStorage.getItem(PHONE_STORAGE) || "";
+function Field({ label, icon, children, hint }: { label: string; icon: React.ReactNode; children: React.ReactNode; hint?: string }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.12em] text-neutral-500">
+        {icon}{label}
+      </label>
+      {children}
+      {hint && <p className="text-[12px] leading-5 text-neutral-400">{hint}</p>}
+    </div>
+  );
 }
 
-function readStoredPlan(): BillingPlan {
-  if (typeof window === "undefined") {
-    return DEFAULT_PLAN;
-  }
-
-  return window.localStorage.getItem(PLAN_STORAGE) === "paid" ? "paid" : DEFAULT_PLAN;
+function Btn({ id, onClick, disabled, variant = "solid", children }: {
+  id?: string; onClick?: () => void; disabled?: boolean; variant?: "solid" | "outline"; children: React.ReactNode;
+}) {
+  const base = "flex w-full items-center justify-center gap-2 rounded-xl px-4 py-[10px] text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40";
+  const cls  = variant === "solid"
+    ? `${base} site-button-primary border border-transparent`
+    : `${base} site-button-secondary border`;
+  return <button id={id} type="button" className={cls} onClick={onClick} disabled={disabled}>{children}</button>;
 }
 
-function readStoredPaidTier(): PaidPlanTier | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const value = window.localStorage.getItem(PAID_TIER_STORAGE);
-  return value && isSupportedPaidTier(value) ? value : null;
+function Divider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-neutral-400">
+      <span className="h-px flex-1 bg-neutral-100" />
+      {label}
+      <span className="h-px flex-1 bg-neutral-100" />
+    </div>
+  );
 }
 
-function persistDraftState(phone: string, plan: BillingPlan, paidTier: PaidPlanTier | null = null) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  if (phone.trim()) {
-    window.localStorage.setItem(PHONE_STORAGE, phone.trim());
-  } else {
-    window.localStorage.removeItem(PHONE_STORAGE);
-  }
-
-  window.localStorage.setItem(PLAN_STORAGE, plan);
-
-  if (paidTier && plan === "paid") {
-    window.localStorage.setItem(PAID_TIER_STORAGE, paidTier);
-  } else {
-    window.localStorage.removeItem(PAID_TIER_STORAGE);
-  }
+function StepBlock({ step, state, title, children }: {
+  step: number; state: StepState; title: string; children: React.ReactNode;
+}) {
+  return (
+    <div className={`flex flex-col gap-4 rounded-2xl border p-4 transition-opacity ${state === "pending" ? "pointer-events-none opacity-35" : "opacity-100"} ${state === "active" ? "border-neutral-200 bg-white" : "border-neutral-100 bg-neutral-50"}`}>
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-neutral-500">
+        <StepDot state={state} number={step} />
+        {title}
+      </div>
+      {children}
+    </div>
+  );
 }
 
-function clearAuthDraftState() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.removeItem(EMAIL_LINK_STORAGE);
-  window.localStorage.removeItem(PHONE_STORAGE);
-  window.localStorage.removeItem(PLAN_STORAGE);
-  window.localStorage.removeItem(PAID_TIER_STORAGE);
+function StatusBar({ message, type }: { message: string; type?: "success" | "error" | "info" }) {
+  const cls =
+    type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" :
+    type === "error"   ? "bg-red-50 border-red-200 text-red-700" :
+    "bg-neutral-50 border-neutral-200 text-neutral-600";
+  return <div className={`rounded-xl border px-4 py-3 text-[13px] leading-5 ${cls}`}>{message}</div>;
 }
+
+/* ─── main page ─── */
 
 function AuthPageContent() {
-  const router = useRouter();
+  const router       = useRouter();
   const searchParams = useSearchParams();
   const { uiLanguage } = useLanguage();
-  const handledUidRef = useRef<string | null>(null);
-  const phoneRef = useRef("");
-  const planRef = useRef<BillingPlan>(DEFAULT_PLAN);
-  const paidTierRef = useRef<PaidPlanTier | null>(null);
-  const copy = authCopy[uiLanguage];
+  const copy   = authCopy[uiLanguage];
   const footer = footerCopy[uiLanguage];
 
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [selectedPlan, setSelectedPlan] = useState<BillingPlan>(DEFAULT_PLAN);
-  const [selectedPaidTier, setSelectedPaidTier] = useState<PaidPlanTier | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const [isBusy, setBusy] = useState(false);
-  const [userUid, setUserUid] = useState("");
-  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
-  const paidTierPresentation = getPaidTierPresentation(selectedPaidTier);
+  const handledUidRef         = useRef<string | null>(null);
+  const recaptchaVerifierRef  = useRef<RecaptchaVerifier | null>(null);
+  const recaptchaWidgetIdRef  = useRef<number | null>(null);
+  const phoneRef              = useRef("");
+  const planRef               = useRef<BillingPlan>(DEFAULT_PLAN);
+  const paidTierRef           = useRef<PaidPlanTier | null>(null);
 
+  /* step 1: sign-in method done */
+  const [step1Done, setStep1Done] = useState(false);
+  /* step 2: otp sent */
+  const [otpSent, setOtpSent]     = useState(false);
+
+  const [email,            setEmail]            = useState("");
+  const [phone,            setPhone]            = useState("");
+  const [otpCode,          setOtpCode]          = useState("");
+  const [otpConfirmation,  setOtpConfirmation]  = useState<ConfirmationResult | null>(null);
+  const [selectedPlan,     setSelectedPlan]     = useState<BillingPlan>(DEFAULT_PLAN);
+  const [selectedPaidTier, setSelectedPaidTier] = useState<PaidPlanTier | null>(null);
+  const [status,           setStatus]           = useState<{ msg: string; type?: "success" | "error" | "info" }>({ msg: "Enter your email or sign in with Google to get started." });
+  const [isBusy,           setBusy]             = useState(false);
+  const [userUid,          setUserUid]          = useState("");
+  const [isHeaderOpen,     setHeaderOpen]       = useState(false);
+
+  const paidTierInfo     = getPaidTierPresentation(selectedPaidTier);
+  const isGooglePending  = Boolean(auth.currentUser && !auth.currentUser.phoneNumber && auth.currentUser.providerData.some(p => p.providerId === "google.com"));
+
+  /* ── init from storage / search params ── */
   useEffect(() => {
-    const storedPhone = readStoredPhone();
-    const requestedPlan = searchParams.get("plan");
-    const requestedTier = searchParams.get("tier");
-    const storedPlan = requestedPlan === "paid" || requestedPlan === "free"
-      ? requestedPlan
-      : readStoredPlan();
-    const storedPaidTier =
-      requestedTier && isSupportedPaidTier(requestedTier)
-        ? requestedTier
-        : readStoredPaidTier();
+    const storedPhone    = readStoredPhone();
+    const reqPlan        = searchParams.get("plan");
+    const reqTier        = searchParams.get("tier");
+    const storedPlan     = (reqPlan === "paid" || reqPlan === "free") ? reqPlan : readStoredPlan();
+    const storedPaidTier = (reqTier && isSupportedPaidTier(reqTier)) ? reqTier : readStoredPaidTier();
     setPhone(storedPhone);
     setSelectedPlan(storedPlan);
     setSelectedPaidTier(storedPaidTier);
-    phoneRef.current = storedPhone;
-    planRef.current = storedPlan;
+    phoneRef.current    = storedPhone;
+    planRef.current     = storedPlan;
     paidTierRef.current = storedPaidTier;
-    persistDraftState(storedPhone, storedPlan, storedPaidTier);
+    persistDraft(storedPhone, storedPlan, storedPaidTier);
   }, [searchParams]);
 
-  useEffect(() => {
-    phoneRef.current = phone;
-    persistDraftState(phone, selectedPlan, paidTierRef.current);
-  }, [phone, selectedPlan]);
+  useEffect(() => { phoneRef.current = phone; persistDraft(phone, selectedPlan, paidTierRef.current); }, [phone, selectedPlan]);
+  useEffect(() => { planRef.current = selectedPlan; }, [selectedPlan]);
 
-  useEffect(() => {
-    planRef.current = selectedPlan;
-  }, [selectedPlan]);
+  /* ── recaptcha helpers ── */
+  const clearRecaptcha = useCallback(() => {
+    recaptchaVerifierRef.current?.clear();
+    recaptchaVerifierRef.current = null;
+    recaptchaWidgetIdRef.current = null;
+  }, []);
 
+  const resetRecaptchaWidget = useCallback(() => {
+    if (typeof window === "undefined" || recaptchaWidgetIdRef.current === null) return;
+    (window as GrecaptchaWindow).grecaptcha?.reset(recaptchaWidgetIdRef.current);
+  }, []);
+
+  useEffect(() => () => clearRecaptcha(), [clearRecaptcha]);
+
+  const resetOtpState = useCallback(() => {
+    setOtpConfirmation(null);
+    setOtpCode("");
+    setOtpSent(false);
+    clearRecaptcha();
+  }, [clearRecaptcha]);
+
+  /* ── finalize session after auth ── */
   const finalizeSession = useCallback(async (user: User, provider: string | null) => {
     setBusy(true);
-
     try {
-      const resolvedPhone = phoneRef.current || readStoredPhone();
-      const chosenPlan = planRef.current || readStoredPlan();
+      const resolvedPhone  = user.phoneNumber?.trim() || phoneRef.current || readStoredPhone();
+      const chosenPlan     = planRef.current || readStoredPlan();
       const chosenPaidTier = paidTierRef.current || readStoredPaidTier();
 
-      const profile = await upsertUserProfile({
-        user,
-        phone: resolvedPhone,
-        provider,
-      });
-
+      const profile = await upsertUserProfile({ user, phone: resolvedPhone, provider });
       setUserUid(user.uid);
 
       if (profile.plan) {
         setSelectedPlan(profile.plan);
         setSelectedPaidTier(profile.paidPlanTier);
-
         if (profile.plan === "paid" && !profile.paidPlanTier && chosenPaidTier) {
-          setStatus(copy.status.workspaceReady);
+          setStatus({ msg: copy.status.workspaceReady, type: "success" });
           router.replace(`/choose-plan?tier=${chosenPaidTier}`);
           return;
         }
-
-        setStatus(copy.status.welcomeBack);
-        clearAuthDraftState();
+        setStatus({ msg: copy.status.welcomeBack, type: "success" });
+        clearDraft();
         router.replace(profile.plan === "paid" && !profile.paidPlanTier ? "/choose-plan" : "/dashboard");
         return;
       }
 
-      setStatus(copy.status.creatingWorkspace(chosenPlan));
-      if (chosenPlan === "paid" && chosenPaidTier) {
-        setSelectedPaidTier(chosenPaidTier);
-        setStatus(copy.status.workspaceReady);
-        router.replace(`/choose-plan?tier=${chosenPaidTier}`);
-        return;
-      }
-
       if (chosenPlan === "paid") {
-        setStatus(copy.status.workspaceReady);
-        router.replace("/choose-plan");
+        setStatus({ msg: copy.status.workspaceReady, type: "success" });
+        router.replace(chosenPaidTier ? `/choose-plan?tier=${chosenPaidTier}` : "/choose-plan");
         return;
       }
 
       await setUserPlan(user.uid, chosenPlan, resolvedPhone);
-      clearAuthDraftState();
-      setStatus(copy.status.workspaceReady);
+      clearDraft();
+      setStatus({ msg: copy.status.workspaceReady, type: "success" });
       router.replace("/dashboard");
     } catch (error) {
       handledUidRef.current = null;
-      setStatus(formatAuthErrorMessage(error, copy.status.signInFinishFailed));
+      setStatus({ msg: formatAuthErrorMessage(error, copy.status.signInFinishFailed), type: "error" });
     } finally {
       setBusy(false);
     }
   }, [copy.status, router]);
 
+  /* ── email link ── */
+  const sendEmailLink = async () => {
+    if (!email.trim()) { setStatus({ msg: copy.status.needEmail, type: "error" }); return; }
+    setBusy(true);
+    setStatus({ msg: copy.status.sendingLink });
+    try {
+      const actionCodeSettings = {
+        url: typeof window !== "undefined" ? `${window.location.origin}/auth` : "/auth",
+        handleCodeInApp: true,
+      };
+      await sendSignInLinkToEmail(auth, email.trim(), actionCodeSettings);
+      setLS(EMAIL_LINK_STORAGE, email.trim());
+      setStatus({ msg: copy.status.linkSent, type: "success" });
+      setStep1Done(true);
+    } catch (error) {
+      setStatus({ msg: formatAuthErrorMessage(error, copy.status.linkFailed), type: "error" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* ── Google sign-in ── */
+  const continueWithGoogle = async () => {
+    setBusy(true);
+    setStatus({ msg: copy.status.connectingGoogle });
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      setStep1Done(true);
+      if (PHONE_OTP_ENABLED && !result.user.phoneNumber) {
+        setStatus({ msg: copy.status.verifyPhoneToContinue, type: "info" });
+      }
+      // onAuthStateChanged handles the rest if phone already linked
+    } catch (error) {
+      handledUidRef.current = null;
+      setStatus({ msg: formatAuthErrorMessage(error, copy.status.googleFailed), type: "error" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* ── send OTP ── */
+  const sendOtp = async () => {
+    const normalized = normalizePhone(phoneRef.current || readStoredPhone());
+    if (!normalized) { setStatus({ msg: copy.status.needPhone, type: "error" }); return; }
+    if (!isValidPhone(normalized)) { setStatus({ msg: copy.status.invalidPhone, type: "error" }); return; }
+    if (normalized !== phoneRef.current) { phoneRef.current = normalized; setPhone(normalized); }
+
+    const user = auth.currentUser;
+    if (!user) { setStatus({ msg: "Please sign in with email or Google first.", type: "error" }); return; }
+
+    setBusy(true);
+    setStatus({ msg: copy.status.sendingOtp });
+    try {
+      auth.languageCode = uiLanguage;
+      clearRecaptcha();
+      const verifier = new RecaptchaVerifier(auth, "send-otp-btn", {
+        size: "invisible",
+        callback: () => {},
+        "expired-callback": () => { resetRecaptchaWidget(); setStatus({ msg: copy.status.verifyPhoneToContinue }); },
+      });
+      recaptchaVerifierRef.current = verifier;
+      recaptchaWidgetIdRef.current = await verifier.render();
+      const confirmation = await linkWithPhoneNumber(user, normalized, verifier);
+      setOtpConfirmation(confirmation);
+      setOtpSent(true);
+      setStatus({ msg: copy.status.otpSent, type: "success" });
+    } catch (error) {
+      resetRecaptchaWidget();
+      setStatus({ msg: formatAuthErrorMessage(error, copy.status.otpFailed), type: "error" });
+    } finally {
+      clearRecaptcha();
+      setBusy(false);
+    }
+  };
+
+  /* ── verify OTP ── */
+  const verifyOtp = async () => {
+    if (!otpConfirmation) { setStatus({ msg: copy.status.verifyPhoneToContinue, type: "error" }); return; }
+    if (!otpCode.trim())  { setStatus({ msg: copy.status.needOtp, type: "error" }); return; }
+    setBusy(true);
+    setStatus({ msg: copy.status.verifyingOtp });
+    try {
+      const result      = await otpConfirmation.confirm(otpCode.trim());
+      await result.user.reload();
+      const resolvedUser = auth.currentUser ?? result.user;
+      handledUidRef.current = resolvedUser.uid;
+      resetOtpState();
+      await finalizeSession(resolvedUser, "google");
+    } catch (error) {
+      handledUidRef.current = null;
+      setStatus({ msg: formatAuthErrorMessage(error, copy.status.otpVerifyFailed), type: "error" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* ── email link handler + auth state ── */
   useEffect(() => {
     const handleExistingLink = async () => {
-      if (typeof window === "undefined" || !isSignInWithEmailLink(auth, window.location.href)) {
-        return;
-      }
-
-      const resolvedEmail = window.localStorage.getItem(EMAIL_LINK_STORAGE);
-
-      if (!resolvedEmail) {
-        setStatus(copy.status.reconnectBrowser);
-        return;
-      }
-
+      if (typeof window === "undefined" || !isSignInWithEmailLink(auth, window.location.href)) return;
+      const resolvedEmail = readLS(EMAIL_LINK_STORAGE);
+      if (!resolvedEmail) { setStatus({ msg: copy.status.reconnectBrowser, type: "error" }); return; }
       setBusy(true);
-      setStatus(copy.status.signingInEmail);
-
+      setStatus({ msg: copy.status.signingInEmail });
       try {
         const result = await signInWithEmailLink(auth, resolvedEmail, window.location.href);
         handledUidRef.current = result.user.uid;
@@ -358,377 +453,252 @@ function AuthPageContent() {
       } catch (error) {
         handledUidRef.current = null;
         setBusy(false);
-        setStatus(formatAuthErrorMessage(error, copy.status.linkExpired));
+        setStatus({ msg: formatAuthErrorMessage(error, copy.status.linkExpired), type: "error" });
       }
     };
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         setUserUid("");
+        handledUidRef.current = null;
+        resetOtpState();
+        setStep1Done(false);
         return;
       }
-
       setUserUid(currentUser.uid);
+      if (!phoneRef.current && currentUser.phoneNumber) setPhone(currentUser.phoneNumber);
 
-      if (handledUidRef.current === currentUser.uid) {
+      const isGoogle = currentUser.providerData.some(p => p.providerId === "google.com");
+      if (PHONE_OTP_ENABLED && isGoogle && !currentUser.phoneNumber) {
+        setStep1Done(true);
         return;
       }
-
+      if (currentUser.phoneNumber) resetOtpState();
+      if (handledUidRef.current === currentUser.uid) return;
       handledUidRef.current = currentUser.uid;
-      await finalizeSession(currentUser, getProviderLabel(currentUser));
+      await finalizeSession(currentUser, isGoogle ? "google" : "email");
     });
 
     void handleExistingLink();
+    return () => unsubscribe();
+  }, [copy.status, finalizeSession, resetOtpState]);
 
-    return () => {
-      unsubscribe();
-    };
-  }, [copy.status.linkExpired, copy.status.reconnectBrowser, copy.status.signingInEmail, finalizeSession, router]);
-
-  const sendEmailLink = async () => {
-    if (!email.trim()) {
-      setStatus(copy.status.needEmail);
-      return;
-    }
-
-    setBusy(true);
-    setStatus(copy.status.sendingLink);
-
-    try {
-      const actionCodeSettings = {
-        url: typeof window !== "undefined" ? `${window.location.origin}/auth` : "/auth",
-        handleCodeInApp: true,
-      };
-
-      await sendSignInLinkToEmail(auth, email.trim(), actionCodeSettings);
-
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(EMAIL_LINK_STORAGE, email.trim());
-      }
-
-      setStatus(copy.status.linkSent);
-    } catch (error) {
-      setStatus(formatAuthErrorMessage(error, copy.status.linkFailed));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const continueWithSocial = async (
-    provider: typeof googleProvider | typeof appleProvider,
-    providerLabel: "google" | "apple",
-    message: string,
-  ) => {
-    setBusy(true);
-    setStatus(message);
-
-    try {
-      const result = await signInWithPopup(auth, provider);
-      handledUidRef.current = result.user.uid;
-      await finalizeSession(result.user, providerLabel);
-    } catch (error) {
-      handledUidRef.current = null;
-      setBusy(false);
-      setStatus(
-        formatAuthErrorMessage(
-          error,
-          providerLabel === "apple" ? copy.status.appleFailed : copy.status.googleFailed,
-        ),
-      );
-    }
-  };
-
+  /* ── plan selection ── */
   const handlePlanSelection = async (plan: BillingPlan) => {
     setSelectedPlan(plan);
+    if (plan === "free") { setSelectedPaidTier(null); paidTierRef.current = null; }
+    persistDraft(phoneRef.current, plan, paidTierRef.current);
 
-    if (plan === "free") {
-      setSelectedPaidTier(null);
-      paidTierRef.current = null;
-    }
-
-    persistDraftState(phoneRef.current, plan, paidTierRef.current);
-
-    if (plan === "paid") {
-      router.push("/choose-plan");
-      return;
-    }
-
-    if (!userUid) {
-      setStatus(copy.status.workspaceSelected(copy.freeWorkspace));
-      return;
-    }
+    if (plan === "paid") { router.push("/choose-plan"); return; }
+    if (!userUid) { setStatus({ msg: copy.status.workspaceSelected(copy.freeWorkspace) }); return; }
+    if (PHONE_OTP_ENABLED && isGooglePending) { setStatus({ msg: copy.status.completePhoneVerificationFirst, type: "info" }); return; }
 
     setBusy(true);
-    setStatus(copy.status.creatingWorkspace(plan));
-
+    setStatus({ msg: copy.status.creatingWorkspace(plan) });
     try {
-      await setUserPlan(userUid, plan, phoneRef.current || readStoredPhone());
-      clearAuthDraftState();
+      await setUserPlan(userUid, plan, auth.currentUser?.phoneNumber?.trim() || phoneRef.current || readStoredPhone());
+      clearDraft();
       router.replace("/dashboard");
     } catch (error) {
-      setStatus(formatAuthErrorMessage(error, copy.status.workspaceSaveFailed));
+      setStatus({ msg: formatAuthErrorMessage(error, copy.status.workspaceSaveFailed), type: "error" });
     } finally {
       setBusy(false);
     }
   };
 
-  return (
-    <div className="site-page relative min-h-screen overflow-hidden px-4 py-10 text-[var(--foreground)]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_top_left,rgba(98,88,255,0.3),transparent_35%),radial-gradient(circle_at_top_right,rgba(64,170,255,0.16),transparent_28%)]" />
-      <div className="pointer-events-none absolute left-10 top-20 h-56 w-56 rounded-full bg-[#5e50f3]/18 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-10 right-10 h-64 w-64 rounded-full bg-[#2294ff]/10 blur-3xl" />
+  const step1State: StepState = step1Done ? "done" : "active";
+  const step2State: StepState = !step1Done ? "pending" : otpSent ? "active" : "active";
 
-      <div className="relative mx-auto max-w-6xl">
-        <header className="site-header-shell site-animate-header relative z-40 mb-8 flex flex-col gap-3 rounded-[1.5rem] px-3 py-3 sm:rounded-[2rem] sm:px-5 md:flex-row md:items-center md:justify-between md:gap-4 md:px-3 md:py-3">
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-neutral-50 px-4 py-10 text-neutral-900">
+      <div className="relative mx-auto max-w-5xl">
+
+        {/* header */}
+        <header className="relative z-40 mb-8 flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3 md:flex-row md:items-center md:justify-between">
           <div className="flex w-full items-center justify-between gap-3 md:w-auto md:flex-none">
-            <AetherBrand
-              href={`/${uiLanguage}`}
-              onClick={() => setIsHeaderMenuOpen(false)}
-              priority
-            />
+            <AetherBrand href={`/${uiLanguage}`} onClick={() => setHeaderOpen(false)} priority />
             <button
               type="button"
-              onClick={() => setIsHeaderMenuOpen((current) => !current)}
-              className="site-button-secondary flex h-11 w-11 shrink-0 items-center justify-center rounded-full md:hidden"
-              aria-expanded={isHeaderMenuOpen}
-              aria-controls="auth-mobile-menu"
-              aria-label={isHeaderMenuOpen ? "Close menu" : "Open menu"}
+              onClick={() => setHeaderOpen(v => !v)}
+              className="site-button-secondary flex h-10 w-10 items-center justify-center rounded-full border md:hidden"
+              aria-expanded={isHeaderOpen}
+              aria-label={isHeaderOpen ? "Close menu" : "Open menu"}
             >
-              <MobileHeaderToggle isOpen={isHeaderMenuOpen} />
+              <MobileHeaderToggle isOpen={isHeaderOpen} />
             </button>
           </div>
-
           <div className="hidden md:flex md:items-center md:gap-3">
             <SitePreferences className="shrink-0" />
-            <Link href={`/${uiLanguage}`} className="site-button-secondary rounded-full px-4 py-2.5 text-sm font-medium">
+            <Link href={`/${uiLanguage}`} className="site-button-secondary rounded-full border px-4 py-2 text-sm font-medium">
               {copy.backHome}
             </Link>
           </div>
-
-          {isHeaderMenuOpen ? (
-            <div
-              id="auth-mobile-menu"
-              className="site-mobile-menu absolute inset-x-3 top-[calc(100%+0.55rem)] z-30 rounded-[1.35rem] px-3 py-3 md:hidden sm:inset-x-5"
-            >
-              <SitePreferences className="w-full grid-cols-1" />
+          {isHeaderOpen && (
+            <div className="absolute inset-x-4 top-[calc(100%+0.5rem)] z-30 rounded-2xl border border-neutral-200 bg-white px-3 py-3 md:hidden">
+              <SitePreferences className="w-full" />
               <Link
                 href={`/${uiLanguage}`}
-                className="site-button-secondary mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-[1rem] px-4 py-2.5 text-sm font-medium"
-                onClick={() => setIsHeaderMenuOpen(false)}
+                className="site-button-secondary mt-3 flex min-h-11 w-full items-center justify-center rounded-xl border text-sm font-medium"
+                onClick={() => setHeaderOpen(false)}
               >
                 {copy.backHome}
               </Link>
             </div>
-          ) : null}
+          )}
         </header>
 
-        <div className="grid w-full gap-6 lg:grid-cols-[0.95fr,1.05fr]">
-        <section className="site-panel-hero site-animate-rise site-animate-glow rounded-[2rem] border p-7 shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:p-8">
-          <div className="site-chip inline-flex items-center gap-3 rounded-full border px-4 py-2 text-xs uppercase tracking-[0.18em]">
-            <span className="rounded-full bg-[#82f0d6]/12 p-1.5 text-[#82f0d6]">
-              <SparkIcon />
-            </span>
-            {copy.badge}
-          </div>
+        {/* main grid */}
+        <div className="grid gap-5 lg:grid-cols-[0.9fr,1.1fr]">
 
-          <h1 className="mt-6 text-4xl font-semibold leading-tight md:text-5xl">{copy.title}</h1>
-
-          <p className="site-muted mt-5 max-w-xl text-sm leading-7 md:text-base">{copy.body}</p>
-
-          <div className="mt-8 space-y-3">
-            {copy.bullets.map((item) => (
-              <div
-                key={item}
-                className="site-panel-soft flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm"
-              >
-                <span className="mt-1 h-2.5 w-2.5 rounded-full bg-[#82f0d6]" />
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="site-panel-soft mt-8 rounded-[1.6rem] border p-5">
-            <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.selectedWorkspace}</p>
-            <div className="mt-4 flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-semibold">
-                  {selectedPlan === "paid"
-                    ? paidTierPresentation.title ?? copy.paidWorkspace
-                    : copy.freeWorkspace}
-                </p>
-                <p className="site-muted mt-2 max-w-xs text-sm">
-                  {selectedPlan === "paid"
-                    ? paidTierPresentation.body ?? copy.paidWorkspaceBody
-                    : copy.freeWorkspaceBody}
-                </p>
-              </div>
-              <div className="rounded-full border border-[#82f0d6]/25 bg-[#82f0d6]/10 px-3 py-1 text-xs uppercase tracking-[0.16em] text-[#82f0d6]">
-                {selectedPlan === "paid" && paidTierPresentation.label
-                  ? paidTierPresentation.label
-                  : copy.activeChoice}
-              </div>
+          {/* ── left panel ── */}
+          <section className="flex flex-col gap-6 rounded-2xl border border-neutral-200 bg-white p-7 md:p-8">
+            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-neutral-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              AI-powered workspace
             </div>
-          </div>
-        </section>
 
-        <section className="site-panel site-animate-rise rounded-[2rem] border p-6 shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:p-7" style={{ ["--site-delay" as string]: "100ms" }}>
-          <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="site-accent-text text-xs uppercase tracking-[0.18em]">{copy.welcomeEyebrow}</p>
-              <h2 className="mt-2 text-3xl font-semibold">{copy.welcomeTitle}</h2>
+              <h1 className="text-3xl font-medium leading-snug md:text-4xl">{copy.title}</h1>
+              <p className="mt-3 text-sm leading-7 text-neutral-500">{copy.body}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="hidden gap-2 md:flex">
-                <span className="site-chip flex h-10 w-10 items-center justify-center rounded-full border">
-                  <GoogleIcon />
-                </span>
-                <span className="site-chip flex h-10 w-10 items-center justify-center rounded-full border">
-                  <AppleIcon />
-                </span>
-                <span className="site-chip flex h-10 w-10 items-center justify-center rounded-full border">
-                  <MailIcon />
-                </span>
+
+            <ul className="flex flex-col gap-2.5">
+              {copy.bullets.map((b) => (
+                <li key={b} className="flex items-start gap-3 rounded-xl border border-neutral-100 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-600">
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
+                  {b}
+                </li>
+              ))}
+            </ul>
+
+            {/* plan preview */}
+            <div className="mt-auto rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+              <p className="mb-2 text-[11px] uppercase tracking-[0.13em] text-neutral-400">{copy.selectedWorkspace}</p>
+              <p className="text-lg font-medium">
+                {selectedPlan === "paid" ? (paidTierInfo.title ?? copy.paidWorkspace) : copy.freeWorkspace}
+              </p>
+              <p className="mt-1 text-sm leading-5 text-neutral-500">
+                {selectedPlan === "paid" ? (paidTierInfo.body ?? copy.paidWorkspaceBody) : copy.freeWorkspaceBody}
+              </p>
+              <span className="mt-3 inline-block rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] tracking-wide text-emerald-700">
+                {selectedPlan === "paid" && paidTierInfo.label ? paidTierInfo.label : copy.activeChoice}
+              </span>
+            </div>
+          </section>
+
+          {/* ── right panel ── */}
+          <section className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-6 md:p-7">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.13em] text-neutral-400">{copy.welcomeEyebrow}</p>
+              <h2 className="mt-1 text-2xl font-medium">{copy.welcomeTitle}</h2>
+            </div>
+
+            {/* ── STEP 1: sign in ── */}
+            <StepBlock step={1} state={step1State} title="Sign in with email or Google">
+              <Field label={copy.emailLabel} icon={<MailIcon />}>
+                <input
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  type="email"
+                  placeholder={copy.emailPlaceholder}
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm outline-none focus:border-neutral-400"
+                />
+              </Field>
+
+              <Btn onClick={sendEmailLink} disabled={isBusy || step1Done}>
+                <MailIcon /> {isBusy ? "…" : copy.sendLinkButton}
+              </Btn>
+
+              <Divider label={copy.emailDivider} />
+
+              <Btn onClick={continueWithGoogle} disabled={isBusy || step1Done} variant="outline">
+                <GoogleIcon /> {isBusy ? "…" : copy.googleButton}
+              </Btn>
+            </StepBlock>
+
+            {PHONE_OTP_ENABLED ? (
+              <StepBlock step={2} state={step2State} title="Verify your phone number">
+                <Field label={copy.phoneLabel} icon={<PhoneIcon />} hint={copy.smsNotice}>
+                  <input
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    type="tel"
+                    placeholder={copy.phonePlaceholder}
+                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm outline-none focus:border-neutral-400"
+                  />
+                </Field>
+
+                <Btn id="send-otp-btn" onClick={sendOtp} disabled={isBusy || otpSent}>
+                  <PhoneIcon /> {isBusy ? "…" : copy.sendOtpButton}
+                </Btn>
+
+                {/* OTP verify — reveals after send */}
+                {otpSent && (
+                  <>
+                    <Divider label={copy.otpLabel} />
+                    <Field label="6-digit code" icon={<LockIcon />}>
+                      <input
+                        value={otpCode}
+                        onChange={e => setOtpCode(e.target.value)}
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        placeholder={copy.otpPlaceholder}
+                        className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm outline-none focus:border-neutral-400"
+                      />
+                    </Field>
+                    <Btn onClick={verifyOtp} disabled={isBusy || !otpConfirmation}>
+                      <LockIcon /> {isBusy ? "…" : copy.verifyOtpButton}
+                    </Btn>
+                  </>
+                )}
+              </StepBlock>
+            ) : null}
+
+            {/* status */}
+            <StatusBar message={status.msg} type={status.type} />
+
+            {/* workspace selector */}
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[11px] uppercase tracking-[0.13em] text-neutral-400">{copy.chooseWorkspace}</p>
+                <p className="text-[11px] text-neutral-400">{copy.selectableBeforeSignin}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {planCards.map(p => {
+                  const active = selectedPlan === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handlePlanSelection(p.id)}
+                      disabled={isBusy}
+                      className={`rounded-xl border p-3.5 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? "site-button-primary border-transparent text-white" : "site-button-secondary text-neutral-700"}`}
+                    >
+                      <p className="text-sm font-medium">
+                        {p.id === "paid" ? (paidTierInfo.title ?? copy.paidWorkspace) : copy.freeWorkspace}
+                      </p>
+                      <p className={`mt-1.5 text-xs leading-5 ${active ? "text-neutral-300" : "text-neutral-400"}`}>
+                        {p.id === "paid" ? (paidTierInfo.body ?? copy.paidWorkspaceBody) : copy.freeWorkspaceBody}
+                      </p>
+                      <p className={`mt-3 text-[11px] uppercase tracking-[0.12em] ${active ? "text-neutral-400" : "text-neutral-400"}`}>
+                        {active ? copy.selectedLabel : copy.chooseLabel}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <button
-              onClick={() =>
-                continueWithSocial(googleProvider, "google", copy.status.connectingGoogle)
-              }
-            type="button"
-            disabled={isBusy}
-            className="site-button-secondary flex items-center justify-center gap-3 rounded-2xl border px-4 py-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            <GoogleIcon />
-            {copy.googleButton}
-          </button>
-          <button
-            onClick={() => continueWithSocial(appleProvider, "apple", copy.status.connectingApple)}
-            type="button"
-            disabled={isBusy}
-            className="site-button-secondary flex items-center justify-center gap-3 rounded-2xl border px-4 py-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            <AppleIcon />
-            {copy.appleButton}
-          </button>
+          </section>
         </div>
 
-          <div className="site-muted my-6 flex items-center gap-3 text-xs uppercase tracking-[0.18em]">
-            <span className="h-px flex-1 bg-[var(--site-border)]" />
-            {copy.emailDivider}
-            <span className="h-px flex-1 bg-[var(--site-border)]" />
-          </div>
-
-          <div className="grid gap-4">
-            <label className="block">
-              <span className="site-muted mb-1.5 flex items-center gap-2 text-xs uppercase tracking-[0.16em]">
-                <MailIcon />
-                {copy.emailLabel}
-              </span>
-              <input
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                type="email"
-                placeholder={copy.emailPlaceholder}
-                className="site-input w-full rounded-xl px-4 py-3 text-sm outline-none"
-              />
-            </label>
-
-            <label className="block">
-              <span className="site-muted mb-1.5 flex items-center gap-2 text-xs uppercase tracking-[0.16em]">
-                <PhoneIcon />
-                {copy.phoneLabel}
-              </span>
-              <input
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                type="tel"
-                placeholder={copy.phonePlaceholder}
-                className="site-input w-full rounded-xl px-4 py-3 text-sm outline-none"
-              />
-            </label>
-          </div>
-
-          <button
-            onClick={sendEmailLink}
-            type="button"
-            disabled={isBusy}
-            className="site-button-primary mt-4 flex w-full items-center justify-center gap-3 rounded-2xl px-4 py-4 text-sm font-semibold transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            <MailIcon />
-            {isBusy ? "..." : copy.sendLinkButton}
-          </button>
-
-          <div className="mt-7">
-            <div className="flex items-center justify-between">
-              <p className="site-muted text-xs uppercase tracking-[0.18em]">{copy.chooseWorkspace}</p>
-              <p className="site-muted text-xs">{copy.selectableBeforeSignin}</p>
-            </div>
-
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {planCards.map((plan) => {
-                const isSelected = selectedPlan === plan.id;
-
-                return (
-                  <button
-                    key={plan.id}
-                    onClick={() => handlePlanSelection(plan.id)}
-                    type="button"
-                    disabled={isBusy}
-                    className="site-option-card rounded-[1.5rem] border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-70"
-                    data-selected={isSelected ? "true" : "false"}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-lg font-semibold">
-                          {plan.id === "paid"
-                            ? paidTierPresentation.title ?? copy.paidWorkspace
-                            : copy.freeWorkspace}
-                        </p>
-                        <p className="site-muted mt-3 text-sm leading-6">
-                          {plan.id === "paid"
-                            ? paidTierPresentation.body ?? copy.paidWorkspaceBody
-                            : copy.freeWorkspaceBody}
-                        </p>
-                        {plan.id === "paid" && paidTierPresentation.label ? (
-                          <p className="site-accent-text mt-3 text-xs uppercase tracking-[0.16em]">
-                            Selected tier: {paidTierPresentation.label}
-                          </p>
-                        ) : null}
-                      </div>
-                      <span
-                        className="mt-1 h-3 w-3 rounded-full border"
-                        style={{ backgroundColor: isSelected ? plan.accent : "transparent" }}
-                      />
-                    </div>
-                    <p className="site-muted mt-4 text-xs uppercase tracking-[0.16em]">
-                      {isSelected ? copy.selectedLabel : copy.chooseLabel}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {status ? (
-            <div className="site-panel-soft mt-5 rounded-2xl border px-4 py-3 text-sm">
-              {status}
-            </div>
-          ) : (
-            <div className="site-panel-soft mt-5 rounded-2xl border px-4 py-3 text-sm">
-              {copy.status.initial}
-            </div>
-          )}
-        </section>
-        </div>
-
-        <footer className="site-panel site-animate-rise mt-6 flex flex-wrap items-center justify-between gap-4 rounded-[1.8rem] border px-5 py-4 text-sm" style={{ ["--site-delay" as string]: "180ms" }}>
-          <p className="site-muted">Secure access for multilingual blog workflows, SEO planning, and content operations.</p>
+        {/* footer */}
+        <footer className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-neutral-200 bg-white px-5 py-4 text-sm">
+          <p className="text-neutral-400">Secure access for multilingual blog workflows, SEO planning, and content operations.</p>
           <div className="text-right">
             <p className="font-medium">{footer.parent}</p>
-            <p className="site-muted text-xs">{footer.rights}</p>
+            <p className="text-xs text-neutral-400">{footer.rights}</p>
           </div>
         </footer>
       </div>

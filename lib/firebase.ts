@@ -2,7 +2,7 @@
 
 import { getApps, getApp, initializeApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
-import { GoogleAuthProvider, OAuthProvider, getAuth } from "firebase/auth";
+import { GoogleAuthProvider, getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -25,7 +25,3 @@ export const auth = getAuth(app);
 export const firestore = getFirestore(app);
 
 export const googleProvider = new GoogleAuthProvider();
-export const appleProvider = new OAuthProvider("apple.com");
-
-appleProvider.addScope("email");
-appleProvider.addScope("name");

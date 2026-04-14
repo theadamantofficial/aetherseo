@@ -36,6 +36,8 @@ type GenerateBlogApiResponse = {
 };
 
 type BlogPdfRewriteResult = {
+  aiContentAfter: number;
+  aiContentBefore: number;
   cleanedContent: string;
   fileName: string;
   highlights: string[];
@@ -397,6 +399,11 @@ function GenerateBlogPageContent() {
   const imageCredits = profile?.assistantImageCredits ?? 0;
   const imagePreviewSrc = ephemeralImageDataUrl || blog?.imageAsset?.imageUrl || null;
   const isSessionOnlyImagePreview = Boolean(ephemeralImageDataUrl && !blog?.imageAsset?.imageUrl);
+  const isPdfRewriteAvailable =
+    plan === "paid" && (profile?.paidPlanTier === "pro" || profile?.paidPlanTier === "agency");
+  const aiContentReduction = pdfRewrite
+    ? Math.max(0, pdfRewrite.aiContentBefore - pdfRewrite.aiContentAfter)
+    : 0;
 
   useEffect(() => {
     const kw = searchParams.get("keyword");
@@ -643,6 +650,11 @@ function GenerateBlogPageContent() {
   }
 
   async function handleRewritePdf() {
+    if (!isPdfRewriteAvailable) {
+      setPdfStatus("PDF originality rewrite is available on Pro and Agency plans only.");
+      return;
+    }
+
     if (!uid) {
       setPdfStatus("You must be signed in to rewrite a PDF.");
       return;
@@ -920,7 +932,8 @@ function GenerateBlogPageContent() {
               </label>
             </div>
 
-            <div className="rounded-[1rem] border border-[var(--site-border)] bg-[var(--site-panel)] p-3.5">
+            {isPdfRewriteAvailable ? (
+              <div className="rounded-[1rem] border border-[var(--site-border)] bg-[var(--site-panel)] p-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 text-[var(--site-fg)]">
@@ -980,10 +993,11 @@ function GenerateBlogPageContent() {
                 </button>
               </div>
 
-              <p className="mt-2 text-[11px] leading-[1.6] text-[var(--site-muted)]">
-                {pdfStatus ?? "Text-based PDFs are processed in your browser first, then the cleaned file downloads as editable text."}
-              </p>
-            </div>
+                <p className="mt-2 text-[11px] leading-[1.6] text-[var(--site-muted)]">
+                  {pdfStatus ?? "Text-based PDFs are processed in your browser first, then the cleaned file downloads as editable text."}
+                </p>
+              </div>
+            ) : null}
 
             <button
               type="button"
@@ -1156,7 +1170,8 @@ function GenerateBlogPageContent() {
               </>
             )}
 
-            <div className="overflow-hidden rounded-xl border border-[var(--site-border)] bg-[var(--site-panel)]">
+            {isPdfRewriteAvailable ? (
+              <div className="overflow-hidden rounded-xl border border-[var(--site-border)] bg-[var(--site-panel)]">
               <div className="flex items-center justify-between gap-3 border-b border-[var(--site-border)] px-4 py-3">
                 <div className="flex items-center gap-2">
                   <IconDoc className="text-[var(--site-muted)]" />
@@ -1176,6 +1191,21 @@ function GenerateBlogPageContent() {
 
               {pdfRewrite ? (
                 <div className="space-y-3 px-4 py-4">
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <div className="rounded-[12px] border border-[var(--site-border)] bg-[var(--site-bg)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[.14em] text-[var(--site-muted)]">AI content before</p>
+                      <p className="mt-1 text-[18px] font-semibold text-[var(--site-fg)]">{pdfRewrite.aiContentBefore}%</p>
+                    </div>
+                    <div className="rounded-[12px] border border-[var(--site-border)] bg-[var(--site-bg)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[.14em] text-[var(--site-muted)]">AI content after</p>
+                      <p className="mt-1 text-[18px] font-semibold text-[var(--site-fg)]">{pdfRewrite.aiContentAfter}%</p>
+                    </div>
+                    <div className="rounded-[12px] border border-[var(--site-border)] bg-[var(--site-bg)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[.14em] text-[var(--site-muted)]">Reduction</p>
+                      <p className="mt-1 text-[18px] font-semibold text-[var(--site-fg)]">{aiContentReduction}%</p>
+                    </div>
+                  </div>
+
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-[var(--site-border)] bg-[var(--site-bg)] px-2.5 py-1 text-[10px] text-[var(--site-muted)]">
                       {pdfRewrite.pageCount} pages
@@ -1227,7 +1257,8 @@ function GenerateBlogPageContent() {
                   </p>
                 </div>
               )}
-            </div>
+              </div>
+            ) : null}
           </div>
         </section>
       </div>

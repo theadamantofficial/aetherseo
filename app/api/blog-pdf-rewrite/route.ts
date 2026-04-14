@@ -1,10 +1,8 @@
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { PDFParse } from "pdf-parse";
 import { getFirebaseAdminAuth } from "@/lib/firebase-admin";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_INPUT_CHARS = 24000;
 const CHUNK_SIZE = 6000;
 
@@ -122,16 +120,6 @@ function chunkText(value: string, chunkSize: number) {
   }
 
   return chunks.filter(Boolean);
-}
-
-async function extractPdfText(file: File) {
-  const parser = new PDFParse({ data: Buffer.from(await file.arrayBuffer()) });
-
-  try {
-    return await parser.getText();
-  } finally {
-    await parser.destroy().catch(() => undefined);
-  }
 }
 
 async function requestChunkRewrite({
@@ -285,35 +273,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not verify the Firebase ID token." }, { status: 401 });
   }
 
-  const formData = await request.formData().catch(() => null);
-  const fileValue = formData?.get("file");
-  const languageValue = formData?.get("language");
-  const language = typeof languageValue === "string" && languageValue.trim() ? languageValue.trim() : "en";
+  const body = await request.json().catch(() => null);
+  const extractedText = typeof body?.extractedText === "string" ? body.extractedText : "";
+  const language = typeof body?.language === "string" && body.language.trim() ? body.language.trim() : "en";
+  const sourceFileName =
+    typeof body?.sourceFileName === "string" && body.sourceFileName.trim()
+      ? body.sourceFileName.trim()
+      : "uploaded-document.pdf";
+  const pageCount =
+    typeof body?.pageCount === "number" && Number.isFinite(body.pageCount) && body.pageCount > 0
+      ? Math.floor(body.pageCount)
+      : 0;
 
-  if (!(fileValue instanceof File)) {
-    return NextResponse.json({ error: "A PDF file is required." }, { status: 400 });
-  }
-
-  if (!fileValue.name.toLowerCase().endsWith(".pdf")) {
-    return NextResponse.json({ error: "Only PDF uploads are supported." }, { status: 400 });
-  }
-
-  if (fileValue.size > MAX_FILE_BYTES) {
-    return NextResponse.json({ error: "PDF must be 10 MB or smaller." }, { status: 400 });
-  }
-
-  let extracted;
-  try {
-    extracted = await extractPdfText(fileValue);
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Could not read the uploaded PDF." },
-      { status: 400 },
-    );
+  if (!extractedText.trim()) {
+    return NextResponse.json({ error: "Extracted PDF text is required." }, { status: 400 });
   }
 
   const warnings: string[] = [];
-  let normalizedText = normalizePdfText(extracted.text || "");
+  let normalizedText = normalizePdfText(extractedText);
 
   if (!normalizedText) {
     return NextResponse.json(
@@ -366,7 +343,7 @@ export async function POST(request: Request) {
   }
 
   const cleanedContent = rewrittenChunks.join("\n\n");
-  const baseName = path.basename(fileValue.name, path.extname(fileValue.name));
+  const baseName = path.basename(sourceFileName, path.extname(sourceFileName));
   const fallbackTitle = baseName
     .split(/[-_]+/)
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
@@ -378,7 +355,7 @@ export async function POST(request: Request) {
   try {
     summaryPayload = await requestRewriteSummary({
       apiKey,
-      fileName: fileValue.name,
+      fileName: sourceFileName,
       language,
       rewrittenText: cleanedContent,
     });
@@ -392,8 +369,8 @@ export async function POST(request: Request) {
       fileName: `${slugify(baseName) || "cleaned-pdf"}-originality-rewrite.txt`,
       highlights: [...highlightSet].slice(0, 6),
       model: resolveRewriteModel(),
-      pageCount: extracted.total,
-      sourceFileName: fileValue.name,
+      pageCount,
+      sourceFileName,
       summary:
         typeof summaryPayload?.summary === "string" && summaryPayload.summary.trim()
           ? summaryPayload.summary.trim()

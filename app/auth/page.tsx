@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   ConfirmationResult,
   RecaptchaVerifier,
@@ -163,9 +164,32 @@ type StepState = "pending" | "active" | "done";
 
 function StepDot({ state, number }: { state: StepState; number: number }) {
   const base = "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border text-[10px] font-medium";
-  if (state === "done")    return <span className={`${base} border-emerald-300 bg-emerald-50 text-emerald-700`}><CheckIcon /></span>;
-  if (state === "active")  return <span className={`${base} border-neutral-900 bg-neutral-900 text-white`}>{number}</span>;
-  return <span className={`${base} border-neutral-200 text-neutral-400`}>{number}</span>;
+  if (state === "done") {
+    return (
+      <span
+        className={base}
+        style={{
+          borderColor: "color-mix(in srgb, var(--site-primary) 30%, var(--site-border))",
+          backgroundColor: "color-mix(in srgb, var(--site-primary) 14%, transparent)",
+          color: "var(--site-primary)",
+        }}
+      >
+        <CheckIcon />
+      </span>
+    );
+  }
+  if (state === "active") {
+    return (
+      <span className={`${base} border-transparent text-white`} style={{ backgroundColor: "var(--site-primary)" }}>
+        {number}
+      </span>
+    );
+  }
+  return (
+    <span className={`${base} bg-[var(--site-surface-soft)] text-[var(--site-muted)]`} style={{ borderColor: "var(--site-border)" }}>
+      {number}
+    </span>
+  );
 }
 
 /* ─── sub-components ─── */
@@ -173,11 +197,11 @@ function StepDot({ state, number }: { state: StepState; number: number }) {
 function Field({ label, icon, children, hint }: { label: string; icon: React.ReactNode; children: React.ReactNode; hint?: string }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.12em] text-neutral-500">
+      <label className="site-muted flex items-center gap-1.5 text-[11px] uppercase tracking-[0.12em]">
         {icon}{label}
       </label>
       {children}
-      {hint && <p className="text-[12px] leading-5 text-neutral-400">{hint}</p>}
+      {hint && <p className="site-muted text-[12px] leading-5">{hint}</p>}
     </div>
   );
 }
@@ -194,10 +218,10 @@ function Btn({ id, onClick, disabled, variant = "solid", children }: {
 
 function Divider({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-neutral-400">
-      <span className="h-px flex-1 bg-neutral-100" />
+    <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-[var(--site-muted)]">
+      <span className="h-px flex-1 bg-[var(--site-border)]" />
       {label}
-      <span className="h-px flex-1 bg-neutral-100" />
+      <span className="h-px flex-1 bg-[var(--site-border)]" />
     </div>
   );
 }
@@ -206,8 +230,8 @@ function StepBlock({ step, state, title, children }: {
   step: number; state: StepState; title: string; children: React.ReactNode;
 }) {
   return (
-    <div className={`flex flex-col gap-4 rounded-2xl border p-4 transition-opacity ${state === "pending" ? "pointer-events-none opacity-35" : "opacity-100"} ${state === "active" ? "border-neutral-200 bg-white" : "border-neutral-100 bg-neutral-50"}`}>
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-neutral-500">
+    <div className={`flex flex-col gap-4 rounded-2xl border p-4 transition-opacity ${state === "pending" ? "pointer-events-none opacity-35" : "opacity-100"} ${state === "active" ? "site-panel" : "site-panel-soft"}`}>
+      <div className="site-muted flex items-center gap-2 text-[11px] uppercase tracking-[0.12em]">
         <StepDot state={state} number={step} />
         {title}
       </div>
@@ -216,12 +240,36 @@ function StepBlock({ step, state, title, children }: {
   );
 }
 
+function getStatusStyles(type?: "success" | "error" | "info"): CSSProperties {
+  if (type === "success") {
+    return {
+      backgroundColor: "color-mix(in srgb, #10b981 12%, var(--site-surface))",
+      borderColor: "color-mix(in srgb, #10b981 26%, var(--site-border))",
+      color: "var(--foreground)",
+    };
+  }
+
+  if (type === "error") {
+    return {
+      backgroundColor: "color-mix(in srgb, #ef4444 12%, var(--site-surface))",
+      borderColor: "color-mix(in srgb, #ef4444 26%, var(--site-border))",
+      color: "var(--foreground)",
+    };
+  }
+
+  return {
+    backgroundColor: "var(--site-surface-soft)",
+    borderColor: "var(--site-border)",
+    color: "var(--foreground)",
+  };
+}
+
 function StatusBar({ message, type }: { message: string; type?: "success" | "error" | "info" }) {
-  const cls =
-    type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" :
-    type === "error"   ? "bg-red-50 border-red-200 text-red-700" :
-    "bg-neutral-50 border-neutral-200 text-neutral-600";
-  return <div className={`rounded-xl border px-4 py-3 text-[13px] leading-5 ${cls}`}>{message}</div>;
+  return (
+    <div className="rounded-xl border px-4 py-3 text-[13px] leading-5" style={getStatusStyles(type)}>
+      {message}
+    </div>
+  );
 }
 
 /* ─── main page ─── */
@@ -234,6 +282,9 @@ function AuthPageContent() {
   const footer = footerCopy[uiLanguage];
 
   const handledUidRef         = useRef<string | null>(null);
+  const emailLinkInProgressRef = useRef(false);
+  const emailLinkHandledUidRef = useRef<string | null>(null);
+  const redirectTimeoutRef    = useRef<number | null>(null);
   const recaptchaVerifierRef  = useRef<RecaptchaVerifier | null>(null);
   const recaptchaWidgetIdRef  = useRef<number | null>(null);
   const phoneRef              = useRef("");
@@ -299,8 +350,34 @@ function AuthPageContent() {
     clearRecaptcha();
   }, [clearRecaptcha]);
 
+  const navigateAfterAuth = useCallback((href: string) => {
+    router.replace(href);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (redirectTimeoutRef.current !== null) {
+      window.clearTimeout(redirectTimeoutRef.current);
+    }
+
+    redirectTimeoutRef.current = window.setTimeout(() => {
+      if (window.location.pathname === "/auth") {
+        window.location.replace(href);
+      }
+    }, 700);
+  }, [router]);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimeoutRef.current !== null) {
+        window.clearTimeout(redirectTimeoutRef.current);
+      }
+    };
+  }, []);
+
   /* ── finalize session after auth ── */
-  const finalizeSession = useCallback(async (user: User, provider: string | null) => {
+  const finalizeSession = useCallback(async (user: User, provider: string | null): Promise<boolean> => {
     setBusy(true);
     try {
       const resolvedPhone  = user.phoneNumber?.trim() || phoneRef.current || readStoredPhone();
@@ -315,32 +392,34 @@ function AuthPageContent() {
         setSelectedPaidTier(profile.paidPlanTier);
         if (profile.plan === "paid" && !profile.paidPlanTier && chosenPaidTier) {
           setStatus({ msg: copy.status.workspaceReady, type: "success" });
-          router.replace(`/choose-plan?tier=${chosenPaidTier}`);
-          return;
+          navigateAfterAuth(`/choose-plan?tier=${chosenPaidTier}`);
+          return true;
         }
         setStatus({ msg: copy.status.welcomeBack, type: "success" });
         clearDraft();
-        router.replace(profile.plan === "paid" && !profile.paidPlanTier ? "/choose-plan" : "/dashboard");
-        return;
+        navigateAfterAuth(profile.plan === "paid" && !profile.paidPlanTier ? "/choose-plan" : "/dashboard");
+        return true;
       }
 
       if (chosenPlan === "paid") {
         setStatus({ msg: copy.status.workspaceReady, type: "success" });
-        router.replace(chosenPaidTier ? `/choose-plan?tier=${chosenPaidTier}` : "/choose-plan");
-        return;
+        navigateAfterAuth(chosenPaidTier ? `/choose-plan?tier=${chosenPaidTier}` : "/choose-plan");
+        return true;
       }
 
       await setUserPlan(user.uid, chosenPlan, resolvedPhone);
       clearDraft();
       setStatus({ msg: copy.status.workspaceReady, type: "success" });
-      router.replace("/dashboard");
+      navigateAfterAuth("/dashboard");
+      return true;
     } catch (error) {
       handledUidRef.current = null;
       setStatus({ msg: formatAuthErrorMessage(error, copy.status.signInFinishFailed), type: "error" });
+      return false;
     } finally {
       setBusy(false);
     }
-  }, [copy.status, router]);
+  }, [copy.status, navigateAfterAuth]);
 
   /* ── email link ── */
   const sendEmailLink = async () => {
@@ -441,19 +520,35 @@ function AuthPageContent() {
   /* ── email link handler + auth state ── */
   useEffect(() => {
     const handleExistingLink = async () => {
-      if (typeof window === "undefined" || !isSignInWithEmailLink(auth, window.location.href)) return;
+      if (
+        typeof window === "undefined" ||
+        emailLinkInProgressRef.current ||
+        !isSignInWithEmailLink(auth, window.location.href)
+      ) {
+        return;
+      }
+
       const resolvedEmail = readLS(EMAIL_LINK_STORAGE);
       if (!resolvedEmail) { setStatus({ msg: copy.status.reconnectBrowser, type: "error" }); return; }
+
+      emailLinkInProgressRef.current = true;
       setBusy(true);
       setStatus({ msg: copy.status.signingInEmail });
+
       try {
         const result = await signInWithEmailLink(auth, resolvedEmail, window.location.href);
         handledUidRef.current = result.user.uid;
-        await finalizeSession(result.user, "email");
+        setStep1Done(true);
+
+        window.history.replaceState(null, "", "/auth");
+        emailLinkHandledUidRef.current = await finalizeSession(result.user, "email") ? result.user.uid : null;
       } catch (error) {
+        emailLinkHandledUidRef.current = null;
         handledUidRef.current = null;
         setBusy(false);
         setStatus({ msg: formatAuthErrorMessage(error, copy.status.linkExpired), type: "error" });
+      } finally {
+        emailLinkInProgressRef.current = false;
       }
     };
 
@@ -461,10 +556,20 @@ function AuthPageContent() {
       if (!currentUser) {
         setUserUid("");
         handledUidRef.current = null;
+        emailLinkHandledUidRef.current = null;
         resetOtpState();
         setStep1Done(false);
         return;
       }
+
+      if (
+        emailLinkInProgressRef.current ||
+        emailLinkHandledUidRef.current === currentUser.uid
+      ) {
+        setUserUid(currentUser.uid);
+        return;
+      }
+
       setUserUid(currentUser.uid);
       if (!phoneRef.current && currentUser.phoneNumber) setPhone(currentUser.phoneNumber);
 
@@ -498,7 +603,7 @@ function AuthPageContent() {
     try {
       await setUserPlan(userUid, plan, auth.currentUser?.phoneNumber?.trim() || phoneRef.current || readStoredPhone());
       clearDraft();
-      router.replace("/dashboard");
+      navigateAfterAuth("/dashboard");
     } catch (error) {
       setStatus({ msg: formatAuthErrorMessage(error, copy.status.workspaceSaveFailed), type: "error" });
     } finally {
@@ -510,11 +615,11 @@ function AuthPageContent() {
   const step2State: StepState = !step1Done ? "pending" : otpSent ? "active" : "active";
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-neutral-50 px-4 py-10 text-neutral-900">
+    <div className="site-page relative min-h-screen overflow-hidden px-4 py-10">
       <div className="relative mx-auto max-w-5xl">
 
         {/* header */}
-        <header className="relative z-40 mb-8 flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3 md:flex-row md:items-center md:justify-between">
+        <header className="site-panel relative z-40 mb-8 flex flex-col gap-3 rounded-2xl border px-4 py-3 md:flex-row md:items-center md:justify-between">
           <div className="flex w-full items-center justify-between gap-3 md:w-auto md:flex-none">
             <AetherBrand href={`/${uiLanguage}`} onClick={() => setHeaderOpen(false)} priority />
             <button
@@ -534,7 +639,7 @@ function AuthPageContent() {
             </Link>
           </div>
           {isHeaderOpen && (
-            <div className="absolute inset-x-4 top-[calc(100%+0.5rem)] z-30 rounded-2xl border border-neutral-200 bg-white px-3 py-3 md:hidden">
+            <div className="site-mobile-menu absolute inset-x-4 top-[calc(100%+0.5rem)] z-30 rounded-2xl px-3 py-3 md:hidden">
               <SitePreferences className="w-full" />
               <Link
                 href={`/${uiLanguage}`}
@@ -551,20 +656,20 @@ function AuthPageContent() {
         <div className="grid gap-5 lg:grid-cols-[0.9fr,1.1fr]">
 
           {/* ── left panel ── */}
-          <section className="flex flex-col gap-6 rounded-2xl border border-neutral-200 bg-white p-7 md:p-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-neutral-500">
+          <section className="site-panel flex flex-col gap-6 rounded-2xl border p-7 md:p-8">
+            <div className="site-chip inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] uppercase tracking-[0.14em]">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               AI-powered workspace
             </div>
 
             <div>
               <h1 className="text-3xl font-medium leading-snug md:text-4xl">{copy.title}</h1>
-              <p className="mt-3 text-sm leading-7 text-neutral-500">{copy.body}</p>
+              <p className="site-muted mt-3 text-sm leading-7">{copy.body}</p>
             </div>
 
             <ul className="flex flex-col gap-2.5">
               {copy.bullets.map((b) => (
-                <li key={b} className="flex items-start gap-3 rounded-xl border border-neutral-100 bg-neutral-50 px-3.5 py-2.5 text-sm text-neutral-600">
+                <li key={b} className="site-panel-soft flex items-start gap-3 rounded-xl border px-3.5 py-2.5 text-sm">
                   <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
                   {b}
                 </li>
@@ -572,36 +677,42 @@ function AuthPageContent() {
             </ul>
 
             {/* plan preview */}
-            <div className="mt-auto rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-              <p className="mb-2 text-[11px] uppercase tracking-[0.13em] text-neutral-400">{copy.selectedWorkspace}</p>
+            <div className="site-panel-soft mt-auto rounded-xl border p-4">
+              <p className="site-muted mb-2 text-[11px] uppercase tracking-[0.13em]">{copy.selectedWorkspace}</p>
               <p className="text-lg font-medium">
                 {selectedPlan === "paid" ? (paidTierInfo.title ?? copy.paidWorkspace) : copy.freeWorkspace}
               </p>
-              <p className="mt-1 text-sm leading-5 text-neutral-500">
+              <p className="site-muted mt-1 text-sm leading-5">
                 {selectedPlan === "paid" ? (paidTierInfo.body ?? copy.paidWorkspaceBody) : copy.freeWorkspaceBody}
               </p>
-              <span className="mt-3 inline-block rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] tracking-wide text-emerald-700">
+              <span
+                className="mt-3 inline-block rounded-full px-2.5 py-0.5 text-[11px] tracking-wide"
+                style={{
+                  backgroundColor: "color-mix(in srgb, var(--site-primary) 14%, transparent)",
+                  color: "var(--site-primary)",
+                }}
+              >
                 {selectedPlan === "paid" && paidTierInfo.label ? paidTierInfo.label : copy.activeChoice}
               </span>
             </div>
           </section>
 
           {/* ── right panel ── */}
-          <section className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-6 md:p-7">
+          <section className="site-panel flex flex-col gap-4 rounded-2xl border p-6 md:p-7">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.13em] text-neutral-400">{copy.welcomeEyebrow}</p>
+              <p className="text-[11px] uppercase tracking-[0.13em] text-[var(--site-muted)]">{copy.welcomeEyebrow}</p>
               <h2 className="mt-1 text-2xl font-medium">{copy.welcomeTitle}</h2>
             </div>
 
             {/* ── STEP 1: sign in ── */}
             <StepBlock step={1} state={step1State} title="Sign in with email or Google">
-              <Field label={copy.emailLabel} icon={<MailIcon />}>
+              <Field label={copy.emailLabel} icon={<MailIcon />} hint={copy.emailHint}>
                 <input
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   type="email"
                   placeholder={copy.emailPlaceholder}
-                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm outline-none focus:border-neutral-400"
+                  className="site-input w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
                 />
               </Field>
 
@@ -624,7 +735,7 @@ function AuthPageContent() {
                     onChange={e => setPhone(e.target.value)}
                     type="tel"
                     placeholder={copy.phonePlaceholder}
-                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm outline-none focus:border-neutral-400"
+                    className="site-input w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
                   />
                 </Field>
 
@@ -645,7 +756,7 @@ function AuthPageContent() {
                         autoComplete="one-time-code"
                         maxLength={6}
                         placeholder={copy.otpPlaceholder}
-                        className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm outline-none focus:border-neutral-400"
+                        className="site-input w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
                       />
                     </Field>
                     <Btn onClick={verifyOtp} disabled={isBusy || !otpConfirmation}>
@@ -662,8 +773,8 @@ function AuthPageContent() {
             {/* workspace selector */}
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-[11px] uppercase tracking-[0.13em] text-neutral-400">{copy.chooseWorkspace}</p>
-                <p className="text-[11px] text-neutral-400">{copy.selectableBeforeSignin}</p>
+                <p className="text-[11px] uppercase tracking-[0.13em] text-[var(--site-muted)]">{copy.chooseWorkspace}</p>
+                <p className="text-[11px] text-[var(--site-muted)]">{copy.selectableBeforeSignin}</p>
               </div>
               <div className="grid grid-cols-2 gap-2.5">
                 {planCards.map(p => {
@@ -674,15 +785,15 @@ function AuthPageContent() {
                       type="button"
                       onClick={() => handlePlanSelection(p.id)}
                       disabled={isBusy}
-                      className={`rounded-xl border p-3.5 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? "site-button-primary border-transparent text-white" : "site-button-secondary text-neutral-700"}`}
+                      className={`rounded-xl border p-3.5 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? "site-button-primary border-transparent text-white" : "border-[var(--site-border)] bg-[var(--site-surface-soft)] text-[var(--foreground)] hover:border-[var(--site-border-strong)] hover:bg-[var(--site-surface)]"}`}
                     >
                       <p className="text-sm font-medium">
                         {p.id === "paid" ? (paidTierInfo.title ?? copy.paidWorkspace) : copy.freeWorkspace}
                       </p>
-                      <p className={`mt-1.5 text-xs leading-5 ${active ? "text-neutral-300" : "text-neutral-400"}`}>
+                      <p className={`mt-1.5 text-xs leading-5 ${active ? "text-white/70" : "text-[var(--site-muted)]"}`}>
                         {p.id === "paid" ? (paidTierInfo.body ?? copy.paidWorkspaceBody) : copy.freeWorkspaceBody}
                       </p>
-                      <p className={`mt-3 text-[11px] uppercase tracking-[0.12em] ${active ? "text-neutral-400" : "text-neutral-400"}`}>
+                      <p className={`mt-3 text-[11px] uppercase tracking-[0.12em] ${active ? "text-white/60" : "text-[var(--site-muted)]"}`}>
                         {active ? copy.selectedLabel : copy.chooseLabel}
                       </p>
                     </button>
@@ -694,11 +805,11 @@ function AuthPageContent() {
         </div>
 
         {/* footer */}
-        <footer className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-neutral-200 bg-white px-5 py-4 text-sm">
-          <p className="text-neutral-400">Secure access for multilingual blog workflows, SEO planning, and content operations.</p>
+        <footer className="site-panel mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-5 py-4 text-sm">
+          <p className="text-[var(--site-muted)]">Secure access for multilingual blog workflows, SEO planning, and content operations.</p>
           <div className="text-right">
             <p className="font-medium">{footer.parent}</p>
-            <p className="text-xs text-neutral-400">{footer.rights}</p>
+            <p className="text-xs text-[var(--site-muted)]">{footer.rights}</p>
           </div>
         </footer>
       </div>

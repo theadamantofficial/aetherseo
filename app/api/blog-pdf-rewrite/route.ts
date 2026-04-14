@@ -188,6 +188,15 @@ function chunkText(value: string, chunkSize: number) {
   return chunks.filter(Boolean);
 }
 
+function normalizeHighlights(value: unknown) {
+  return Array.isArray(value)
+    ? value
+        .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        .map((item) => normalizeWhitespace(item))
+        .slice(0, 3)
+    : [];
+}
+
 async function requestChunkRewrite({
   apiKey,
   chunk,
@@ -232,6 +241,9 @@ Requirements:
 - make the writing sound more human and less templated
 - remove repetitive filler and generic marketing phrases
 - avoid copying sentence structure too closely
+- vary sentence length and rhythm so the prose does not read mechanically
+- prefer direct language over abstract framing and generic setup lines
+- avoid these phrases unless they already appear inside a quotation: furthermore, moreover, additionally, in conclusion, in today's, ever-evolving, delve into, unlock, leverage, seamless, robust, landscape
 - keep the final length within roughly 20% of the source chunk
 - do not add claims, numbers, or citations that are not present
 - highlights should contain up to 3 short notes about what changed
@@ -251,6 +263,85 @@ ${chunk}`,
   const content = payload?.choices?.[0]?.message?.content;
   if (typeof content !== "string") {
     throw new Error("OpenAI returned an empty PDF rewrite response.");
+  }
+
+  return parseJsonObject(content);
+}
+
+async function requestChunkHumanize({
+  apiKey,
+  chunkIndex,
+  currentText,
+  language,
+  scoreHint,
+  sourceChunk,
+  totalChunks,
+}: {
+  apiKey: string;
+  chunkIndex: number;
+  currentText: string;
+  language: string;
+  scoreHint: number;
+  sourceChunk: string;
+  totalChunks: number;
+}) {
+  const response = await fetch(OPENAI_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: resolveRewriteModel(),
+      temperature: 0.55,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a senior editor humanizing text that still reads AI-generated. Preserve facts, but rewrite with natural rhythm, cleaner phrasing, and less predictable sentence structure. Always return valid JSON only.",
+        },
+        {
+          role: "user",
+          content: `Humanize chunk ${chunkIndex} of ${totalChunks} in ${language}.
+
+Current detector-style hint: ${scoreHint}/100 AI-like.
+
+Return JSON:
+{
+  "rewrittenText": string,
+  "highlights": string[]
+}
+
+Requirements:
+- keep the same meaning and factual claims as the source
+- remove stock transitions, listicle signposting, and generic marketing phrasing
+- vary sentence openings and sentence length aggressively
+- make the prose feel written by a careful human editor, not a template
+- use contractions only where they sound natural
+- prefer concrete nouns and verbs over abstract filler
+- avoid phrases like: furthermore, moreover, additionally, in conclusion, overall, in today's, ever-evolving, delve into, unlock, leverage, seamless, robust, landscape, valuable insights
+- do not add anecdotes, examples, data, or opinions that are not supported by the source
+- keep the result publication-ready
+
+Source chunk:
+${sourceChunk}
+
+Current rewritten chunk:
+${currentText}`,
+        },
+      ],
+    }),
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.error?.message || "OpenAI PDF humanization pass failed.");
+  }
+
+  const content = payload?.choices?.[0]?.message?.content;
+  if (typeof content !== "string") {
+    throw new Error("OpenAI returned an empty PDF humanization response.");
   }
 
   return parseJsonObject(content);
@@ -406,20 +497,47 @@ export async function POST(request: Request) {
         totalChunks: chunks.length,
       });
 
-      const rewrittenText =
+      let rewrittenText =
         typeof parsed?.rewrittenText === "string" && parsed.rewrittenText.trim()
           ? parsed.rewrittenText.trim()
           : chunk;
 
-      rewrittenChunks.push(rewrittenText);
+      for (const item of normalizeHighlights(parsed?.highlights)) {
+        highlightSet.add(item);
+      }
 
-      if (Array.isArray(parsed?.highlights)) {
-        for (const item of parsed.highlights) {
-          if (typeof item === "string" && item.trim()) {
-            highlightSet.add(normalizeWhitespace(item));
-          }
+      let aiScore = estimateAiContentPercent(rewrittenText);
+
+      // Run up to two extra passes when the chunk still reads formulaic.
+      for (let pass = 0; pass < 2 && aiScore > 24; pass += 1) {
+        const humanized = await requestChunkHumanize({
+          apiKey,
+          chunkIndex: index + 1,
+          currentText: rewrittenText,
+          language,
+          scoreHint: aiScore,
+          sourceChunk: chunk,
+          totalChunks: chunks.length,
+        });
+
+        const candidate =
+          typeof humanized?.rewrittenText === "string" && humanized.rewrittenText.trim()
+            ? humanized.rewrittenText.trim()
+            : rewrittenText;
+        const candidateScore = estimateAiContentPercent(candidate);
+
+        // Prefer the candidate whenever it improves the heuristic score.
+        if (candidateScore <= aiScore) {
+          rewrittenText = candidate;
+          aiScore = candidateScore;
+        }
+
+        for (const item of normalizeHighlights(humanized?.highlights)) {
+          highlightSet.add(item);
         }
       }
+
+      rewrittenChunks.push(rewrittenText);
     } catch (error) {
       warnings.push(
         error instanceof Error

@@ -384,8 +384,6 @@ Original file name: ${fileName}
 
 Return JSON:
 {
-  "aiContentAfter": number,
-  "aiContentBefore": number,
   "title": string,
   "summary": string
 }
@@ -394,9 +392,6 @@ Requirements:
 - title should be concise and publication-ready
 - summary should be 1 to 2 sentences
 - mention that the document was rewritten to reduce AI-style phrasing and duplication risk
-- aiContentBefore and aiContentAfter must be integers from 0 to 100
-- higher AI content means the text sounds more templated or machine-written
-- aiContentAfter should usually be lower than aiContentBefore if the rewrite improved the text
 
 Original text sample:
 ${originalText.slice(0, 4000)}
@@ -486,9 +481,11 @@ export async function POST(request: Request) {
   const chunks = chunkText(normalizedText, CHUNK_SIZE);
   const rewrittenChunks: string[] = [];
   const highlightSet = new Set<string>();
+  let preservedOriginalChunkCount = 0;
 
   for (const [index, chunk] of chunks.entries()) {
     try {
+      const sourceScore = estimateAiContentPercent(chunk);
       const parsed = await requestChunkRewrite({
         apiKey,
         chunk,
@@ -537,7 +534,12 @@ export async function POST(request: Request) {
         }
       }
 
-      rewrittenChunks.push(rewrittenText);
+      if (aiScore < sourceScore) {
+        rewrittenChunks.push(rewrittenText);
+      } else {
+        preservedOriginalChunkCount += 1;
+        rewrittenChunks.push(chunk);
+      }
     } catch (error) {
       warnings.push(
         error instanceof Error
@@ -556,11 +558,19 @@ export async function POST(request: Request) {
     .join(" ") || "Cleaned PDF rewrite";
   const summaryFallback =
     "This document was rewritten to reduce AI-style phrasing and lower duplication risk while keeping the original meaning intact.";
-  const fallbackAiContentBefore = estimateAiContentPercent(normalizedText);
-  const fallbackAiContentAfter = Math.max(
+  const aiContentBefore = estimateAiContentPercent(normalizedText);
+  const aiContentAfter = Math.max(
     6,
-    Math.min(fallbackAiContentBefore, estimateAiContentPercent(cleanedContent)),
+    Math.min(aiContentBefore, estimateAiContentPercent(cleanedContent)),
   );
+
+  if (preservedOriginalChunkCount > 0) {
+    warnings.unshift(
+      preservedOriginalChunkCount === chunks.length
+        ? "This draft already scored cleaner than the rewrite candidates, so the original wording was kept for consistency."
+        : `Kept ${preservedOriginalChunkCount} section${preservedOriginalChunkCount === 1 ? "" : "s"} unchanged because the rewrite did not improve the consistency score.`,
+    );
+  }
 
   let summaryPayload: Record<string, unknown> | null = null;
   try {
@@ -583,22 +593,8 @@ export async function POST(request: Request) {
       model: resolveRewriteModel(),
       pageCount,
       sourceFileName,
-      aiContentAfter:
-        typeof summaryPayload?.aiContentAfter === "number" && Number.isFinite(summaryPayload.aiContentAfter)
-          ? Math.max(
-              0,
-              Math.min(
-                typeof summaryPayload?.aiContentBefore === "number" && Number.isFinite(summaryPayload.aiContentBefore)
-                  ? Math.round(summaryPayload.aiContentBefore)
-                  : fallbackAiContentBefore,
-                Math.round(summaryPayload.aiContentAfter),
-              ),
-            )
-          : fallbackAiContentAfter,
-      aiContentBefore:
-        typeof summaryPayload?.aiContentBefore === "number" && Number.isFinite(summaryPayload.aiContentBefore)
-          ? Math.max(0, Math.min(100, Math.round(summaryPayload.aiContentBefore)))
-          : fallbackAiContentBefore,
+      aiContentAfter,
+      aiContentBefore,
       summary:
         typeof summaryPayload?.summary === "string" && summaryPayload.summary.trim()
           ? summaryPayload.summary.trim()

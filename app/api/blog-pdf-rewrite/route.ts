@@ -1,6 +1,6 @@
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { getFirebaseAdminAuth } from "@/lib/firebase-admin";
+import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase-admin";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const MAX_INPUT_CHARS = 24000;
@@ -79,6 +79,72 @@ function slugify(value: string) {
 
 function countWords(value: string) {
   return value ? value.split(/\s+/).filter(Boolean).length : 0;
+}
+
+function splitSentences(value: string) {
+  return value
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => normalizeWhitespace(sentence))
+    .filter(Boolean);
+}
+
+function estimateAiContentPercent(value: string) {
+  const text = normalizeWhitespace(value).toLowerCase();
+  if (!text) {
+    return 0;
+  }
+
+  const phrases = [
+    "in today's",
+    "in today s",
+    "ever-evolving",
+    "ever evolving",
+    "delve into",
+    "unlock the",
+    "unlock your",
+    "game-changer",
+    "game changer",
+    "leverage",
+    "furthermore",
+    "moreover",
+    "in conclusion",
+    "streamline",
+    "seamless",
+    "robust",
+    "landscape",
+    "valuable insights",
+    "cutting-edge",
+    "cutting edge",
+  ];
+  const sentences = splitSentences(value);
+  const longSentenceCount = sentences.filter((sentence) => countWords(sentence) >= 24).length;
+  const transitionCount = (text.match(/\b(furthermore|moreover|additionally|however|therefore)\b/g) ?? []).length;
+  const listyCount = (text.match(/\b(firstly|secondly|thirdly|overall)\b/g) ?? []).length;
+  const phraseCount = phrases.reduce((count, phrase) => count + (text.includes(phrase) ? 1 : 0), 0);
+  const sentenceStarts = new Map<string, number>();
+
+  for (const sentence of sentences) {
+    const start = sentence.toLowerCase().split(/\s+/).slice(0, 2).join(" ");
+    if (start) {
+      sentenceStarts.set(start, (sentenceStarts.get(start) ?? 0) + 1);
+    }
+  }
+
+  const repeatedStarts = [...sentenceStarts.values()].filter((count) => count > 1).length;
+  const averageWords = sentences.length
+    ? Math.round(sentences.reduce((total, sentence) => total + countWords(sentence), 0) / sentences.length)
+    : 0;
+
+  const score =
+    18 +
+    phraseCount * 7 +
+    transitionCount * 4 +
+    listyCount * 4 +
+    longSentenceCount * 3 +
+    repeatedStarts * 5 +
+    Math.max(0, averageWords - 18);
+
+  return Math.max(8, Math.min(96, Math.round(score)));
 }
 
 function chunkText(value: string, chunkSize: number) {
@@ -194,11 +260,13 @@ async function requestRewriteSummary({
   apiKey,
   fileName,
   language,
+  originalText,
   rewrittenText,
 }: {
   apiKey: string;
   fileName: string;
   language: string;
+  originalText: string;
   rewrittenText: string;
 }) {
   const response = await fetch(OPENAI_ENDPOINT, {
@@ -225,6 +293,8 @@ Original file name: ${fileName}
 
 Return JSON:
 {
+  "aiContentAfter": number,
+  "aiContentBefore": number,
   "title": string,
   "summary": string
 }
@@ -233,9 +303,15 @@ Requirements:
 - title should be concise and publication-ready
 - summary should be 1 to 2 sentences
 - mention that the document was rewritten to reduce AI-style phrasing and duplication risk
+- aiContentBefore and aiContentAfter must be integers from 0 to 100
+- higher AI content means the text sounds more templated or machine-written
+- aiContentAfter should usually be lower than aiContentBefore if the rewrite improved the text
 
-Text sample:
-${rewrittenText.slice(0, 8000)}`,
+Original text sample:
+${originalText.slice(0, 4000)}
+
+Rewritten text sample:
+${rewrittenText.slice(0, 4000)}`,
         },
       ],
     }),
@@ -271,6 +347,18 @@ export async function POST(request: Request) {
   const decodedToken = await getFirebaseAdminAuth().verifyIdToken(token).catch(() => null);
   if (!decodedToken) {
     return NextResponse.json({ error: "Could not verify the Firebase ID token." }, { status: 401 });
+  }
+
+  const userSnapshot = await getFirebaseAdminDb().collection("users").doc(decodedToken.uid).get();
+  const userData = userSnapshot.data() ?? {};
+  const plan = userData.plan;
+  const paidPlanTier = userData.paidPlanTier;
+
+  if (plan !== "paid" || (paidPlanTier !== "pro" && paidPlanTier !== "agency")) {
+    return NextResponse.json(
+      { error: "PDF originality rewrite is available on Pro and Agency plans only." },
+      { status: 403 },
+    );
   }
 
   const body = await request.json().catch(() => null);
@@ -350,6 +438,11 @@ export async function POST(request: Request) {
     .join(" ") || "Cleaned PDF rewrite";
   const summaryFallback =
     "This document was rewritten to reduce AI-style phrasing and lower duplication risk while keeping the original meaning intact.";
+  const fallbackAiContentBefore = estimateAiContentPercent(normalizedText);
+  const fallbackAiContentAfter = Math.max(
+    6,
+    Math.min(fallbackAiContentBefore, estimateAiContentPercent(cleanedContent)),
+  );
 
   let summaryPayload: Record<string, unknown> | null = null;
   try {
@@ -357,6 +450,7 @@ export async function POST(request: Request) {
       apiKey,
       fileName: sourceFileName,
       language,
+      originalText: normalizedText,
       rewrittenText: cleanedContent,
     });
   } catch (error) {
@@ -371,6 +465,22 @@ export async function POST(request: Request) {
       model: resolveRewriteModel(),
       pageCount,
       sourceFileName,
+      aiContentAfter:
+        typeof summaryPayload?.aiContentAfter === "number" && Number.isFinite(summaryPayload.aiContentAfter)
+          ? Math.max(
+              0,
+              Math.min(
+                typeof summaryPayload?.aiContentBefore === "number" && Number.isFinite(summaryPayload.aiContentBefore)
+                  ? Math.round(summaryPayload.aiContentBefore)
+                  : fallbackAiContentBefore,
+                Math.round(summaryPayload.aiContentAfter),
+              ),
+            )
+          : fallbackAiContentAfter,
+      aiContentBefore:
+        typeof summaryPayload?.aiContentBefore === "number" && Number.isFinite(summaryPayload.aiContentBefore)
+          ? Math.max(0, Math.min(100, Math.round(summaryPayload.aiContentBefore)))
+          : fallbackAiContentBefore,
       summary:
         typeof summaryPayload?.summary === "string" && summaryPayload.summary.trim()
           ? summaryPayload.summary.trim()

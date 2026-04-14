@@ -154,6 +154,7 @@ export type AuthCopy = {
   smsNotice: string;
   otpLabel: string;
   emailPlaceholder: string;
+  emailHint: string;
   phonePlaceholder: string;
   otpPlaceholder: string;
   sendOtpButton: string;
@@ -910,6 +911,7 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
     smsNotice: "SMS verification may apply standard carrier rates.",
     otpLabel: "Verification code",
     emailPlaceholder: "name@company.com",
+    emailHint: "We'll email a sign-in link here. If it doesn't show up in a minute, check your spam or junk folder too.",
     phonePlaceholder: "+1 555 000 0000",
     otpPlaceholder: "Enter the 6-digit OTP",
     sendOtpButton: "Send OTP code",
@@ -927,7 +929,7 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
       invalidPhone: "Enter a valid phone number in international format, for example +15550000000.",
       needEmail: "Enter your email address first.",
       sendingLink: "Sending your secure sign-in link...",
-      linkSent: "Sign-in link sent. Check your inbox and open it in the same browser.",
+      linkSent: "Sign-in link sent. Check your inbox, and if it is not there, look in spam or junk before opening it in the same browser.",
       linkFailed: "Unable to send sign-in link right now. Try again.",
       reconnectBrowser: "Please request a new sign-in link from this browser.",
       signingInEmail: "Signing in with email link...",
@@ -975,6 +977,7 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
     smsNotice: "La verificacion por SMS puede aplicar tarifas normales del operador.",
     otpLabel: "Codigo de verificacion",
     emailPlaceholder: "nombre@empresa.com",
+    emailHint: "Te enviaremos aqui el enlace de acceso. Si no aparece en un minuto, revisa tambien spam o correo no deseado.",
     phonePlaceholder: "+34 600 000 000",
     otpPlaceholder: "Introduce el OTP de 6 digitos",
     sendOtpButton: "Enviar codigo OTP",
@@ -992,7 +995,7 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
       invalidPhone: "Introduce un telefono valido en formato internacional, por ejemplo +34600000000.",
       needEmail: "Primero introduce tu correo.",
       sendingLink: "Enviando tu enlace seguro...",
-      linkSent: "Enlace enviado. Revisa tu correo y abrelo en el mismo navegador.",
+      linkSent: "Enlace enviado. Revisa tu correo y, si no aparece, mira tambien spam o correo no deseado antes de abrirlo en el mismo navegador.",
       linkFailed: "No fue posible enviar el enlace ahora mismo.",
       reconnectBrowser: "Solicita un nuevo enlace desde este navegador.",
       signingInEmail: "Accediendo con enlace de correo...",
@@ -1040,6 +1043,7 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
     smsNotice: "La verification par SMS peut entrainer les frais standards de votre operateur.",
     otpLabel: "Code de verification",
     emailPlaceholder: "nom@entreprise.com",
+    emailHint: "Nous enverrons le lien de connexion ici. S'il n'apparait pas dans une minute, verifiez aussi le dossier spam ou courrier indesirable.",
     phonePlaceholder: "+33 6 00 00 00 00",
     otpPlaceholder: "Entrez le code OTP a 6 chiffres",
     sendOtpButton: "Envoyer le code OTP",
@@ -1057,7 +1061,7 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
       invalidPhone: "Entrez un numero valide au format international, par exemple +33600000000.",
       needEmail: "Entrez votre email d'abord.",
       sendingLink: "Envoi de votre lien securise...",
-      linkSent: "Lien envoye. Ouvrez-le dans le meme navigateur.",
+      linkSent: "Lien envoye. Verifiez votre boite mail et, s'il n'apparait pas, regardez aussi dans le spam avant de l'ouvrir dans le meme navigateur.",
       linkFailed: "Impossible d'envoyer le lien pour le moment.",
       reconnectBrowser: "Veuillez demander un nouveau lien depuis ce navigateur.",
       signingInEmail: "Connexion avec lien email...",
@@ -1105,6 +1109,7 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
     smsNotice: "SMS verification par standard carrier charges lag sakte hain.",
     otpLabel: "Verification code",
     emailPlaceholder: "name@company.com",
+    emailHint: "Sign-in link isi email par aayega. Agar ek minute me na dikhe to spam ya junk folder bhi check karo.",
     phonePlaceholder: "+91 98765 43210",
     otpPlaceholder: "6-digit OTP enter karo",
     sendOtpButton: "OTP code bhejo",
@@ -1122,7 +1127,7 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
       invalidPhone: "Valid international format me phone number enter karo, jaise +919876543210.",
       needEmail: "Pehle apna email enter karo.",
       sendingLink: "Secure sign-in link bheja ja raha hai...",
-      linkSent: "Link bhej diya gaya. Inbox check karo aur same browser me open karo.",
+      linkSent: "Link bhej diya gaya. Inbox check karo, aur agar wahan na ho to spam ya junk folder bhi dekh lo, phir same browser me open karo.",
       linkFailed: "Abhi sign-in link send nahin ho paya.",
       reconnectBrowser: "Isi browser se naya sign-in link request karo.",
       signingInEmail: "Email link se sign in ho raha hai...",

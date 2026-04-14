@@ -55,6 +55,67 @@ type BlogPdfRewriteApiResponse = {
 
 const assistantAddonDefinitions = getAssistantAddonDefinitions();
 const imageAddonDefinition = assistantAddonDefinitions["seo-image"];
+const MAX_LOCAL_PDF_BYTES = 20 * 1024 * 1024;
+const MAX_PDF_TEXT_CHARS = 24000;
+
+let pdfJsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
+
+function normalizeExtractedPdfText(value: string) {
+  return value
+    .replace(/\u0000/g, " ")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[^\S\n]+/g, " ")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+async function loadPdfJs() {
+  if (!pdfJsPromise) {
+    pdfJsPromise = import("pdfjs-dist").then((module) => {
+      module.GlobalWorkerOptions.workerSrc = new URL(
+        "pdfjs-dist/build/pdf.worker.min.mjs",
+        import.meta.url,
+      ).toString();
+      return module;
+    });
+  }
+
+  return pdfJsPromise;
+}
+
+async function extractPdfTextInBrowser(file: File) {
+  const pdfjs = await loadPdfJs();
+  const data = new Uint8Array(await file.arrayBuffer());
+  const loadingTask = pdfjs.getDocument({ data });
+
+  try {
+    const pdf = await loadingTask.promise;
+    const pages: string[] = [];
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item) => {
+          const textItem = item as { str?: string };
+          return typeof textItem.str === "string" ? textItem.str : "";
+        })
+        .join(" ");
+
+      pages.push(normalizeExtractedPdfText(pageText));
+      page.cleanup();
+    }
+
+    return {
+      pageCount: pdf.numPages,
+      text: normalizeExtractedPdfText(pages.join("\n\n")),
+    };
+  } finally {
+    await loadingTask.destroy();
+  }
+}
 
 /* ─── small icons ───────────────────────────────────────── */
 
@@ -138,13 +199,14 @@ function formatAuthErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-async function postAuthenticatedFormData<T>(url: string, token: string, body: FormData): Promise<T> {
+async function postAuthenticatedJsonWithFallback<T>(url: string, token: string, body: object): Promise<T> {
   const response = await fetch(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
-    body,
+    body: JSON.stringify(body),
   });
 
   const rawText = await response.text();
@@ -567,9 +629,17 @@ function GenerateBlogPageContent() {
       return;
     }
 
+    if (nextFile.size > MAX_LOCAL_PDF_BYTES) {
+      setSelectedPdf(null);
+      setPdfRewrite(null);
+      setPdfStatus("PDF must be 20 MB or smaller for in-browser processing.");
+      event.target.value = "";
+      return;
+    }
+
     setSelectedPdf(nextFile);
     setPdfRewrite(null);
-    setPdfStatus(`${nextFile.name} is ready for rewrite.`);
+    setPdfStatus(`${nextFile.name} is ready for local text extraction and rewrite.`);
   }
 
   async function handleRewritePdf() {
@@ -590,18 +660,32 @@ function GenerateBlogPageContent() {
     }
 
     setPdfBusy(true);
-    setPdfStatus("Uploading PDF and running the high-level rewrite model...");
+    setPdfStatus("Extracting PDF text in your browser...");
 
     try {
       const token = await currentUser.getIdToken();
-      const formData = new FormData();
-      formData.set("file", selectedPdf);
-      formData.set("language", outputLanguage);
+      const extraction = await extractPdfTextInBrowser(selectedPdf);
+      let extractedText = extraction.text.trim();
 
-      const payload = await postAuthenticatedFormData<BlogPdfRewriteApiResponse>(
+      if (!extractedText) {
+        throw new Error("The PDF did not contain readable text. Try a text-based PDF instead of a scanned image.");
+      }
+
+      if (extractedText.length > MAX_PDF_TEXT_CHARS) {
+        extractedText = extractedText.slice(0, MAX_PDF_TEXT_CHARS).trim();
+      }
+
+      setPdfStatus("Sending extracted text to the high-level rewrite model...");
+
+      const payload = await postAuthenticatedJsonWithFallback<BlogPdfRewriteApiResponse>(
         "/api/blog-pdf-rewrite",
         token,
-        formData,
+        {
+          extractedText,
+          language: outputLanguage,
+          pageCount: extraction.pageCount,
+          sourceFileName: selectedPdf.name,
+        },
       );
 
       if (!payload.document) {
@@ -609,7 +693,9 @@ function GenerateBlogPageContent() {
       }
 
       setPdfRewrite(payload.document);
-      setPdfStatus("PDF rewrite is ready. Download the cleaned file below.");
+      setPdfStatus(
+        payload.document.warnings[0] ?? "PDF rewrite is ready. Download the cleaned file below.",
+      );
     } catch (error) {
       setPdfStatus(error instanceof Error ? error.message : "Could not rewrite the PDF.");
     } finally {
@@ -844,7 +930,7 @@ function GenerateBlogPageContent() {
                     <p className="text-[13px] font-semibold">PDF originality rewrite</p>
                   </div>
                   <p className="mt-2 text-[11px] leading-[1.6] text-[var(--site-muted)]">
-                    Upload a PDF, rewrite the copy to reduce AI-style phrasing and plagiarism risk, then download an editable cleaned file.
+                    Upload a PDF, extract its text in the browser, rewrite the copy to reduce AI-style phrasing and plagiarism risk, then download an editable cleaned file.
                   </p>
                 </div>
                 <span className="rounded-full border border-[var(--site-border)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[.16em] text-[var(--site-muted)]">
@@ -895,7 +981,7 @@ function GenerateBlogPageContent() {
               </div>
 
               <p className="mt-2 text-[11px] leading-[1.6] text-[var(--site-muted)]">
-                {pdfStatus ?? "Supports text-based PDF uploads up to 10 MB. The cleaned file downloads as editable text."}
+                {pdfStatus ?? "Text-based PDFs are processed in your browser first, then the cleaned file downloads as editable text."}
               </p>
             </div>
 

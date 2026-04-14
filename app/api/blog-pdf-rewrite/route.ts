@@ -1,6 +1,6 @@
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { PDFParse } from "pdf-parse";
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { getFirebaseAdminAuth } from "@/lib/firebase-admin";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
@@ -125,13 +125,13 @@ function chunkText(value: string, chunkSize: number) {
 }
 
 async function extractPdfText(file: File) {
-  const parser = new PDFParse({ data: Buffer.from(await file.arrayBuffer()) });
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const result = await pdfParse(buffer);
 
-  try {
-    return await parser.getText();
-  } finally {
-    await parser.destroy().catch(() => undefined);
-  }
+  return {
+    text: result.text || "",
+    total: result.numpages || 0,
+  };
 }
 
 async function requestChunkRewrite({

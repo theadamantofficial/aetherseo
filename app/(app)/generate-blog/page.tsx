@@ -147,9 +147,19 @@ async function postAuthenticatedFormData<T>(url: string, token: string, body: Fo
     body,
   });
 
-  const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+  const rawText = await response.text();
+  let payload: { error?: string } | null = null;
+
+  if (rawText) {
+    try {
+      payload = JSON.parse(rawText) as { error?: string };
+    } catch {
+      payload = null;
+    }
+  }
+
   if (!response.ok) {
-    throw new Error(payload?.error ?? "Request failed.");
+    throw new Error(payload?.error ?? (rawText.trim() || "Request failed."));
   }
 
   return payload as T;

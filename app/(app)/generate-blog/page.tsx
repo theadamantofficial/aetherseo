@@ -35,6 +35,24 @@ type GenerateBlogApiResponse = {
   warnings?: string[];
 };
 
+type BlogPdfRewriteResult = {
+  cleanedContent: string;
+  fileName: string;
+  highlights: string[];
+  model: string;
+  pageCount: number;
+  sourceFileName: string;
+  summary: string;
+  title: string;
+  warnings: string[];
+  wordCount: number;
+};
+
+type BlogPdfRewriteApiResponse = {
+  document?: BlogPdfRewriteResult;
+  error?: string;
+};
+
 const assistantAddonDefinitions = getAssistantAddonDefinitions();
 const imageAddonDefinition = assistantAddonDefinitions["seo-image"];
 
@@ -80,6 +98,24 @@ function IconImage({ className }: { className?: string }) {
   );
 }
 
+function IconUpload({ className }: { className?: string }) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className={className} aria-hidden>
+      <path d="M6.5 9V2.5M6.5 2.5L4.1 4.9M6.5 2.5l2.4 2.4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2.4 10.2h8.2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconDownload({ className }: { className?: string }) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className={className} aria-hidden>
+      <path d="M6.5 2.4v6.3M6.5 8.7l2.4-2.4M6.5 8.7L4.1 6.3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2.4 10.2h8.2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function Spinner() {
   return (
     <span
@@ -100,6 +136,31 @@ function formatAuthErrorMessage(error: unknown, fallback: string): string {
     if (maybeMessage) return `${fallback} (${maybeMessage})`;
   }
   return fallback;
+}
+
+async function postAuthenticatedFormData<T>(url: string, token: string, body: FormData): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body,
+  });
+
+  const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+  if (!response.ok) {
+    throw new Error(payload?.error ?? "Request failed.");
+  }
+
+  return payload as T;
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  return `${Math.max(1, bytes / 1024).toFixed(1)} KB`;
 }
 
 /* ─── SEO score mini-card ───────────────────────────────── */
@@ -252,6 +313,10 @@ function GenerateBlogPageContent() {
   const [ephemeralImageDataUrl, setEphemeralImageDataUrl] = useState<string | null>(null);
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
   const [isCheckoutBusy, setCheckoutBusy] = useState(false);
+  const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
+  const [pdfRewrite, setPdfRewrite] = useState<BlogPdfRewriteResult | null>(null);
+  const [pdfStatus, setPdfStatus] = useState<string | null>(null);
+  const [isPdfBusy, setPdfBusy] = useState(false);
 
   const currentLanguage =
     globalLanguageOptions.find((option) => option.code === outputLanguage) ?? globalLanguageOptions[0];
@@ -475,6 +540,93 @@ function GenerateBlogPageContent() {
     }
   }
 
+  function handlePdfSelection(event: React.ChangeEvent<HTMLInputElement>) {
+    const nextFile = event.target.files?.[0] ?? null;
+
+    if (!nextFile) {
+      setSelectedPdf(null);
+      setPdfStatus(null);
+      return;
+    }
+
+    if (!nextFile.name.toLowerCase().endsWith(".pdf")) {
+      setSelectedPdf(null);
+      setPdfRewrite(null);
+      setPdfStatus("Select a PDF file.");
+      event.target.value = "";
+      return;
+    }
+
+    setSelectedPdf(nextFile);
+    setPdfRewrite(null);
+    setPdfStatus(`${nextFile.name} is ready for rewrite.`);
+  }
+
+  async function handleRewritePdf() {
+    if (!uid) {
+      setPdfStatus("You must be signed in to rewrite a PDF.");
+      return;
+    }
+
+    if (!selectedPdf) {
+      setPdfStatus("Upload a PDF first.");
+      return;
+    }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      setPdfStatus("You must be signed in to rewrite a PDF.");
+      return;
+    }
+
+    setPdfBusy(true);
+    setPdfStatus("Uploading PDF and running the high-level rewrite model...");
+
+    try {
+      const token = await currentUser.getIdToken();
+      const formData = new FormData();
+      formData.set("file", selectedPdf);
+      formData.set("language", outputLanguage);
+
+      const payload = await postAuthenticatedFormData<BlogPdfRewriteApiResponse>(
+        "/api/blog-pdf-rewrite",
+        token,
+        formData,
+      );
+
+      if (!payload.document) {
+        throw new Error("The PDF rewrite returned an empty result.");
+      }
+
+      setPdfRewrite(payload.document);
+      setPdfStatus("PDF rewrite is ready. Download the cleaned file below.");
+    } catch (error) {
+      setPdfStatus(error instanceof Error ? error.message : "Could not rewrite the PDF.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
+  function handleDownloadPdfRewrite() {
+    if (!pdfRewrite) {
+      return;
+    }
+
+    const blob = new Blob([pdfRewrite.cleanedContent], {
+      type: "text/plain;charset=utf-8",
+    });
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = pdfRewrite.fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => {
+      URL.revokeObjectURL(objectUrl);
+    }, 0);
+  }
+
   return (
     <div className="space-y-4">
       {isCheckoutOpen ? (
@@ -672,6 +824,71 @@ function GenerateBlogPageContent() {
               </label>
             </div>
 
+            <div className="rounded-[1rem] border border-[var(--site-border)] bg-[var(--site-panel)] p-3.5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 text-[var(--site-fg)]">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--site-primary)]/12 text-[var(--site-primary)]">
+                      <IconDoc />
+                    </span>
+                    <p className="text-[13px] font-semibold">PDF originality rewrite</p>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-[1.6] text-[var(--site-muted)]">
+                    Upload a PDF, rewrite the copy to reduce AI-style phrasing and plagiarism risk, then download an editable cleaned file.
+                  </p>
+                </div>
+                <span className="rounded-full border border-[var(--site-border)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[.16em] text-[var(--site-muted)]">
+                  High-level model
+                </span>
+              </div>
+
+              <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-[12px] border border-dashed border-[var(--site-border-strong)] bg-[var(--site-bg)] px-3 py-3 text-[12px] font-medium text-[var(--site-fg)] transition-colors hover:border-[var(--site-primary)]">
+                <IconUpload />
+                <span>{selectedPdf ? "Replace PDF" : "Upload PDF"}</span>
+                <input
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={handlePdfSelection}
+                  className="sr-only"
+                />
+              </label>
+
+              {selectedPdf ? (
+                <div className="mt-3 rounded-[12px] border border-[var(--site-border)] bg-[var(--site-bg)] px-3 py-2.5">
+                  <p className="truncate text-[12px] font-medium text-[var(--site-fg)]">{selectedPdf.name}</p>
+                  <p className="mt-1 text-[11px] text-[var(--site-muted)]">
+                    {formatFileSize(selectedPdf.size)} • Output language: {currentLanguage.nativeLabel}
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleRewritePdf}
+                  disabled={isPdfBusy || !selectedPdf}
+                  className="site-button-primary flex items-center justify-center gap-2 rounded-[10px] px-4 py-2 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isPdfBusy ? <Spinner /> : <IconSparkle />}
+                  {isPdfBusy ? "Rewriting..." : "Rewrite PDF"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadPdfRewrite}
+                  disabled={!pdfRewrite}
+                  className="site-button-secondary flex items-center justify-center gap-2 rounded-[10px] border px-4 py-2 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <IconDownload />
+                  Download cleaned file
+                </button>
+              </div>
+
+              <p className="mt-2 text-[11px] leading-[1.6] text-[var(--site-muted)]">
+                {pdfStatus ?? "Supports text-based PDF uploads up to 10 MB. The cleaned file downloads as editable text."}
+              </p>
+            </div>
+
             <button
               type="button"
               onClick={handleGenerate}
@@ -842,6 +1059,79 @@ function GenerateBlogPageContent() {
                 </div>
               </>
             )}
+
+            <div className="overflow-hidden rounded-xl border border-[var(--site-border)] bg-[var(--site-panel)]">
+              <div className="flex items-center justify-between gap-3 border-b border-[var(--site-border)] px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <IconDoc className="text-[var(--site-muted)]" />
+                  <p className="text-[10px] uppercase tracking-[.14em] text-[var(--site-muted)]">PDF rewrite output</p>
+                </div>
+                {pdfRewrite ? (
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdfRewrite}
+                    className="site-button-secondary inline-flex items-center gap-2 rounded-[10px] border px-3 py-1.5 text-[10px] font-semibold"
+                  >
+                    <IconDownload />
+                    Download
+                  </button>
+                ) : null}
+              </div>
+
+              {pdfRewrite ? (
+                <div className="space-y-3 px-4 py-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-[var(--site-border)] bg-[var(--site-bg)] px-2.5 py-1 text-[10px] text-[var(--site-muted)]">
+                      {pdfRewrite.pageCount} pages
+                    </span>
+                    <span className="rounded-full border border-[var(--site-border)] bg-[var(--site-bg)] px-2.5 py-1 text-[10px] text-[var(--site-muted)]">
+                      {pdfRewrite.wordCount} words
+                    </span>
+                    <span className="rounded-full border border-[var(--site-border)] bg-[var(--site-bg)] px-2.5 py-1 text-[10px] text-[var(--site-muted)]">
+                      {pdfRewrite.model}
+                    </span>
+                  </div>
+
+                  <div>
+                    <p className="text-[14px] font-medium text-[var(--site-fg)]">{pdfRewrite.title}</p>
+                    <p className="mt-1 text-[12px] leading-[1.6] text-[var(--site-muted)]">{pdfRewrite.summary}</p>
+                    <p className="mt-2 text-[11px] text-[var(--site-muted)]">Source file: {pdfRewrite.sourceFileName}</p>
+                  </div>
+
+                  {pdfRewrite.highlights.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {pdfRewrite.highlights.map((highlight, index) => (
+                        <span
+                          key={`${highlight}-${index}`}
+                          className="rounded-full border border-[var(--site-border)] bg-[var(--site-bg)] px-2.5 py-1 text-[10px] text-[var(--site-muted)]"
+                        >
+                          {highlight}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <div className="max-h-72 overflow-y-auto rounded-[12px] border border-[var(--site-border)] bg-[var(--site-bg)] px-4 py-3">
+                    <p className="whitespace-pre-wrap text-[12px] leading-[1.75] text-[var(--site-fg)]">
+                      {pdfRewrite.cleanedContent}
+                    </p>
+                  </div>
+
+                  {pdfRewrite.warnings.length > 0 ? (
+                    <p className="text-[11px] leading-[1.6] text-[var(--site-muted)]">
+                      {pdfRewrite.warnings[0]}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="px-4 py-4">
+                  <p className="text-[13px] font-medium text-[var(--site-fg)]">No PDF rewrite yet</p>
+                  <p className="mt-1.5 text-[12px] leading-[1.65] text-[var(--site-muted)]">
+                    Upload a PDF from the left panel to rewrite the document and download a cleaner version from this workspace.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </section>
       </div>

@@ -389,6 +389,7 @@ function GenerateBlogPageContent() {
   const [isCheckoutBusy, setCheckoutBusy] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
   const [pdfRewrite, setPdfRewrite] = useState<BlogPdfRewriteResult | null>(null);
+  const [pdfDownloadUrl, setPdfDownloadUrl] = useState<string | null>(null);
   const [pdfStatus, setPdfStatus] = useState<string | null>(null);
   const [isPdfBusy, setPdfBusy] = useState(false);
 
@@ -413,6 +414,23 @@ function GenerateBlogPageContent() {
   useEffect(() => {
     setOutputLanguage(language);
   }, [language]);
+
+  useEffect(() => {
+    if (!pdfRewrite) {
+      setPdfDownloadUrl(null);
+      return;
+    }
+
+    const blob = new Blob([`\uFEFF${pdfRewrite.cleanedContent}`], {
+      type: "text/plain;charset=utf-8",
+    });
+    const objectUrl = URL.createObjectURL(blob);
+    setPdfDownloadUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [pdfRewrite]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -715,26 +733,6 @@ function GenerateBlogPageContent() {
     }
   }
 
-  function handleDownloadPdfRewrite() {
-    if (!pdfRewrite) {
-      return;
-    }
-
-    const blob = new Blob([pdfRewrite.cleanedContent], {
-      type: "text/plain;charset=utf-8",
-    });
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    link.download = pdfRewrite.fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => {
-      URL.revokeObjectURL(objectUrl);
-    }, 0);
-  }
-
   return (
     <div className="space-y-4">
       {isCheckoutOpen ? (
@@ -982,15 +980,27 @@ function GenerateBlogPageContent() {
                   {isPdfBusy ? "Rewriting..." : "Rewrite PDF"}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handleDownloadPdfRewrite}
-                  disabled={!pdfRewrite}
-                  className="site-button-secondary flex items-center justify-center gap-2 rounded-[10px] border px-4 py-2 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <IconDownload />
-                  Download cleaned file
-                </button>
+                {pdfRewrite && pdfDownloadUrl ? (
+                  <a
+                    href={pdfDownloadUrl}
+                    download={pdfRewrite.fileName}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="site-button-secondary flex items-center justify-center gap-2 rounded-[10px] border px-4 py-2 text-[11px] font-semibold"
+                  >
+                    <IconDownload />
+                    Download cleaned file
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="site-button-secondary flex items-center justify-center gap-2 rounded-[10px] border px-4 py-2 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <IconDownload />
+                    Download cleaned file
+                  </button>
+                )}
               </div>
 
                 <p className="mt-2 text-[11px] leading-[1.6] text-[var(--site-muted)]">
@@ -1177,15 +1187,17 @@ function GenerateBlogPageContent() {
                   <IconDoc className="text-[var(--site-muted)]" />
                   <p className="text-[10px] uppercase tracking-[.14em] text-[var(--site-muted)]">PDF rewrite output</p>
                 </div>
-                {pdfRewrite ? (
-                  <button
-                    type="button"
-                    onClick={handleDownloadPdfRewrite}
+                {pdfRewrite && pdfDownloadUrl ? (
+                  <a
+                    href={pdfDownloadUrl}
+                    download={pdfRewrite.fileName}
+                    target="_blank"
+                    rel="noreferrer"
                     className="site-button-secondary inline-flex items-center gap-2 rounded-[10px] border px-3 py-1.5 text-[10px] font-semibold"
                   >
                     <IconDownload />
                     Download
-                  </button>
+                  </a>
                 ) : null}
               </div>
 

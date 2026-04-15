@@ -1,14 +1,9 @@
-const fallbackWebhookUrls = {
-  leads:
-    "https://discord.com/api/webhooks/1491821804371578951/8j3m6Z7D_x3G1kv_s5pDLdACCSl_GcHfLqbfJSF6fVpsxwn8XmVQViY4zeUpJBlRa0bX",
-  blogPosted:
-    "https://discord.com/api/webhooks/1488937214850371676/Ue4SrCFjJIK7HVxypWiop-D7JlNrDeHAAJajXumF2Gz0_S5cEhyyGJMSlF64BmtPQyeR",
-  planPurchase:
-    "https://discord.com/api/webhooks/1491821804371578951/8j3m6Z7D_x3G1kv_s5pDLdACCSl_GcHfLqbfJSF6fVpsxwn8XmVQViY4zeUpJBlRa0bX",
-  siteAnalytics:
-    "https://discord.com/api/webhooks/1491822016683311194/0Kia4i0WP5rVSjhzFzKMbEBPZbzkOR-_ypanJ73ENYtvN2-BjTX8_DXax0msVC-bZ6aZ",
-  siteCrash:
-    "https://discord.com/api/webhooks/1491822215946043633/ImBUnpKmLbwTF_JlfXGGMHqbOBex8t91g9YosWZsFQye8R4pbFVLDeNkRj8rdN4k5mVU",
+const webhookEnvNames = {
+  leads: "DISCORD_LEADS_WEBHOOK_URL",
+  blogPosted: "DISCORD_BLOG_POSTED_WEBHOOK_URL",
+  planPurchase: "DISCORD_PLAN_PURCHASE_WEBHOOK_URL",
+  siteAnalytics: "DISCORD_SITE_ANALYTICS_WEBHOOK_URL",
+  siteCrash: "DISCORD_SITE_CRASH_WEBHOOK_URL",
 } as const;
 
 type DiscordEmbed = {
@@ -18,19 +13,11 @@ type DiscordEmbed = {
   fields?: Array<{ name: string; value: string; inline?: boolean }>;
 };
 
-function getWebhookUrl(name: keyof typeof fallbackWebhookUrls) {
-  const envValue = {
-    leads: process.env.DISCORD_LEADS_WEBHOOK_URL,
-    blogPosted: process.env.DISCORD_BLOG_POSTED_WEBHOOK_URL,
-    planPurchase: process.env.DISCORD_PLAN_PURCHASE_WEBHOOK_URL,
-    siteAnalytics: process.env.DISCORD_SITE_ANALYTICS_WEBHOOK_URL,
-    siteCrash: process.env.DISCORD_SITE_CRASH_WEBHOOK_URL,
-  }[name];
-
-  return envValue || fallbackWebhookUrls[name];
+function getWebhookUrl(name: keyof typeof webhookEnvNames) {
+  return process.env[webhookEnvNames[name]]?.trim();
 }
 
-async function postWebhook(name: keyof typeof fallbackWebhookUrls, embed: DiscordEmbed) {
+async function postWebhook(name: keyof typeof webhookEnvNames, embed: DiscordEmbed) {
   const url = getWebhookUrl(name);
   if (!url) {
     return;

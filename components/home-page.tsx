@@ -189,6 +189,7 @@ export default function HomePage() {
           goal: String(fd.get("goal") ?? ""),
           details: String(fd.get("details") ?? ""),
           language,
+          website: String(fd.get("website") ?? ""),
         }),
       });
       if (!res.ok) throw new Error("failed");
@@ -917,6 +918,15 @@ export default function HomePage() {
                 shadow-[0_28px_80px_rgba(0,0,0,0.3)]
               "
             >
+              <input
+                name="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden"
+              />
+
               <div className="grid gap-4 md:grid-cols-2">
                 {/* Name */}
                 <label className="block">

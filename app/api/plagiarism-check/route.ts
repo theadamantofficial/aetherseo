@@ -23,7 +23,7 @@ function resolveOpenAIKey() {
 }
 
 function resolveModel() {
-  return process.env.OPENAI_MODEL || "gpt-4o-mini";
+  return process.env.OPENAI_MODEL || "gpt-5.5";
 }
 
 function readBearerToken(request: Request): string | null {

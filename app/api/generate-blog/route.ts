@@ -7,6 +7,7 @@ import type { GeneratedBlogImageAsset } from "@/lib/firebase-data";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const OPENAI_IMAGE_ENDPOINT = "https://api.openai.com/v1/images/generations";
+const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages";
 const IMAGE_BLOB_PREFIX = "blog-images/";
 
 export const runtime = "nodejs";
@@ -21,7 +22,15 @@ function resolveOpenAIKey() {
 }
 
 function resolveModel() {
-  return process.env.OPENAI_MODEL || "gpt-4o-mini";
+  return process.env.OPENAI_MODEL || "gpt-5.5";
+}
+
+function resolveAnthropicKey() {
+  return process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || "";
+}
+
+function resolveClaudeModel() {
+  return process.env.CLAUDE_MODEL || process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
 }
 
 function resolveImageModel() {
@@ -133,6 +142,234 @@ function buildFallbackImageAsset(keyword: string, title: string): GeneratedBlogI
   };
 }
 
+function buildLocalBlogDraft({
+  includeSeoImageAsset,
+  keyword,
+  language,
+  paragraphCount,
+  tone,
+}: {
+  includeSeoImageAsset: boolean;
+  keyword: string;
+  language: string;
+  paragraphCount: number;
+  tone: string;
+}): Record<string, unknown> {
+  const title = `${keyword} SEO Strategy`;
+  const paragraphTemplates = [
+    `${keyword} works best when the page is built around a clear search intent, not a loose collection of related terms. Start by deciding what the reader needs to understand, compare, or do next, then make every section support that outcome.`,
+    `For a ${tone.toLowerCase()} article, the strongest structure is practical: define the problem, show the workflow, explain the tradeoffs, and give the reader a simple next step. This keeps the content useful for humans while giving search engines a cleaner topic map.`,
+    `A good optimization pass should tighten the title, meta description, headings, internal links, and supporting examples. Those details help the page feel more specific and reduce the generic phrasing that often makes AI-generated content sound flat.`,
+    `The final draft should include evidence from the product workflow, customer questions, or implementation details. That kind of specificity improves EEAT signals without making claims the business cannot support.`,
+    `After publishing, re-run the audit, check whether the page is crawlable, and update the article as new search questions appear. SEO quality improves when content becomes part of a maintained system rather than a one-time draft.`,
+    `Use the article as a cluster anchor by linking it to related guides, comparison pages, and conversion pages. This helps readers move naturally through the site and gives crawlers a clearer view of the topic hierarchy.`,
+  ];
+
+  return {
+    bullets: [
+      "Match the opening section to the dominant search intent.",
+      "Use specific workflow details instead of broad marketing claims.",
+      "Refresh metadata and internal links after each major edit.",
+    ],
+    imageAsset: includeSeoImageAsset ? buildFallbackImageAsset(keyword, title) : null,
+    metaDescription: `Build a practical ${keyword} strategy with clearer intent, stronger structure, and SEO-ready optimization steps.`,
+    paragraphs: paragraphTemplates.slice(0, paragraphCount),
+    previewMeta:
+      `Fallback draft generated in ${language} after provider retries. Review before publishing for brand voice and local nuance.`,
+    sectionBody:
+      "Use this fallback as a structured starting point, then refine examples, proof points, and calls to action around the actual product or service.",
+    sectionTitle: "Publishing Checklist",
+    title,
+  };
+}
+
+function buildBlogPrompt({
+  includeSeoImageAsset,
+  keyword,
+  language,
+  length,
+  paragraphCount,
+  tone,
+}: {
+  includeSeoImageAsset: boolean;
+  keyword: string;
+  language: string;
+  length: string;
+  paragraphCount: number;
+  tone: string;
+}) {
+  return `Create a humanized SEO blog draft in ${language} for the keyword "${keyword}".
+
+Tone: ${tone}
+Length: ${length}
+Include SEO image metadata: ${includeSeoImageAsset ? "yes" : "no"}
+
+Return JSON with this exact shape:
+{
+  "title": string,
+  "metaDescription": string,
+  "previewMeta": string,
+  "paragraphs": string[],
+  "sectionTitle": string,
+  "sectionBody": string,
+  "bullets": string[],
+  "imageAsset": ${includeSeoImageAsset ? `{"prompt": string, "alt": string, "title": string, "fileName": string}` : "null"}
+}
+
+Requirements:
+- title under 70 characters
+- metaDescription under 160 characters
+- previewMeta should be a short editorial summary
+- exactly ${paragraphCount} paragraphs
+- exactly 3 bullets
+- practical, publishable, startup-oriented writing
+- use natural sentence variation and avoid robotic repetition
+- strengthen EEAT with concrete workflow detail, not unverifiable claims
+- no markdown fences
+${includeSeoImageAsset ? `- imageAsset.prompt should describe a realistic blog hero image related to the article
+- imageAsset.alt must be concise and under 125 characters
+- imageAsset.title should read like an editorial image title
+- imageAsset.fileName must be lowercase kebab-case and end in .png
+- avoid brand logos or text overlays in the image prompt` : "- imageAsset must be null"}`;
+}
+
+async function requestOpenAIBlogDraft({
+  apiKey,
+  includeSeoImageAsset,
+  keyword,
+  language,
+  length,
+  paragraphCount,
+  tone,
+}: {
+  apiKey: string;
+  includeSeoImageAsset: boolean;
+  keyword: string;
+  language: string;
+  length: string;
+  paragraphCount: number;
+  tone: string;
+}) {
+  const response = await fetch(OPENAI_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: resolveModel(),
+      temperature: 0.7,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You write high-quality SEO blog drafts. Always respond with valid JSON only.",
+        },
+        {
+          role: "user",
+          content: buildBlogPrompt({
+            includeSeoImageAsset,
+            keyword,
+            language,
+            length,
+            paragraphCount,
+            tone,
+          }),
+        },
+      ],
+    }),
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.error?.message || "OpenAI blog generation failed.");
+  }
+
+  const content = payload?.choices?.[0]?.message?.content;
+  if (typeof content !== "string") {
+    throw new Error("OpenAI returned an empty response.");
+  }
+
+  const parsed = extractJsonObject(content);
+  if (!parsed) {
+    throw new Error("Could not parse OpenAI JSON response.");
+  }
+
+  return parsed;
+}
+
+async function requestClaudeBlogDraft({
+  apiKey,
+  includeSeoImageAsset,
+  keyword,
+  language,
+  length,
+  paragraphCount,
+  tone,
+}: {
+  apiKey: string;
+  includeSeoImageAsset: boolean;
+  keyword: string;
+  language: string;
+  length: string;
+  paragraphCount: number;
+  tone: string;
+}) {
+  const response = await fetch(ANTHROPIC_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      max_tokens: 5000,
+      messages: [
+        {
+          role: "user",
+          content: buildBlogPrompt({
+            includeSeoImageAsset,
+            keyword,
+            language,
+            length,
+            paragraphCount,
+            tone,
+          }),
+        },
+      ],
+      model: resolveClaudeModel(),
+      system:
+        "You are Claude writing the main blog draft and humanization pass for an SEO content workflow. Return valid JSON only.",
+      temperature: 0.65,
+    }),
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.error?.message || "Claude blog generation failed.");
+  }
+
+  const content = Array.isArray(payload?.content)
+    ? payload.content
+        .map((part: { text?: unknown; type?: unknown }) =>
+          part.type === "text" && typeof part.text === "string" ? part.text : "",
+        )
+        .join("")
+    : "";
+
+  if (!content.trim()) {
+    throw new Error("Claude returned an empty response.");
+  }
+
+  const parsed = extractJsonObject(content);
+  if (!parsed) {
+    throw new Error("Could not parse Claude JSON response.");
+  }
+
+  return parsed;
+}
+
 async function generateSeoImage({
   apiKey,
   asset,
@@ -197,10 +434,11 @@ async function generateSeoImage({
 }
 
 export async function POST(request: Request) {
-  const apiKey = resolveOpenAIKey();
-  if (!apiKey) {
+  const openAIKey = resolveOpenAIKey();
+  const anthropicKey = resolveAnthropicKey();
+  if (!openAIKey && !anthropicKey) {
     return NextResponse.json(
-      { error: "Missing OpenAI API key. Set OPENAI_API_KEY in your environment." },
+      { error: "Missing AI API key. Set ANTHROPIC_API_KEY or OPENAI_API_KEY in your environment." },
       { status: 500 },
     );
   }
@@ -226,6 +464,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Keyword is required." }, { status: 400 });
   }
 
+  if (includeSeoImageAsset && !openAIKey) {
+    return NextResponse.json(
+      { error: "Missing OpenAI API key. SEO image generation requires OPENAI_API_KEY." },
+      { status: 500 },
+    );
+  }
+
   const paragraphCount = length.toLowerCase().includes("long")
     ? 6
     : length.toLowerCase().includes("short")
@@ -242,73 +487,90 @@ export async function POST(request: Request) {
       creditsUsed.image = reservedImageCredits;
     }
 
-    const response = await fetch(OPENAI_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: resolveModel(),
-        temperature: 0.7,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              "You write high-quality SEO blog drafts. Always respond with valid JSON only.",
-          },
-          {
-            role: "user",
-            content: `Create an SEO blog draft in ${language} for the keyword "${keyword}".
+    let parsed: Record<string, unknown>;
 
-Tone: ${tone}
-Length: ${length}
-Include SEO image metadata: ${includeSeoImageAsset ? "yes" : "no"}
-
-Return JSON with this exact shape:
-{
-  "title": string,
-  "metaDescription": string,
-  "previewMeta": string,
-  "paragraphs": string[],
-  "sectionTitle": string,
-  "sectionBody": string,
-  "bullets": string[],
-  "imageAsset": ${includeSeoImageAsset ? `{"prompt": string, "alt": string, "title": string, "fileName": string}` : "null"}
-}
-
-Requirements:
-- title under 70 characters
-- metaDescription under 160 characters
-- previewMeta should be a short editorial summary
-- exactly ${paragraphCount} paragraphs
-- exactly 3 bullets
-- practical, publishable, startup-oriented writing
-- no markdown fences
-${includeSeoImageAsset ? `- imageAsset.prompt should describe a realistic blog hero image related to the article
-- imageAsset.alt must be concise and under 125 characters
-- imageAsset.title should read like an editorial image title
-- imageAsset.fileName must be lowercase kebab-case and end in .png
-- avoid brand logos or text overlays in the image prompt` : "- imageAsset must be null"}`,
-          },
-        ],
-      }),
-    });
-
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) {
-      throw new Error(payload?.error?.message || "OpenAI blog generation failed.");
-    }
-
-    const content = payload?.choices?.[0]?.message?.content;
-    if (typeof content !== "string") {
-      throw new Error("OpenAI returned an empty response.");
-    }
-
-    const parsed = extractJsonObject(content);
-    if (!parsed) {
-      throw new Error("Could not parse OpenAI JSON response.");
+    if (anthropicKey) {
+      try {
+        parsed = await requestClaudeBlogDraft({
+          apiKey: anthropicKey,
+          includeSeoImageAsset,
+          keyword,
+          language,
+          length,
+          paragraphCount,
+          tone,
+        });
+      } catch (error) {
+        if (!openAIKey) {
+          warnings.push(
+            error instanceof Error
+              ? `Claude blog generation failed and no OpenAI fallback key is configured, so a local structured draft was used. ${error.message}`
+              : "Claude blog generation failed and no OpenAI fallback key is configured, so a local structured draft was used.",
+          );
+          parsed = buildLocalBlogDraft({
+            includeSeoImageAsset,
+            keyword,
+            language,
+            paragraphCount,
+            tone,
+          });
+        } else {
+          warnings.push(
+            error instanceof Error
+              ? `Claude blog generation failed, so OpenAI fallback was used. ${error.message}`
+              : "Claude blog generation failed, so OpenAI fallback was used.",
+          );
+          try {
+            parsed = await requestOpenAIBlogDraft({
+              apiKey: openAIKey,
+              includeSeoImageAsset,
+              keyword,
+              language,
+              length,
+              paragraphCount,
+              tone,
+            });
+          } catch (fallbackError) {
+            warnings.push(
+              fallbackError instanceof Error
+                ? `OpenAI paid blog fallback failed, so a local structured draft was used. ${fallbackError.message}`
+                : "OpenAI paid blog fallback failed, so a local structured draft was used.",
+            );
+            parsed = buildLocalBlogDraft({
+              includeSeoImageAsset,
+              keyword,
+              language,
+              paragraphCount,
+              tone,
+            });
+          }
+        }
+      }
+    } else {
+      try {
+        parsed = await requestOpenAIBlogDraft({
+          apiKey: openAIKey,
+          includeSeoImageAsset,
+          keyword,
+          language,
+          length,
+          paragraphCount,
+          tone,
+        });
+      } catch (error) {
+        warnings.push(
+          error instanceof Error
+            ? `OpenAI blog generation failed, so a local structured draft was used. ${error.message}`
+            : "OpenAI blog generation failed, so a local structured draft was used.",
+        );
+        parsed = buildLocalBlogDraft({
+          includeSeoImageAsset,
+          keyword,
+          language,
+          paragraphCount,
+          tone,
+        });
+      }
     }
 
     let imageAsset: GeneratedBlogImageAsset | null =
@@ -337,7 +599,7 @@ ${includeSeoImageAsset ? `- imageAsset.prompt should describe a realistic blog h
     if (imageAsset) {
       try {
         const generatedImage = await generateSeoImage({
-          apiKey,
+          apiKey: openAIKey,
           asset: {
             ...imageAsset,
             fileName: imageAsset.fileName.endsWith(".png")

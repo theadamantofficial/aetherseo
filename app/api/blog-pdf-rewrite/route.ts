@@ -22,7 +22,7 @@ function resolveRewriteModel() {
     process.env.OPENAI_HIGH_MODEL ||
     process.env.OPENAI_REWRITE_MODEL ||
     process.env.OPENAI_MODEL ||
-    "gpt-4.1"
+    "gpt-5.5"
   );
 }
 

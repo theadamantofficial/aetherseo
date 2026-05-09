@@ -1,6 +1,7 @@
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase-admin";
+import { withOpenAIChatTemperature } from "@/lib/openai-chat-options";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const MAX_INPUT_CHARS = 24000;
@@ -216,9 +217,8 @@ async function requestChunkRewrite({
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
+    body: JSON.stringify(withOpenAIChatTemperature({
       model: resolveRewriteModel(),
-      temperature: 0.25,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -252,7 +252,7 @@ Chunk:
 ${chunk}`,
         },
       ],
-    }),
+    }, 0.25)),
   });
 
   const payload = await response.json().catch(() => null);
@@ -291,9 +291,8 @@ async function requestChunkHumanize({
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
+    body: JSON.stringify(withOpenAIChatTemperature({
       model: resolveRewriteModel(),
-      temperature: 0.55,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -331,7 +330,7 @@ Current rewritten chunk:
 ${currentText}`,
         },
       ],
-    }),
+    }, 0.55)),
   });
 
   const payload = await response.json().catch(() => null);
@@ -366,9 +365,8 @@ async function requestRewriteSummary({
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
+    body: JSON.stringify(withOpenAIChatTemperature({
       model: resolveRewriteModel(),
-      temperature: 0.2,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -400,7 +398,7 @@ Rewritten text sample:
 ${rewrittenText.slice(0, 4000)}`,
         },
       ],
-    }),
+    }, 0.2)),
   });
 
   const payload = await response.json().catch(() => null);

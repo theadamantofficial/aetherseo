@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withOpenAIChatTemperature } from "@/lib/openai-chat-options";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta";
@@ -686,9 +687,8 @@ async function requestOpenAINarrative({
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
+    body: JSON.stringify(withOpenAIChatTemperature({
       model: resolveOpenAIModel(),
-      temperature: 0.2,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -701,7 +701,7 @@ async function requestOpenAINarrative({
           content: buildNarrativePrompt(signals, issues, score),
         },
       ],
-    }),
+    }, 0.2)),
   });
 
   const payload = await response.json().catch(() => null);

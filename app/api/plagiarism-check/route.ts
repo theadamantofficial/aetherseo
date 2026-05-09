@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase-admin";
+import { withOpenAIChatTemperature } from "@/lib/openai-chat-options";
 import type {
   PlagiarismLockedSuggestion,
   PlagiarismMatch,
@@ -442,9 +443,8 @@ async function requestPlagiarismAnalysis({
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
+    body: JSON.stringify(withOpenAIChatTemperature({
       model: resolveModel(),
-      temperature: 0.35,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -496,7 +496,7 @@ Requirements:
 - altTextSuggestions should contain 3 concise suggestions`,
         },
       ],
-    }),
+    }, 0.35)),
   });
 
   const payload = await response.json().catch(() => null);

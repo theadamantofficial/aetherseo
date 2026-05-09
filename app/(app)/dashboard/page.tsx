@@ -530,8 +530,8 @@ export default function DashboardPage() {
             {translatedDashboard.recommendations.map((recommendation: string) => {
               const href = isPaid
                 ? latestAuditUrl
-                  ? `/ai-assistant?action=fix-plan&input=${encodeURIComponent(rec)}&url=${encodeURIComponent(latestAuditUrl)}`
-                  : `/ai-assistant?action=fix-plan&input=${encodeURIComponent(rec)}`
+                  ? `/ai-assistant?action=fix-plan&input=${encodeURIComponent(recommendation)}&url=${encodeURIComponent(latestAuditUrl)}`
+                  : `/ai-assistant?action=fix-plan&input=${encodeURIComponent(recommendation)}`
                 : "/billing?upgrade=assistant-locked";
               const actionLabel = isPaid ? ui.launchFixPlan : ui.upgradePlan;
 

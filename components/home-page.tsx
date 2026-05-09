@@ -41,14 +41,6 @@ function formatPublishedDate(date: string, language: string) {
   }
 }
 
-function SectionEyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--site-muted)] opacity-70">
-      {children}
-    </p>
-  );
-}
-
 /* ─── Page ──────────────────────────────────────────────────────────────── */
 
 export default function HomePage() {
@@ -198,17 +190,17 @@ export default function HomePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: String(fd.get("name") ?? ""),
-          email: String(fd.get("email") ?? ""),
-          company: String(fd.get("company") ?? ""),
-          goal: String(fd.get("goal") ?? ""),
-          details: String(fd.get("details") ?? ""),
+          name: String(formData.get("name") ?? ""),
+          email: String(formData.get("email") ?? ""),
+          company: String(formData.get("company") ?? ""),
+          goal: String(formData.get("goal") ?? ""),
+          details: String(formData.get("details") ?? ""),
           language,
-          website: String(fd.get("website") ?? ""),
+          website: String(formData.get("website") ?? ""),
         }),
       });
 
-      if (!response.ok) {
+      if (!res.ok) {
         throw new Error("Contact submit failed");
       }
 

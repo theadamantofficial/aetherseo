@@ -405,23 +405,6 @@ function SparkDot({ className = "" }: { className?: string }) {
   );
 }
 
-function SectionEyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--site-muted)] opacity-70">
-      {children}
-    </p>
-  );
-}
-
-function SparkDot({ className = "" }: { className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#83f6d7] shadow-[0_0_8px_rgba(131,246,215,0.7)] ${className}`}
-    />
-  );
-}
-
 function SectionEyebrow({ children }: { children: ReactNode }) {
   return (
     <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--site-muted)] opacity-70">

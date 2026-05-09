@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState, type ReactNode } from "react";
 import PublicFooter from "@/components/public-footer";
 import PublicHeader from "@/components/public-header";
 import { useLanguage } from "@/components/language-provider";
@@ -15,10 +15,30 @@ function SparkDot() {
   return (
     <span
       aria-hidden="true"
-      className="inline-block h-1.5 w-1.5 rounded-full bg-[#83f6d7]
-        shadow-[0_0_8px_rgba(131,246,215,0.7)]"
+      className="inline-block h-1.5 w-1.5 rounded-full bg-[#83f6d7] shadow-[0_0_8px_rgba(131,246,215,0.7)]"
     />
   );
+}
+
+function SectionEyebrow({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--site-muted)] opacity-70">
+      {children}
+    </p>
+  );
+}
+
+function formatPublishedDate(date: string, language: string) {
+  try {
+    return new Intl.DateTimeFormat(language, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    }).format(new Date(date));
+  } catch {
+    return new Date(date).toISOString().slice(0, 10);
+  }
 }
 
 function SectionEyebrow({ children }: { children: React.ReactNode }) {
@@ -39,9 +59,7 @@ export default function HomePage() {
     `home-page-copy-${uiLanguage}`,
   );
   const [posts, setPosts] = useState<PublishedBlogPost[]>([]);
-  const [contactState, setContactState] = useState<
-    "idle" | "sending" | "success" | "error"
-  >("idle");
+  const [contactState, setContactState] = useState<"idle" | "sending" | "success" | "error">("idle");
 
   const ui = useTranslatedCopy(
     {
@@ -66,7 +84,7 @@ export default function HomePage() {
         guided: "Guided",
         open: "Open",
         readArticle: "Read article",
-        sending: "Sending…",
+        sending: "Sending...",
       },
       es: {
         live: "Centro en vivo",
@@ -89,7 +107,7 @@ export default function HomePage() {
         guided: "Guiado",
         open: "Abrir",
         readArticle: "Leer articulo",
-        sending: "Enviando…",
+        sending: "Enviando...",
       },
       fr: {
         live: "Centre en direct",
@@ -102,20 +120,17 @@ export default function HomePage() {
         domainAuditBody: "Ecart de metadata detecte",
         historyFeedBody: "7 actions enregistrees cette semaine",
         oneWorkspace: "1 espace",
-        oneWorkspaceBody:
-          "Un seul endroit pour contenu, audit et historique.",
+        oneWorkspaceBody: "Un seul endroit pour contenu, audit et historique.",
         fastHandoff: "Passage rapide",
-        fastHandoffBody:
-          "Flux plus propre pour fondateurs et operateurs.",
+        fastHandoffBody: "Flux plus propre pour fondateurs et operateurs.",
         planAware: "Lie a l'offre",
-        planAwareBody:
-          "Les experiences gratuites et payantes restent separees.",
+        planAwareBody: "Les experiences gratuites et payantes restent separees.",
         active: "Actif",
         structured: "Structure pour une execution concentree",
         guided: "Guide",
         open: "Ouvrir",
         readArticle: "Lire l'article",
-        sending: "Envoi…",
+        sending: "Envoi...",
       },
       hi: {
         live: "Live command center",
@@ -130,8 +145,7 @@ export default function HomePage() {
         oneWorkspace: "1 workspace",
         oneWorkspaceBody: "Content, audit aur history ke liye ek jagah.",
         fastHandoff: "Fast handoff",
-        fastHandoffBody:
-          "Founders aur operators ke liye cleaner flow.",
+        fastHandoffBody: "Founders aur operators ke liye cleaner flow.",
         planAware: "Plan-aware",
         planAwareBody: "Free aur paid experiences alag rehti hain.",
         active: "Active",
@@ -139,7 +153,7 @@ export default function HomePage() {
         guided: "Guided",
         open: "Open",
         readArticle: "Article padho",
-        sending: "Sending…",
+        sending: "Sending...",
       },
     }[uiLanguage],
     language,
@@ -157,14 +171,14 @@ export default function HomePage() {
     let isMounted = true;
     async function loadPosts() {
       try {
-        const res = await fetch(
-          `/api/public-blog-posts?language=${uiLanguage}&limit=3`,
-          { cache: "no-store" },
-        );
-        const payload = (await res.json()) as {
-          posts?: PublishedBlogPost[];
-        };
-        if (isMounted) setPosts(payload.posts ?? []);
+        const response = await fetch(`/api/public-blog-posts?language=${uiLanguage}&limit=3`, {
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as { posts?: PublishedBlogPost[] };
+
+        if (isMounted) {
+          setPosts(payload.posts ?? []);
+        }
       } catch {
         if (isMounted) setPosts([]);
       }
@@ -173,10 +187,11 @@ export default function HomePage() {
     return () => { isMounted = false; };
   }, [uiLanguage]);
 
-  async function handleContactSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const fd = new FormData(form);
+  async function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
     setContactState("sending");
     try {
       const res = await fetch("/api/contact", {
@@ -192,7 +207,11 @@ export default function HomePage() {
           website: String(fd.get("website") ?? ""),
         }),
       });
-      if (!res.ok) throw new Error("failed");
+
+      if (!response.ok) {
+        throw new Error("Contact submit failed");
+      }
+
       form.reset();
       setContactState("success");
     } catch {
@@ -202,12 +221,7 @@ export default function HomePage() {
 
   return (
     <div className="site-page min-h-screen overflow-x-hidden text-[var(--foreground)]">
-
-      {/* ── Ambient background glows ──────────────────────────── */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0"
-      >
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-32 left-[-10%] h-[600px] w-[600px] rounded-full bg-[#705dff]/10 blur-[120px]" />
         <div className="absolute right-[-5%] top-[20%] h-[400px] w-[400px] rounded-full bg-[#3d8dff]/8 blur-[100px]" />
         <div className="absolute bottom-[10%] left-[30%] h-[300px] w-[300px] rounded-full bg-[#83f6d7]/5 blur-[80px]" />
@@ -216,26 +230,11 @@ export default function HomePage() {
       <div className="relative z-10 px-3 pt-4">
         <PublicHeader language={uiLanguage} />
 
-        <main
-          className="mx-auto w-full max-w-7xl px-3 pb-24 pt-4 sm:px-6"
-        >
-
-          {/* ══════════════════════════════════════════════════════
-              HERO
-          ══════════════════════════════════════════════════════ */}
+        <main className="mx-auto w-full max-w-7xl px-3 pb-24 pt-4 sm:px-6">
           <section
             aria-label="Hero"
-            className="
-              animate-fade-up
-              relative overflow-hidden rounded-[2.5rem]
-              border border-[var(--site-border)]
-              bg-[var(--site-surface)]
-              px-7 py-10
-              shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_32px_80px_rgba(0,0,0,0.28)]
-              md:px-12 md:py-14 xl:px-16
-            "
+            className="animate-fade-up relative overflow-hidden rounded-[2.5rem] border border-[var(--site-border)] bg-[var(--site-surface)] px-7 py-10 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_32px_80px_rgba(0,0,0,0.28)] md:px-12 md:py-14 xl:px-16"
           >
-            {/* Noise texture overlay */}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0 opacity-[0.025]"
@@ -246,8 +245,6 @@ export default function HomePage() {
                 backgroundSize: "128px 128px",
               }}
             />
-
-            {/* Gradient orb inside hero */}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute -right-24 -top-24 h-[480px] w-[480px] rounded-full bg-[#705dff]/12 blur-[90px]"
@@ -257,30 +254,12 @@ export default function HomePage() {
               className="pointer-events-none absolute -bottom-16 left-[10%] h-[300px] w-[300px] rounded-full bg-[#3d8dff]/8 blur-[70px]"
             />
 
-            {/* Badge */}
-            <div
-              className="
-                relative inline-flex items-center gap-2
-                rounded-full border border-[var(--site-border)]
-                bg-[var(--site-surface-soft)]
-                px-4 py-2 text-[10px] font-semibold uppercase
-                tracking-[0.2em] text-[var(--site-muted)]
-                backdrop-blur-sm
-              "
-            >
+            <div className="relative inline-flex items-center gap-2 rounded-full border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--site-muted)] backdrop-blur-sm">
               <SparkDot />
               {copy.hero.badge}
             </div>
 
-            {/* Headline */}
-            <h1
-              className="
-                relative mt-6 max-w-5xl
-                text-[clamp(2.6rem,6vw,4.5rem)]
-                font-semibold leading-[0.93]
-                tracking-[-0.03em] text-[var(--foreground)]
-              "
-            >
+            <h1 className="relative mt-6 max-w-5xl text-[clamp(2.6rem,6vw,4.5rem)] font-semibold leading-[0.93] tracking-[-0.03em] text-[var(--foreground)]">
               {copy.hero.title}
             </h1>
 
@@ -288,110 +267,55 @@ export default function HomePage() {
               {copy.hero.body}
             </p>
 
-            {/* CTA row */}
             <div className="relative mt-8 flex flex-wrap gap-3">
               <Link
                 href="/auth"
-                className="
-                  site-button-primary
-                  rounded-[14px] px-6 py-3
-                  text-[13px] font-semibold
-                  transition-all duration-200
-                  hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(131,246,215,0.18)]
-                  active:translate-y-0
-                "
+                className="site-button-primary rounded-[14px] px-6 py-3 text-[13px] font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(131,246,215,0.18)] active:translate-y-0"
               >
                 {copy.hero.primaryCta}
               </Link>
               <a
                 href="#workflow"
-                className="
-                  site-button-secondary
-                  rounded-[14px] border px-6 py-3
-                  text-[13px] font-semibold
-                  transition-all duration-200
-                  hover:-translate-y-0.5 hover:opacity-90
-                "
+                className="site-button-secondary rounded-[14px] border px-6 py-3 text-[13px] font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:opacity-90"
               >
                 {copy.hero.workflowCta}
               </a>
               <a
                 href="#platform"
-                className="
-                  site-button-secondary
-                  rounded-[14px] border px-6 py-3
-                  text-[13px] font-semibold
-                  transition-all duration-200
-                  hover:-translate-y-0.5 hover:opacity-90
-                "
+                className="site-button-secondary rounded-[14px] border px-6 py-3 text-[13px] font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:opacity-90"
               >
                 {copy.hero.platformCta}
               </a>
             </div>
 
-            {/* Signal cards */}
             <div className="relative mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {copy.heroSignals.map((signal, i) => (
+              {copy.heroSignals.map((signal, index) => (
                 <article
                   key={signal.title}
-                  style={{ animationDelay: `${i * 80}ms` }}
-                  className="
-                    animate-fade-up
-                    group rounded-[18px]
-                    border border-[var(--site-border)]
-                    bg-[var(--site-surface-soft)]
-                    p-5
-                    transition-all duration-300
-                    hover:-translate-y-0.5
-                    hover:border-[#877cff]/40
-                    hover:bg-[var(--site-surface)]
-                  "
+                  style={{ animationDelay: `${index * 80}ms` }}
+                  className="animate-fade-up group rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#877cff]/40 hover:bg-[var(--site-surface)]"
                 >
                   <p className="site-accent-text text-[10px] font-semibold uppercase tracking-[0.2em]">
                     {signal.title}
                   </p>
-                  <p className="mt-3 text-[13px] leading-[1.7] text-[var(--site-muted)]">
-                    {signal.body}
-                  </p>
+                  <p className="mt-3 text-[13px] leading-[1.7] text-[var(--site-muted)]">{signal.body}</p>
                 </article>
               ))}
             </div>
           </section>
 
-          {/* ══════════════════════════════════════════════════════
-              TRUST BAR
-          ══════════════════════════════════════════════════════ */}
-          <div
-            aria-label="Trust signals"
-            className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"
-          >
+          <div aria-label="Trust signals" className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {copy.trustBar.map((item) => (
               <div
                 key={item}
-                className="
-                  rounded-full border border-[var(--site-border)]
-                  bg-[var(--site-surface)]
-                  px-5 py-3
-                  text-center text-[12px] font-medium
-                  text-[var(--site-muted)]
-                  backdrop-blur-sm
-                  transition-colors duration-200
-                  hover:border-[#877cff]/30
-                "
+                className="rounded-full border border-[var(--site-border)] bg-[var(--site-surface)] px-5 py-3 text-center text-[12px] font-medium text-[var(--site-muted)] backdrop-blur-sm transition-colors duration-200 hover:border-[#877cff]/30"
               >
                 {item}
               </div>
             ))}
           </div>
 
-          {/* ══════════════════════════════════════════════════════
-              PLATFORM
-          ══════════════════════════════════════════════════════ */}
-          <section
-            id="platform"
-            aria-labelledby="platform-heading"
-            className="mt-20 scroll-mt-28"
-          >
+          <section id="platform" aria-labelledby="platform-heading" className="mt-20 scroll-mt-28">
             <header className="flex flex-wrap items-end justify-between gap-6">
               <div>
                 <SectionEyebrow>{copy.platform.eyebrow}</SectionEyebrow>
@@ -402,43 +326,26 @@ export default function HomePage() {
                   {copy.platform.title}
                 </h2>
               </div>
-              <p className="max-w-sm text-[13px] leading-[1.75] text-[var(--site-muted)]">
-                {copy.platform.body}
-              </p>
+              <p className="max-w-sm text-[13px] leading-[1.75] text-[var(--site-muted)]">{copy.platform.body}</p>
             </header>
 
             <div className="mt-7 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {copy.platform.modules.map((mod, i) => (
+              {copy.platform.modules.map((module, index) => (
                 <article
-                  key={mod.title}
-                  style={{ animationDelay: `${i * 60}ms` }}
-                  className="
-                    animate-fade-up group relative overflow-hidden
-                    rounded-[22px]
-                    border border-[var(--site-border)]
-                    bg-[var(--site-surface)]
-                    p-6
-                    transition-all duration-300
-                    hover:-translate-y-1
-                    hover:border-[#8b82ff]/35
-                    hover:shadow-[0_16px_40px_rgba(0,0,0,0.22)]
-                  "
+                  key={module.title}
+                  style={{ animationDelay: `${index * 60}ms` }}
+                  className="animate-fade-up group relative overflow-hidden rounded-[22px] border border-[var(--site-border)] bg-[var(--site-surface)] p-6 transition-all duration-300 hover:-translate-y-1 hover:border-[#8b82ff]/35 hover:shadow-[0_16px_40px_rgba(0,0,0,0.22)]"
                 >
-                  {/* Card glow */}
                   <div
                     aria-hidden="true"
                     className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#6c5cff]/10 blur-2xl transition-all duration-300 group-hover:bg-[#6c5cff]/20"
                   />
 
                   <p className="site-accent-text relative text-[10px] font-semibold uppercase tracking-[0.2em]">
-                    {mod.eyebrow}
+                    {module.eyebrow}
                   </p>
-                  <h3 className="relative mt-4 text-[1.3rem] font-semibold leading-tight">
-                    {mod.title}
-                  </h3>
-                  <p className="relative mt-3 text-[13px] leading-[1.7] text-[var(--site-muted)]">
-                    {mod.body}
-                  </p>
+                  <h3 className="relative mt-4 text-[1.3rem] font-semibold leading-tight">{module.title}</h3>
+                  <p className="relative mt-3 text-[13px] leading-[1.7] text-[var(--site-muted)]">{module.body}</p>
 
                   <div className="relative mt-8 flex items-center gap-2 text-[11px] font-medium text-[var(--site-muted)] opacity-60">
                     <SparkDot />
@@ -449,30 +356,12 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* ══════════════════════════════════════════════════════
-              WORKFLOW
-          ══════════════════════════════════════════════════════ */}
           <section
             id="workflow"
             aria-labelledby="workflow-heading"
-            className="
-              mt-20 scroll-mt-28
-              grid gap-4 rounded-[2.2rem]
-              border border-[var(--site-border)]
-              bg-[var(--site-surface)]
-              p-5 md:p-8
-              xl:grid-cols-[0.9fr,1.1fr]
-            "
+            className="mt-20 scroll-mt-28 grid gap-4 rounded-[2.2rem] border border-[var(--site-border)] bg-[var(--site-surface)] p-5 md:p-8 xl:grid-cols-[0.9fr,1.1fr]"
           >
-            {/* Left: description + checklist */}
-            <article
-              className="
-                rounded-[1.6rem]
-                border border-[var(--site-border)]
-                bg-[var(--site-surface-soft)]
-                p-6
-              "
-            >
+            <article className="rounded-[1.6rem] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-6">
               <SectionEyebrow>{copy.workflow.eyebrow}</SectionEyebrow>
               <h2
                 id="workflow-heading"
@@ -484,23 +373,11 @@ export default function HomePage() {
                 {copy.workflow.body}
               </p>
 
-              <ul
-                aria-label="Workflow checklist"
-                className="mt-8 space-y-2"
-              >
+              <ul aria-label="Workflow checklist" className="mt-8 space-y-2">
                 {copy.workflow.checklist.map((line) => (
                   <li
                     key={line}
-                    className="
-                      flex items-center gap-3
-                      rounded-[14px]
-                      border border-[var(--site-border)]
-                      bg-[var(--site-surface)]
-                      px-4 py-3
-                      text-[13px]
-                      transition-colors duration-200
-                      hover:border-[#877cff]/30
-                    "
+                    className="flex items-center gap-3 rounded-[14px] border border-[var(--site-border)] bg-[var(--site-surface)] px-4 py-3 text-[13px] transition-colors duration-200 hover:border-[#877cff]/30"
                   >
                     <SparkDot />
                     <span>{line}</span>
@@ -509,57 +386,29 @@ export default function HomePage() {
               </ul>
             </article>
 
-            {/* Right: step cards */}
-            <div className="grid grid-cols-2 gap-3">
-              {copy.workflow.steps.map((item, i) => (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {copy.workflow.steps.map((item, index) => (
                 <article
                   key={item.step}
-                  style={{ animationDelay: `${i * 60}ms` }}
-                  className="
-                    animate-fade-up group
-                    rounded-[1.5rem]
-                    border border-[var(--site-border)]
-                    bg-[var(--site-surface-soft)]
-                    p-5
-                    transition-all duration-300
-                    hover:-translate-y-0.5
-                    hover:border-[#8a80ff]/35
-                  "
+                  style={{ animationDelay: `${index * 60}ms` }}
+                  className="animate-fade-up group rounded-[1.5rem] border border-[var(--site-border)] bg-[var(--site-surface-soft)] p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#8a80ff]/35"
                 >
                   <div className="flex items-center justify-between">
                     <p className="site-accent-text text-[10px] font-semibold uppercase tracking-[0.2em]">
                       {item.step}
                     </p>
-                    <span
-                      className="
-                        rounded-full border border-[var(--site-border)]
-                        bg-[var(--site-surface)]
-                        px-2.5 py-1
-                        text-[10px] font-medium
-                        text-[var(--site-muted)]
-                      "
-                    >
+                    <span className="rounded-full border border-[var(--site-border)] bg-[var(--site-surface)] px-2.5 py-1 text-[10px] font-medium text-[var(--site-muted)]">
                       {ui.guided}
                     </span>
                   </div>
-                  <h3 className="mt-5 text-[1.2rem] font-semibold leading-tight">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-[12px] leading-[1.65] text-[var(--site-muted)]">
-                    {item.body}
-                  </p>
+                  <h3 className="mt-5 text-[1.2rem] font-semibold leading-tight">{item.title}</h3>
+                  <p className="mt-2 text-[12px] leading-[1.65] text-[var(--site-muted)]">{item.body}</p>
                 </article>
               ))}
             </div>
           </section>
 
-          {/* ══════════════════════════════════════════════════════
-              BLOG
-          ══════════════════════════════════════════════════════ */}
-          <section
-            aria-labelledby="blog-heading"
-            className="mt-20"
-          >
+          <section aria-labelledby="blog-heading" className="mt-20">
             <header className="flex flex-wrap items-end justify-between gap-6">
               <div>
                 <SectionEyebrow>{copy.blog.eyebrow}</SectionEyebrow>
@@ -571,39 +420,27 @@ export default function HomePage() {
                 </h2>
               </div>
               <div className="max-w-sm">
-                <p className="text-[13px] leading-[1.75] text-[var(--site-muted)]">
-                  {copy.blog.body}
-                </p>
+                <p className="text-[13px] leading-[1.75] text-[var(--site-muted)]">{copy.blog.body}</p>
                 <Link
                   href={`/${uiLanguage}/blog`}
-                  className="site-link-accent mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold"
+                  className="site-link-accent group mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold"
                 >
                   {copy.blog.cta}
-                  <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+                  <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">
+                    {"->"}
+                  </span>
                 </Link>
               </div>
             </header>
 
             <div className="mt-8 grid gap-3 lg:grid-cols-3">
               {posts.length === 0 ? (
-                <article
-                  className="
-                    rounded-[22px]
-                    border border-[var(--site-border)]
-                    bg-[var(--site-surface)]
-                    p-7 lg:col-span-3
-                  "
-                >
-                  <h3 className="text-[1.3rem] font-semibold leading-tight">
-                    No live articles yet
-                  </h3>
+                <article className="rounded-[22px] border border-[var(--site-border)] bg-[var(--site-surface)] p-7 lg:col-span-3">
+                  <h3 className="text-[1.3rem] font-semibold leading-tight">No live articles yet</h3>
                   <p className="mt-3 max-w-2xl text-[13px] leading-[1.75] text-[var(--site-muted)]">
                     The public blog feed is live-data only. Publish the first article from the blog admin console and it will appear here.
                   </p>
-                  <Link
-                    href="/aether-lab-ops"
-                    className="site-link-accent mt-5 inline-flex text-[13px] font-semibold"
-                  >
+                  <Link href="/aether-lab-ops" className="site-link-accent mt-5 inline-flex text-[13px] font-semibold">
                     Open publishing console
                   </Link>
                 </article>
@@ -611,38 +448,18 @@ export default function HomePage() {
                 posts.map((post) => (
                   <article
                     key={post.slug}
-                    className="
-                      group flex flex-col
-                      rounded-[22px]
-                      border border-[var(--site-border)]
-                      bg-[var(--site-surface)]
-                      p-6
-                      transition-all duration-300
-                      hover:-translate-y-1
-                      hover:border-[#877cff]/30
-                      hover:shadow-[0_16px_40px_rgba(0,0,0,0.2)]
-                    "
+                    className="group flex flex-col rounded-[22px] border border-[var(--site-border)] bg-[var(--site-surface)] p-6 transition-all duration-300 hover:-translate-y-1 hover:border-[#877cff]/30 hover:shadow-[0_16px_40px_rgba(0,0,0,0.2)]"
                   >
                     <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--site-muted)] opacity-60">
                       <span>{post.category}</span>
                       <span>{post.readTime}</span>
                     </div>
-                    <h3 className="mt-4 text-[1.2rem] font-semibold leading-tight">
-                      {post.title}
-                    </h3>
-                    <p className="mt-3 flex-1 text-[13px] leading-[1.7] text-[var(--site-muted)]">
-                      {post.excerpt}
-                    </p>
-                    <time
-                      dateTime={post.publishedAt}
-                      className="mt-5 text-[11px] text-[var(--site-muted)] opacity-50"
-                    >
-                      {new Date(post.publishedAt).toLocaleDateString()}
+                    <h3 className="mt-4 text-[1.2rem] font-semibold leading-tight">{post.title}</h3>
+                    <p className="mt-3 flex-1 text-[13px] leading-[1.7] text-[var(--site-muted)]">{post.excerpt}</p>
+                    <time dateTime={post.publishedAt} className="mt-5 text-[11px] text-[var(--site-muted)] opacity-50">
+                      {formatPublishedDate(post.publishedAt, uiLanguage)}
                     </time>
-                    <Link
-                      href={`/${uiLanguage}/blog/${post.slug}`}
-                      className="site-link-accent mt-4 inline-flex text-[13px] font-semibold"
-                    >
+                    <Link href={`/${uiLanguage}/blog/${post.slug}`} className="site-link-accent mt-4 inline-flex text-[13px] font-semibold">
                       {ui.readArticle}
                     </Link>
                   </article>
@@ -651,35 +468,14 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* ══════════════════════════════════════════════════════
-              PLANS
-          ══════════════════════════════════════════════════════ */}
-          <section
-            id="plans"
-            aria-labelledby="plans-heading"
-            className="mt-20 scroll-mt-28"
-          >
+          <section id="plans" aria-labelledby="plans-heading" className="mt-20 scroll-mt-28">
             <SectionEyebrow>{copy.plans.free.eyebrow}</SectionEyebrow>
-            <h2
-              id="plans-heading"
-              className="sr-only"
-            >
+            <h2 id="plans-heading" className="sr-only">
               Pricing plans
             </h2>
 
             <div className="mt-4 grid gap-4 xl:grid-cols-2">
-              {/* Free */}
-              <article
-                className="
-                  group rounded-[22px]
-                  border border-[var(--site-border)]
-                  bg-[var(--site-surface)]
-                  p-8
-                  transition-all duration-300
-                  hover:-translate-y-0.5
-                  hover:border-[#877cff]/25
-                "
-              >
+              <article className="group rounded-[22px] border border-[var(--site-border)] bg-[var(--site-surface)] p-8 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#877cff]/25">
                 <SectionEyebrow>{copy.plans.free.eyebrow}</SectionEyebrow>
                 <h3 className="mt-2 text-[clamp(1.6rem,3vw,2.2rem)] font-semibold leading-tight tracking-[-0.02em]">
                   {copy.plans.free.title}
@@ -687,54 +483,25 @@ export default function HomePage() {
                 <p className="mt-3 max-w-md text-[13px] leading-[1.75] text-[var(--site-muted)]">
                   {copy.plans.free.body}
                 </p>
-                <ul
-                  aria-label="Free plan features"
-                  className="mt-7 space-y-2"
-                >
-                  {copy.plans.free.features.map((feat) => (
+                <ul aria-label="Free plan features" className="mt-7 space-y-2">
+                  {copy.plans.free.features.map((feature) => (
                     <li
-                      key={feat}
-                      className="
-                        rounded-[14px]
-                        border border-[var(--site-border)]
-                        bg-[var(--site-surface-soft)]
-                        px-4 py-3
-                        text-[13px]
-                      "
+                      key={feature}
+                      className="rounded-[14px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-4 py-3 text-[13px]"
                     >
-                      {feat}
+                      {feature}
                     </li>
                   ))}
                 </ul>
                 <Link
                   href="/auth?plan=free"
-                  className="
-                    site-button-secondary
-                    mt-8 inline-flex rounded-[14px]
-                    border px-5 py-3
-                    text-[13px] font-semibold
-                    transition-all duration-200
-                    hover:-translate-y-0.5 hover:opacity-90
-                  "
+                  className="site-button-secondary mt-8 inline-flex rounded-[14px] border px-5 py-3 text-[13px] font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:opacity-90"
                 >
                   {copy.plans.free.cta}
                 </Link>
               </article>
 
-              {/* Paid */}
-              <article
-                className="
-                  relative overflow-hidden
-                  rounded-[22px]
-                  border border-[#877cff]/30
-                  bg-[var(--site-surface)]
-                  p-8
-                  shadow-[0_0_0_1px_rgba(135,124,255,0.08)_inset]
-                  transition-all duration-300
-                  hover:-translate-y-0.5
-                  hover:shadow-[0_20px_60px_rgba(0,0,0,0.28)]
-                "
-              >
+              <article className="relative overflow-hidden rounded-[22px] border border-[#877cff]/30 bg-[var(--site-surface)] p-8 shadow-[0_0_0_1px_rgba(135,124,255,0.08)_inset] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
                 <div
                   aria-hidden="true"
                   className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[var(--site-primary)]/12 blur-3xl"
@@ -751,37 +518,19 @@ export default function HomePage() {
                 <p className="relative mt-3 max-w-md text-[13px] leading-[1.75] text-[var(--site-muted)]">
                   {copy.plans.paid.body}
                 </p>
-                <ul
-                  aria-label="Paid plan features"
-                  className="relative mt-7 grid gap-2 sm:grid-cols-2"
-                >
-                  {copy.plans.paid.features.map((feat) => (
+                <ul aria-label="Paid plan features" className="relative mt-7 grid gap-2 sm:grid-cols-2">
+                  {copy.plans.paid.features.map((feature) => (
                     <li
-                      key={feat}
-                      className="
-                        rounded-[14px]
-                        border border-[var(--site-border)]
-                        bg-[var(--site-surface-soft)]
-                        px-4 py-3
-                        text-[13px]
-                      "
+                      key={feature}
+                      className="rounded-[14px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-4 py-3 text-[13px]"
                     >
-                      {feat}
+                      {feature}
                     </li>
                   ))}
                 </ul>
                 <Link
                   href="/choose-plan"
-                  className="
-                    site-button-primary
-                    relative mt-8 inline-flex
-                    rounded-[14px] border px-6 py-3
-                    text-[13px] font-black
-                    uppercase tracking-[0.04em]
-                    transition-all duration-200
-                    hover:-translate-y-0.5
-                    hover:shadow-[0_8px_24px_rgba(131,246,215,0.2)]
-                  "
+                  className="site-button-primary relative mt-8 inline-flex rounded-[14px] border px-6 py-3 text-[13px] font-black uppercase tracking-[0.04em] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(131,246,215,0.2)]"
                 >
                   {copy.plans.paid.cta}
                 </Link>
@@ -789,9 +538,6 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* ══════════════════════════════════════════════════════
-              FAQ
-          ══════════════════════════════════════════════════════ */}
           <section
             id="faq"
             aria-labelledby="faq-heading"
@@ -805,72 +551,29 @@ export default function HomePage() {
               >
                 {copy.faq.title}
               </h2>
-              <p className="mt-4 max-w-md text-[13px] leading-[1.75] text-[var(--site-muted)]">
-                {copy.faq.body}
-              </p>
+              <p className="mt-4 max-w-md text-[13px] leading-[1.75] text-[var(--site-muted)]">{copy.faq.body}</p>
             </header>
 
             <div className="space-y-2">
               {copy.faq.items.map((item) => (
                 <details
                   key={item.question}
-                  className="
-                    group rounded-[18px]
-                    border border-[var(--site-border)]
-                    bg-[var(--site-surface)]
-                    p-5
-                    transition-all duration-300
-                    hover:border-[#877cff]/25
-                    open:border-[#877cff]/30
-                  "
+                  className="group rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-5 transition-all duration-300 hover:border-[#877cff]/25 open:border-[#877cff]/30"
                 >
-                  <summary className="
-                    flex cursor-pointer list-none
-                    items-center justify-between gap-4
-                    text-[15px] font-semibold
-                    [&::-webkit-details-marker]:hidden
-                  ">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-semibold [&::-webkit-details-marker]:hidden">
                     <span>{item.question}</span>
-                    <span
-                      className="
-                        shrink-0 rounded-full
-                        border border-[var(--site-border)]
-                        bg-[var(--site-surface-soft)]
-                        px-3 py-1
-                        text-[10px] font-semibold
-                        uppercase tracking-[0.18em]
-                        text-[var(--site-muted)]
-                      "
-                    >
+                    <span className="shrink-0 rounded-full border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--site-muted)]">
                       {ui.open}
                     </span>
                   </summary>
-                  <p className="mt-4 max-w-3xl text-[13px] leading-[1.75] text-[var(--site-muted)]">
-                    {item.answer}
-                  </p>
+                  <p className="mt-4 max-w-3xl text-[13px] leading-[1.75] text-[var(--site-muted)]">{item.answer}</p>
                 </details>
               ))}
             </div>
           </section>
 
-          {/* ══════════════════════════════════════════════════════
-              CONTACT
-          ══════════════════════════════════════════════════════ */}
-          <section
-            aria-labelledby="contact-heading"
-            className="mt-20 grid gap-4 xl:grid-cols-[0.88fr,1.12fr]"
-          >
-            {/* Info panel */}
-            <article
-              className="
-                rounded-[22px]
-                border border-[var(--site-border)]
-                bg-[var(--site-surface)]
-                p-8
-                transition-all duration-300
-                hover:border-[#877cff]/25
-              "
-            >
+          <section aria-labelledby="contact-heading" className="mt-20 grid gap-4 xl:grid-cols-[0.88fr,1.12fr]">
+            <article className="rounded-[22px] border border-[var(--site-border)] bg-[var(--site-surface)] p-8 transition-all duration-300 hover:border-[#877cff]/25">
               <SectionEyebrow>{copy.contact.eyebrow}</SectionEyebrow>
               <h2
                 id="contact-heading"
@@ -878,57 +581,29 @@ export default function HomePage() {
               >
                 {copy.contact.title}
               </h2>
-              <p className="mt-4 max-w-md text-[13px] leading-[1.75] text-[var(--site-muted)]">
-                {copy.contact.body}
-              </p>
+              <p className="mt-4 max-w-md text-[13px] leading-[1.75] text-[var(--site-muted)]">{copy.contact.body}</p>
 
               <ul aria-label="Contact highlights" className="mt-8 space-y-2">
-                {[
-                  copy.platform.modules[0]?.title,
-                  copy.workflow.steps[0]?.title,
-                  copy.plans.paid.title,
-                ].map((item, idx) => (
-                  <li
-                    key={`${item}-${idx}`}
-                    className="
-                      flex items-center gap-3
-                      rounded-[14px]
-                      border border-[var(--site-border)]
-                      bg-[var(--site-surface-soft)]
-                      px-4 py-4
-                      text-[13px]
-                    "
-                  >
-                    <SparkDot />
-                    <span>{item}</span>
-                  </li>
-                ))}
+                {[copy.platform.modules[0]?.title, copy.workflow.steps[0]?.title, copy.plans.paid.title].map(
+                  (item, index) => (
+                    <li
+                      key={`${item}-${index}`}
+                      className="flex items-center gap-3 rounded-[14px] border border-[var(--site-border)] bg-[var(--site-surface-soft)] px-4 py-4 text-[13px]"
+                    >
+                      <SparkDot />
+                      <span>{item}</span>
+                    </li>
+                  ),
+                )}
               </ul>
             </article>
 
-            {/* Form */}
             <form
               onSubmit={handleContactSubmit}
               aria-label="Contact form"
-              className="
-                rounded-[22px]
-                border border-[var(--site-border)]
-                bg-[var(--site-surface)]
-                p-8
-                shadow-[0_28px_80px_rgba(0,0,0,0.3)]
-              "
+              className="rounded-[22px] border border-[var(--site-border)] bg-[var(--site-surface)] p-8 shadow-[0_28px_80px_rgba(0,0,0,0.3)]"
             >
-              <input
-                name="website"
-                type="text"
-                tabIndex={-1}
-                autoComplete="off"
-                aria-hidden="true"
-                className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden"
-              />
-
               <div className="grid gap-4 md:grid-cols-2">
-                {/* Name */}
                 <label className="block">
                   <span className="mb-2 block text-[12px] font-semibold text-[var(--foreground)]">
                     {copy.contact.fields.name}
@@ -939,18 +614,10 @@ export default function HomePage() {
                     required
                     autoComplete="name"
                     placeholder={copy.contact.placeholders.name}
-                    className="
-                      site-input w-full
-                      rounded-[14px] border
-                      px-4 py-3
-                      text-[13px] outline-none
-                      transition-colors duration-200
-                      focus:border-[#8d84ff]/55
-                    "
+                    className="site-input w-full rounded-[14px] border px-4 py-3 text-[13px] outline-none transition-colors duration-200 focus:border-[#8d84ff]/55"
                   />
                 </label>
 
-                {/* Email */}
                 <label className="block">
                   <span className="mb-2 block text-[12px] font-semibold text-[var(--foreground)]">
                     {copy.contact.fields.email}
@@ -961,18 +628,10 @@ export default function HomePage() {
                     required
                     autoComplete="email"
                     placeholder={copy.contact.placeholders.email}
-                    className="
-                      site-input w-full
-                      rounded-[14px] border
-                      px-4 py-3
-                      text-[13px] outline-none
-                      transition-colors duration-200
-                      focus:border-[#8d84ff]/55
-                    "
+                    className="site-input w-full rounded-[14px] border px-4 py-3 text-[13px] outline-none transition-colors duration-200 focus:border-[#8d84ff]/55"
                   />
                 </label>
 
-                {/* Company */}
                 <label className="block">
                   <span className="mb-2 block text-[12px] font-semibold text-[var(--foreground)]">
                     {copy.contact.fields.company}
@@ -982,18 +641,10 @@ export default function HomePage() {
                     type="text"
                     autoComplete="organization"
                     placeholder={copy.contact.placeholders.company}
-                    className="
-                      site-input w-full
-                      rounded-[14px] border
-                      px-4 py-3
-                      text-[13px] outline-none
-                      transition-colors duration-200
-                      focus:border-[#8d84ff]/55
-                    "
+                    className="site-input w-full rounded-[14px] border px-4 py-3 text-[13px] outline-none transition-colors duration-200 focus:border-[#8d84ff]/55"
                   />
                 </label>
 
-                {/* Goal */}
                 <label className="block">
                   <span className="mb-2 block text-[12px] font-semibold text-[var(--foreground)]">
                     {copy.contact.fields.goal}
@@ -1003,19 +654,11 @@ export default function HomePage() {
                     type="text"
                     required
                     placeholder={copy.contact.placeholders.goal}
-                    className="
-                      site-input w-full
-                      rounded-[14px] border
-                      px-4 py-3
-                      text-[13px] outline-none
-                      transition-colors duration-200
-                      focus:border-[#8d84ff]/55
-                    "
+                    className="site-input w-full rounded-[14px] border px-4 py-3 text-[13px] outline-none transition-colors duration-200 focus:border-[#8d84ff]/55"
                   />
                 </label>
               </div>
 
-              {/* Details */}
               <label className="mt-4 block">
                 <span className="mb-2 block text-[12px] font-semibold text-[var(--foreground)]">
                   {copy.contact.fields.details}
@@ -1024,14 +667,7 @@ export default function HomePage() {
                   name="details"
                   rows={5}
                   placeholder={copy.contact.placeholders.details}
-                  className="
-                    site-input w-full resize-none
-                    rounded-[18px] border
-                    px-4 py-3
-                    text-[13px] outline-none
-                    transition-colors duration-200
-                    focus:border-[#8d84ff]/55
-                  "
+                  className="site-input w-full resize-none rounded-[18px] border px-4 py-3 text-[13px] outline-none transition-colors duration-200 focus:border-[#8d84ff]/55"
                 />
               </label>
 
@@ -1052,42 +688,18 @@ export default function HomePage() {
                 <button
                   type="submit"
                   disabled={contactState === "sending"}
-                  className="
-                    site-button-primary
-                    rounded-[14px] px-6 py-3
-                    text-[13px] font-black
-                    uppercase tracking-[0.04em]
-                    transition-all duration-200
-                    hover:-translate-y-0.5
-                    hover:shadow-[0_8px_24px_rgba(131,246,215,0.2)]
-                    disabled:cursor-not-allowed disabled:opacity-60
-                  "
+                  className="site-button-primary rounded-[14px] px-6 py-3 text-[13px] font-black uppercase tracking-[0.04em] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(131,246,215,0.2)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {contactState === "sending"
-                    ? ui.sending
-                    : copy.contact.submit}
+                  {contactState === "sending" ? ui.sending : copy.contact.submit}
                 </button>
               </div>
             </form>
           </section>
 
-          {/* ══════════════════════════════════════════════════════
-              FINAL CTA BANNER
-          ══════════════════════════════════════════════════════ */}
           <section
             aria-labelledby="cta-heading"
-            className="
-              relative mt-16 overflow-hidden
-              rounded-[2.2rem]
-              border border-[#877cff]/25
-              bg-[var(--site-surface)]
-              px-8 py-14
-              text-center
-              shadow-[0_32px_80px_rgba(0,0,0,0.4)]
-              md:px-12
-            "
+            className="relative mt-16 overflow-hidden rounded-[2.2rem] border border-[#877cff]/25 bg-[var(--site-surface)] px-8 py-14 text-center shadow-[0_32px_80px_rgba(0,0,0,0.4)] md:px-12"
           >
-            {/* Ambient glows */}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute -left-16 top-0 h-56 w-56 rounded-full bg-[#705dff]/15 blur-3xl"
@@ -1111,35 +723,19 @@ export default function HomePage() {
             <div className="relative mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 href="/auth"
-                className="
-                  site-button-primary
-                  rounded-[14px] border px-7 py-3.5
-                  text-[13px] font-black
-                  uppercase tracking-[0.04em]
-                  transition-all duration-200
-                  hover:-translate-y-0.5
-                  hover:shadow-[0_8px_28px_rgba(131,246,215,0.22)]
-                  active:translate-y-0
-                "
+                className="site-button-primary rounded-[14px] border px-7 py-3.5 text-[13px] font-black uppercase tracking-[0.04em] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(131,246,215,0.22)] active:translate-y-0"
               >
                 {copy.cta.primary}
               </Link>
               <a
                 href="#platform"
-                className="
-                  site-button-secondary
-                  rounded-[14px] border px-7 py-3.5
-                  text-[13px] font-semibold
-                  transition-all duration-200
-                  hover:-translate-y-0.5 hover:opacity-90
-                "
+                className="site-button-secondary rounded-[14px] border px-7 py-3.5 text-[13px] font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:opacity-90"
               >
                 {copy.cta.secondary}
               </a>
             </div>
           </section>
 
-          {/* Footer */}
           <div className="mt-16">
             <PublicFooter language={uiLanguage} />
           </div>

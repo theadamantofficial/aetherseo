@@ -67,6 +67,7 @@ export default function RootLayout({
       style={{ colorScheme: "dark" }}
     >
       <body suppressHydrationWarning className="min-h-full flex flex-col">
+        <Script id="theme-init" src="/theme-init.js" strategy="beforeInteractive" />
         <CookieConsentProvider>
           <ThemeProvider>
             <SiteMonitor />

@@ -148,12 +148,18 @@ export type AuthCopy = {
   welcomeEyebrow: string;
   welcomeTitle: string;
   googleButton: string;
-  appleButton: string;
   emailDivider: string;
   emailLabel: string;
   phoneLabel: string;
+  smsNotice: string;
+  otpLabel: string;
   emailPlaceholder: string;
+  emailHint: string;
   phonePlaceholder: string;
+  otpPlaceholder: string;
+  sendOtpButton: string;
+  resendOtpButton: string;
+  verifyOtpButton: string;
   sendLinkButton: string;
   chooseWorkspace: string;
   selectableBeforeSignin: string;
@@ -162,6 +168,8 @@ export type AuthCopy = {
   backHome: string;
   status: {
     initial: string;
+    needPhone: string;
+    invalidPhone: string;
     needEmail: string;
     sendingLink: string;
     linkSent: string;
@@ -171,12 +179,18 @@ export type AuthCopy = {
     linkExpired: string;
     connectingGoogle: string;
     googleFailed: string;
-    connectingApple: string;
-    appleFailed: string;
+    verifyPhoneToContinue: string;
+    sendingOtp: string;
+    otpSent: string;
+    otpFailed: string;
+    needOtp: string;
+    verifyingOtp: string;
+    otpVerifyFailed: string;
     creatingWorkspace: (plan: string) => string;
     workspaceReady: string;
     workspaceSelected: (plan: string) => string;
     workspaceSaveFailed: string;
+    completePhoneVerificationFirst: string;
     signInFinishFailed: string;
     welcomeBack: string;
   };
@@ -187,6 +201,7 @@ export type ShellCopy = {
     dashboard: string;
     analytics: string;
     aiAssistant: string;
+    plagiarismCheck: string;
     generateBlog: string;
     websiteAudit: string;
     history: string;
@@ -874,11 +889,11 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
   en: {
     badge: "Auth and workspace setup",
     title: "Enter Aether and choose the workspace that fits your growth stage",
-    body: "Sign in with Google, Apple, or email link. Your plan choice is saved with your account, your phone is stored for later verification, and your dashboard loads only your own data.",
+    body: "Sign in with Google or email link. For Google access, enter a phone number and verify it with a Firebase OTP before your workspace opens.",
     bullets: [
-      "Google, Apple, and email-link sign-in",
+      "Google sign-in with required phone OTP verification",
+      "Passwordless email-link access",
       "Selectable free or paid workspace before auth",
-      "Phone number captured for later verification",
       "Dashboard data isolated per signed-in user",
     ],
     selectedWorkspace: "Selected workspace",
@@ -890,12 +905,18 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
     welcomeEyebrow: "Welcome back",
     welcomeTitle: "Secure access",
     googleButton: "Continue with Google",
-    appleButton: "Continue with Apple",
     emailDivider: "Email Link Access",
     emailLabel: "Email address",
-    phoneLabel: "Phone number for later verification",
+    phoneLabel: "Phone number for required Google OTP verification",
+    smsNotice: "SMS verification may apply standard carrier rates.",
+    otpLabel: "Verification code",
     emailPlaceholder: "name@company.com",
+    emailHint: "We'll email a sign-in link here. If it doesn't show up in a minute, check your spam or junk folder too.",
     phonePlaceholder: "+1 555 000 0000",
+    otpPlaceholder: "Enter the 6-digit OTP",
+    sendOtpButton: "Send OTP code",
+    resendOtpButton: "Resend OTP code",
+    verifyOtpButton: "Verify OTP",
     sendLinkButton: "Send sign-in link",
     chooseWorkspace: "Choose workspace tier",
     selectableBeforeSignin: "Selectable before sign-in",
@@ -903,22 +924,30 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
     chooseLabel: "Tap to choose",
     backHome: "Back to home",
     status: {
-      initial: "Pick a workspace tier, then continue with Google, Apple, or email link.",
+      initial: "Pick a workspace tier, add your phone number, then continue with Google or email link.",
+      needPhone: "Enter your phone number before continuing with Google.",
+      invalidPhone: "Enter a valid phone number in international format, for example +15550000000.",
       needEmail: "Enter your email address first.",
       sendingLink: "Sending your secure sign-in link...",
-      linkSent: "Sign-in link sent. Check your inbox and open it in the same browser.",
+      linkSent: "Sign-in link sent. Check your inbox, and if it is not there, look in spam or junk before opening it in the same browser.",
       linkFailed: "Unable to send sign-in link right now. Try again.",
       reconnectBrowser: "Please request a new sign-in link from this browser.",
       signingInEmail: "Signing in with email link...",
       linkExpired: "This email link is invalid or expired. Send a fresh one.",
       connectingGoogle: "Connecting with Google...",
       googleFailed: "Google sign in failed. Try again.",
-      connectingApple: "Connecting with Apple...",
-      appleFailed: "Apple sign in failed. Make sure Apple sign-in is enabled.",
+      verifyPhoneToContinue: "Google sign-in is almost done. Verify your phone number with the OTP to continue.",
+      sendingOtp: "Sending your verification code...",
+      otpSent: "Verification code sent. Enter the OTP from your phone.",
+      otpFailed: "We could not send the phone verification code. Try again.",
+      needOtp: "Enter the OTP from your phone.",
+      verifyingOtp: "Verifying your OTP...",
+      otpVerifyFailed: "We could not verify that OTP. Try again.",
       creatingWorkspace: (plan) => `Creating your ${plan} workspace...`,
       workspaceReady: "Workspace ready. Redirecting to your dashboard.",
-      workspaceSelected: (plan) => `${plan} workspace selected. Continue with Google, Apple, or email link.`,
+      workspaceSelected: (plan) => `${plan} workspace selected. Continue with Google or email link.`,
       workspaceSaveFailed: "We could not save the selected workspace. Try again.",
+      completePhoneVerificationFirst: "Verify your phone number first to finish Google sign-in.",
       signInFinishFailed: "We could not finish sign-in. Try again.",
       welcomeBack: "Welcome back. Redirecting to your dashboard.",
     },
@@ -926,11 +955,11 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
   es: {
     badge: "Acceso y configuracion",
     title: "Entra a Aether y elige el espacio que mejor se adapte a tu etapa",
-    body: "Accede con Google, Apple o enlace por correo. Tu plan se guarda con tu cuenta y el dashboard carga solo tus propios datos.",
+    body: "Accede con Google o enlace por correo. Para Google debes introducir tu telefono y verificarlo con un OTP de Firebase antes de entrar.",
     bullets: [
-      "Acceso con Google, Apple y enlace por correo",
+      "Acceso con Google y OTP obligatorio en telefono",
+      "Acceso por enlace de correo sin password",
       "Plan gratis o pago antes del acceso",
-      "Telefono guardado para verificacion futura",
       "Datos separados por usuario autenticado",
     ],
     selectedWorkspace: "Espacio seleccionado",
@@ -942,12 +971,18 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
     welcomeEyebrow: "Bienvenido",
     welcomeTitle: "Acceso seguro",
     googleButton: "Continuar con Google",
-    appleButton: "Continuar con Apple",
     emailDivider: "Acceso por enlace de correo",
     emailLabel: "Correo electronico",
-    phoneLabel: "Telefono para verificacion posterior",
+    phoneLabel: "Telefono para verificacion OTP obligatoria con Google",
+    smsNotice: "La verificacion por SMS puede aplicar tarifas normales del operador.",
+    otpLabel: "Codigo de verificacion",
     emailPlaceholder: "nombre@empresa.com",
+    emailHint: "Te enviaremos aqui el enlace de acceso. Si no aparece en un minuto, revisa tambien spam o correo no deseado.",
     phonePlaceholder: "+34 600 000 000",
+    otpPlaceholder: "Introduce el OTP de 6 digitos",
+    sendOtpButton: "Enviar codigo OTP",
+    resendOtpButton: "Reenviar codigo OTP",
+    verifyOtpButton: "Verificar OTP",
     sendLinkButton: "Enviar enlace de acceso",
     chooseWorkspace: "Elegir tipo de espacio",
     selectableBeforeSignin: "Se puede elegir antes de entrar",
@@ -955,22 +990,30 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
     chooseLabel: "Toca para elegir",
     backHome: "Volver al inicio",
     status: {
-      initial: "Elige un plan y luego continua con Google, Apple o enlace por correo.",
+      initial: "Elige un plan, anade tu telefono y luego continua con Google o enlace por correo.",
+      needPhone: "Primero introduce tu telefono para continuar con Google.",
+      invalidPhone: "Introduce un telefono valido en formato internacional, por ejemplo +34600000000.",
       needEmail: "Primero introduce tu correo.",
       sendingLink: "Enviando tu enlace seguro...",
-      linkSent: "Enlace enviado. Revisa tu correo y abrelo en el mismo navegador.",
+      linkSent: "Enlace enviado. Revisa tu correo y, si no aparece, mira tambien spam o correo no deseado antes de abrirlo en el mismo navegador.",
       linkFailed: "No fue posible enviar el enlace ahora mismo.",
       reconnectBrowser: "Solicita un nuevo enlace desde este navegador.",
       signingInEmail: "Accediendo con enlace de correo...",
       linkExpired: "El enlace es invalido o ha expirado. Envia uno nuevo.",
       connectingGoogle: "Conectando con Google...",
       googleFailed: "El acceso con Google fallo. Intenta de nuevo.",
-      connectingApple: "Conectando con Apple...",
-      appleFailed: "El acceso con Apple fallo. Activa el acceso con Apple.",
+      verifyPhoneToContinue: "El acceso con Google casi esta listo. Verifica tu telefono con el OTP para continuar.",
+      sendingOtp: "Enviando tu codigo de verificacion...",
+      otpSent: "Codigo enviado. Introduce el OTP que recibiste en tu telefono.",
+      otpFailed: "No fue posible enviar el codigo OTP. Intenta otra vez.",
+      needOtp: "Introduce el OTP de tu telefono.",
+      verifyingOtp: "Verificando tu OTP...",
+      otpVerifyFailed: "No pudimos verificar ese OTP. Intenta otra vez.",
       creatingWorkspace: (plan) => `Creando tu espacio ${plan}...`,
       workspaceReady: "Espacio listo. Redirigiendo al dashboard.",
-      workspaceSelected: (plan) => `Espacio ${plan} seleccionado. Continua con Google, Apple o enlace por correo.`,
+      workspaceSelected: (plan) => `Espacio ${plan} seleccionado. Continua con Google o enlace por correo.`,
       workspaceSaveFailed: "No fue posible guardar el espacio elegido.",
+      completePhoneVerificationFirst: "Verifica tu telefono primero para terminar el acceso con Google.",
       signInFinishFailed: "No pudimos completar el acceso.",
       welcomeBack: "Bienvenido de nuevo. Redirigiendo al dashboard.",
     },
@@ -978,11 +1021,11 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
   fr: {
     badge: "Auth et configuration",
     title: "Entrez dans Aether et choisissez l'espace adapte a votre stade de croissance",
-    body: "Connectez-vous avec Google, Apple ou lien email. Votre offre est enregistree avec le compte et le dashboard charge uniquement vos donnees.",
+    body: "Connectez-vous avec Google ou lien email. Pour Google, saisissez votre telephone et verifiez-le avec un OTP Firebase avant d'ouvrir l'espace.",
     bullets: [
-      "Connexion Google, Apple et lien email",
+      "Connexion Google avec verification OTP obligatoire",
+      "Connexion sans mot de passe par lien email",
       "Choix gratuit ou payant avant auth",
-      "Telephone garde pour verification plus tard",
       "Donnees isolees par utilisateur connecte",
     ],
     selectedWorkspace: "Espace selectionne",
@@ -994,12 +1037,18 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
     welcomeEyebrow: "Bon retour",
     welcomeTitle: "Acces securise",
     googleButton: "Continuer avec Google",
-    appleButton: "Continuer avec Apple",
     emailDivider: "Acces par lien email",
     emailLabel: "Adresse email",
-    phoneLabel: "Telephone pour verification future",
+    phoneLabel: "Telephone pour verification OTP obligatoire avec Google",
+    smsNotice: "La verification par SMS peut entrainer les frais standards de votre operateur.",
+    otpLabel: "Code de verification",
     emailPlaceholder: "nom@entreprise.com",
+    emailHint: "Nous enverrons le lien de connexion ici. S'il n'apparait pas dans une minute, verifiez aussi le dossier spam ou courrier indesirable.",
     phonePlaceholder: "+33 6 00 00 00 00",
+    otpPlaceholder: "Entrez le code OTP a 6 chiffres",
+    sendOtpButton: "Envoyer le code OTP",
+    resendOtpButton: "Renvoyer le code OTP",
+    verifyOtpButton: "Verifier OTP",
     sendLinkButton: "Envoyer le lien de connexion",
     chooseWorkspace: "Choisir l'offre",
     selectableBeforeSignin: "Choix possible avant la connexion",
@@ -1007,22 +1056,30 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
     chooseLabel: "Cliquer pour choisir",
     backHome: "Retour a l'accueil",
     status: {
-      initial: "Choisissez une offre puis continuez avec Google, Apple ou lien email.",
+      initial: "Choisissez une offre, ajoutez votre telephone, puis continuez avec Google ou lien email.",
+      needPhone: "Entrez votre numero de telephone avant de continuer avec Google.",
+      invalidPhone: "Entrez un numero valide au format international, par exemple +33600000000.",
       needEmail: "Entrez votre email d'abord.",
       sendingLink: "Envoi de votre lien securise...",
-      linkSent: "Lien envoye. Ouvrez-le dans le meme navigateur.",
+      linkSent: "Lien envoye. Verifiez votre boite mail et, s'il n'apparait pas, regardez aussi dans le spam avant de l'ouvrir dans le meme navigateur.",
       linkFailed: "Impossible d'envoyer le lien pour le moment.",
       reconnectBrowser: "Veuillez demander un nouveau lien depuis ce navigateur.",
       signingInEmail: "Connexion avec lien email...",
       linkExpired: "Le lien est invalide ou expire.",
       connectingGoogle: "Connexion a Google...",
       googleFailed: "La connexion Google a echoue.",
-      connectingApple: "Connexion a Apple...",
-      appleFailed: "La connexion Apple a echoue. Activez la connexion Apple.",
+      verifyPhoneToContinue: "La connexion Google est presque terminee. Verifiez votre telephone avec le code OTP pour continuer.",
+      sendingOtp: "Envoi de votre code de verification...",
+      otpSent: "Code envoye. Saisissez le code OTP recu sur votre telephone.",
+      otpFailed: "Impossible d'envoyer le code OTP pour le moment.",
+      needOtp: "Entrez le code OTP recu sur votre telephone.",
+      verifyingOtp: "Verification de votre OTP...",
+      otpVerifyFailed: "Impossible de verifier ce code OTP. Reessayez.",
       creatingWorkspace: (plan) => `Creation de votre espace ${plan}...`,
       workspaceReady: "Espace pret. Redirection vers le dashboard.",
-      workspaceSelected: (plan) => `Espace ${plan} selectionne. Continuez avec Google, Apple ou lien email.`,
+      workspaceSelected: (plan) => `Espace ${plan} selectionne. Continuez avec Google ou lien email.`,
       workspaceSaveFailed: "Impossible d'enregistrer l'espace choisi.",
+      completePhoneVerificationFirst: "Verifiez votre telephone d'abord pour terminer la connexion Google.",
       signInFinishFailed: "Nous n'avons pas pu terminer la connexion.",
       welcomeBack: "Bon retour. Redirection vers votre dashboard.",
     },
@@ -1030,11 +1087,11 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
   hi: {
     badge: "Auth aur workspace setup",
     title: "Aether me enter karo aur apne growth stage ke hisab se workspace chuno",
-    body: "Google, Apple ya email link se sign in karo. Plan choice account ke saath save hoti hai aur dashboard sirf aapka data load karta hai.",
+    body: "Google ya email link se sign in karo. Google access ke liye phone number enter karke Firebase OTP se verify karna zaroori hai.",
     bullets: [
-      "Google, Apple aur email-link sign-in",
+      "Google sign-in ke saath mandatory phone OTP verification",
+      "Passwordless email-link access",
       "Auth se pehle free ya paid choose karo",
-      "Phone number baad ki verification ke liye store hota hai",
       "Dashboard data har user ke liye alag hai",
     ],
     selectedWorkspace: "Selected workspace",
@@ -1046,12 +1103,18 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
     welcomeEyebrow: "Welcome back",
     welcomeTitle: "Secure access",
     googleButton: "Google ke saath continue karo",
-    appleButton: "Apple ke saath continue karo",
     emailDivider: "Email link access",
     emailLabel: "Email address",
-    phoneLabel: "Phone number for later verification",
+    phoneLabel: "Google OTP verification ke liye phone number",
+    smsNotice: "SMS verification par standard carrier charges lag sakte hain.",
+    otpLabel: "Verification code",
     emailPlaceholder: "name@company.com",
+    emailHint: "Sign-in link isi email par aayega. Agar ek minute me na dikhe to spam ya junk folder bhi check karo.",
     phonePlaceholder: "+91 98765 43210",
+    otpPlaceholder: "6-digit OTP enter karo",
+    sendOtpButton: "OTP code bhejo",
+    resendOtpButton: "OTP code dobara bhejo",
+    verifyOtpButton: "OTP verify karo",
     sendLinkButton: "Sign-in link bhejo",
     chooseWorkspace: "Workspace tier choose karo",
     selectableBeforeSignin: "Sign-in se pehle choose ho sakta hai",
@@ -1059,22 +1122,30 @@ export const authCopy: Record<SiteLanguage, AuthCopy> = {
     chooseLabel: "Choose karne ke liye tap karo",
     backHome: "Back to home",
     status: {
-      initial: "Workspace tier choose karo, phir Google, Apple ya email link se continue karo.",
+      initial: "Workspace tier choose karo, phone number add karo, phir Google ya email link se continue karo.",
+      needPhone: "Google se continue karne se pehle phone number enter karo.",
+      invalidPhone: "Valid international format me phone number enter karo, jaise +919876543210.",
       needEmail: "Pehle apna email enter karo.",
       sendingLink: "Secure sign-in link bheja ja raha hai...",
-      linkSent: "Link bhej diya gaya. Inbox check karo aur same browser me open karo.",
+      linkSent: "Link bhej diya gaya. Inbox check karo, aur agar wahan na ho to spam ya junk folder bhi dekh lo, phir same browser me open karo.",
       linkFailed: "Abhi sign-in link send nahin ho paya.",
       reconnectBrowser: "Isi browser se naya sign-in link request karo.",
       signingInEmail: "Email link se sign in ho raha hai...",
       linkExpired: "Ye email link invalid ya expired hai.",
       connectingGoogle: "Google se connect ho raha hai...",
       googleFailed: "Google sign in fail ho gaya.",
-      connectingApple: "Apple se connect ho raha hai...",
-      appleFailed: "Apple sign in fail ho gaya. Apple sign-in enable karo.",
+      verifyPhoneToContinue: "Google sign-in lagbhag ready hai. Continue karne ke liye phone OTP verify karo.",
+      sendingOtp: "Aapka verification code bheja ja raha hai...",
+      otpSent: "Verification code bhej diya gaya. Phone par aaya OTP enter karo.",
+      otpFailed: "Phone verification code abhi send nahin ho paya. Dobara try karo.",
+      needOtp: "Phone par aaya OTP enter karo.",
+      verifyingOtp: "OTP verify ho raha hai...",
+      otpVerifyFailed: "Ye OTP verify nahin ho paya. Dobara try karo.",
       creatingWorkspace: (plan) => `Aapka ${plan} workspace create ho raha hai...`,
       workspaceReady: "Workspace ready hai. Dashboard par redirect ho raha hai.",
-      workspaceSelected: (plan) => `${plan} workspace select ho gaya. Ab Google, Apple ya email link se continue karo.`,
+      workspaceSelected: (plan) => `${plan} workspace select ho gaya. Ab Google ya email link se continue karo.`,
       workspaceSaveFailed: "Selected workspace save nahin ho paya.",
+      completePhoneVerificationFirst: "Google sign-in finish karne ke liye pehle phone verify karo.",
       signInFinishFailed: "Sign-in complete nahin ho paya.",
       welcomeBack: "Welcome back. Dashboard par redirect ho raha hai.",
     },
@@ -1087,6 +1158,7 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
       dashboard: "Dashboard",
       analytics: "Analytics",
       aiAssistant: "AI Assistant",
+      plagiarismCheck: "Plagiarism Check",
       generateBlog: "Generate Blog",
       websiteAudit: "Website Audit",
       history: "History",
@@ -1111,6 +1183,7 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
       dashboard: "Dashboard",
       analytics: "Analitica",
       aiAssistant: "Asistente IA",
+      plagiarismCheck: "Revision de plagio",
       generateBlog: "Generar blog",
       websiteAudit: "Auditoria web",
       history: "Historial",
@@ -1135,6 +1208,7 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
       dashboard: "Dashboard",
       analytics: "Analytique",
       aiAssistant: "Assistant IA",
+      plagiarismCheck: "Controle de plagiat",
       generateBlog: "Generer un blog",
       websiteAudit: "Audit web",
       history: "Historique",
@@ -1159,6 +1233,7 @@ export const shellCopy: Record<SiteLanguage, ShellCopy> = {
       dashboard: "Dashboard",
       analytics: "Analytics",
       aiAssistant: "AI assistant",
+      plagiarismCheck: "Plagiarism check",
       generateBlog: "Blog generate karo",
       websiteAudit: "Website audit",
       history: "History",

@@ -27,6 +27,8 @@ import {
   type RazorpayOrderResponse,
 } from "@/lib/razorpay-client";
 
+/* ─── Types ──────────────────────────────────────────────────────────────── */
+
 type ActionConfig = {
   id: AssistantActionType;
   label: string;
@@ -47,6 +49,8 @@ const actionIds: AssistantActionType[] = [
   "schema-faq",
   "fix-plan",
 ];
+
+/* ─── i18n copy ──────────────────────────────────────────────────────────── */
 
 const assistantUiCopy: Record<
   AppUiLanguage,
@@ -181,41 +185,11 @@ const assistantUiCopy: Record<
     noUrl: "Koi URL linked nahi hai",
     sectionsTitle: "Generated sections",
     actions: {
-      "blog-brief": {
-        id: "blog-brief",
-        label: "Blog brief",
-        description: "Target topic ke liye audience, search intent, structure aur CTA outline karo.",
-        placeholder: "SaaS startups ke liye programmatic SEO",
-        urlLabel: "Optional target URL",
-      },
-      metadata: {
-        id: "metadata",
-        label: "Metadata pack",
-        description: "Title tags, meta descriptions, H1 ideas aur SERP packaging generate karo.",
-        placeholder: "AI SEO platform startup homepage",
-        urlLabel: "Page URL",
-      },
-      "keyword-cluster": {
-        id: "keyword-cluster",
-        label: "Keyword cluster",
-        description: "Pillar topics, supporting keywords aur internal linking directions map karo.",
-        placeholder: "AI content optimization tools",
-        urlLabel: "Optional reference URL",
-      },
-      "schema-faq": {
-        id: "schema-faq",
-        label: "Schema + FAQ",
-        description: "Page ya topic ke liye implementation-ready schema aur FAQ ideas banao.",
-        placeholder: "SaaS SEO product pricing page",
-        urlLabel: "Page URL",
-      },
-      "fix-plan": {
-        id: "fix-plan",
-        label: "Fix plan",
-        description: "Audit findings ko concrete rewrites, checks aur implementation tasks me badlo.",
-        placeholder: "H1 ko primary keyword ke saath revise karo aur search intent clear karo",
-        urlLabel: "Audited URL",
-      },
+      "blog-brief": { id: "blog-brief", label: "Blog brief", description: "Target topic ke liye audience, search intent, structure aur CTA outline karo.", placeholder: "SaaS startups ke liye programmatic SEO", urlLabel: "Optional target URL" },
+      metadata: { id: "metadata", label: "Metadata pack", description: "Title tags, meta descriptions, H1 ideas aur SERP packaging generate karo.", placeholder: "AI SEO platform startup homepage", urlLabel: "Page URL" },
+      "keyword-cluster": { id: "keyword-cluster", label: "Keyword cluster", description: "Pillar topics, supporting keywords aur internal linking directions map karo.", placeholder: "AI content optimization tools", urlLabel: "Optional reference URL" },
+      "schema-faq": { id: "schema-faq", label: "Schema + FAQ", description: "Page ya topic ke liye implementation-ready schema aur FAQ ideas banao.", placeholder: "SaaS SEO product pricing page", urlLabel: "Page URL" },
+      "fix-plan": { id: "fix-plan", label: "Fix plan", description: "Audit findings ko concrete rewrites, checks aur implementation tasks me badlo.", placeholder: "H1 ko primary keyword ke saath revise karo aur search intent clear karo", urlLabel: "Audited URL" },
     },
   },
   fr: {
@@ -230,11 +204,7 @@ const assistantUiCopy: Record<
     primaryInput: "Entree principale",
     produceTitle: "Ce que cette action va produire",
     produceBody: "Cette action genere une sortie structuree reutilisable dans le workspace.",
-    bullets: [
-      "Sortie generee par IA, pas des modeles statiques",
-      "Enregistree dans l'historique du workspace",
-      "Reutilisable pour blog, audit et execution SEO",
-    ],
+    bullets: ["Sortie generee par IA, pas des modeles statiques", "Enregistree dans l'historique du workspace", "Reutilisable pour blog, audit et execution SEO"],
     outputLanguage: "Langue de sortie",
     outputLanguageBody: "Cette sortie suit votre preference de langue actuelle du site :",
     runPrefix: "Lancer",
@@ -250,41 +220,11 @@ const assistantUiCopy: Record<
     noUrl: "Aucune URL liee",
     sectionsTitle: "Sections generees",
     actions: {
-      "blog-brief": {
-        id: "blog-brief",
-        label: "Brief blog",
-        description: "Definissez audience, intention de recherche, structure et CTA pour un sujet cible.",
-        placeholder: "SEO programmatique pour startups SaaS",
-        urlLabel: "URL cible optionnelle",
-      },
-      metadata: {
-        id: "metadata",
-        label: "Pack metadata",
-        description: "Generez titres, meta descriptions, idees H1 et habillage SERP.",
-        placeholder: "Homepage d'une plateforme SEO IA pour startups",
-        urlLabel: "URL de la page",
-      },
-      "keyword-cluster": {
-        id: "keyword-cluster",
-        label: "Cluster de mots-cles",
-        description: "Cartographiez sujets piliers, mots-cles de soutien et directions de maillage interne.",
-        placeholder: "Outils d'optimisation de contenu IA",
-        urlLabel: "URL de reference optionnelle",
-      },
-      "schema-faq": {
-        id: "schema-faq",
-        label: "Schema + FAQ",
-        description: "Generez schema et idees FAQ pretes a implementer.",
-        placeholder: "Page de tarification d'un produit SaaS SEO",
-        urlLabel: "URL de la page",
-      },
-      "fix-plan": {
-        id: "fix-plan",
-        label: "Plan de correction",
-        description: "Transformez les constats d'audit en re-ecritures, verifications et taches concretes.",
-        placeholder: "Reviser le H1 pour inclure le mot-cle principal et clarifier l'intention",
-        urlLabel: "URL auditee",
-      },
+      "blog-brief": { id: "blog-brief", label: "Brief blog", description: "Definissez audience, intention de recherche, structure et CTA pour un sujet cible.", placeholder: "SEO programmatique pour startups SaaS", urlLabel: "URL cible optionnelle" },
+      metadata: { id: "metadata", label: "Pack metadata", description: "Generez titres, meta descriptions, idees H1 et habillage SERP.", placeholder: "Homepage d'une plateforme SEO IA pour startups", urlLabel: "URL de la page" },
+      "keyword-cluster": { id: "keyword-cluster", label: "Cluster de mots-cles", description: "Cartographiez sujets piliers, mots-cles de soutien et directions de maillage interne.", placeholder: "Outils d'optimisation de contenu IA", urlLabel: "URL de reference optionnelle" },
+      "schema-faq": { id: "schema-faq", label: "Schema + FAQ", description: "Generez schema et idees FAQ pretes a implementer.", placeholder: "Page de tarification d'un produit SaaS SEO", urlLabel: "URL de la page" },
+      "fix-plan": { id: "fix-plan", label: "Plan de correction", description: "Transformez les constats d'audit en re-ecritures, verifications et taches concretes.", placeholder: "Reviser le H1 pour inclure le mot-cle principal et clarifier l'intention", urlLabel: "URL auditee" },
     },
   },
   de: {
@@ -299,11 +239,7 @@ const assistantUiCopy: Record<
     primaryInput: "Haupteingabe",
     produceTitle: "Was diese Aktion erzeugt",
     produceBody: "Diese Aktion erzeugt strukturierte Ausgaben fuer die weitere Nutzung im Workspace.",
-    bullets: [
-      "AI-generierte Ausgabe statt statischer Vorlagen",
-      "Wird im Workspace-Verlauf gespeichert",
-      "Wiederverwendbar fuer Blog, Audit und SEO-Ausfuehrung",
-    ],
+    bullets: ["AI-generierte Ausgabe statt statischer Vorlagen", "Wird im Workspace-Verlauf gespeichert", "Wiederverwendbar fuer Blog, Audit und SEO-Ausfuehrung"],
     outputLanguage: "Ausgabesprache",
     outputLanguageBody: "Diese Ausgabe folgt deiner aktuellen Website-Sprachpraeferenz:",
     runPrefix: "Starten",
@@ -319,41 +255,11 @@ const assistantUiCopy: Record<
     noUrl: "Keine URL verknuepft",
     sectionsTitle: "Generierte Abschnitte",
     actions: {
-      "blog-brief": {
-        id: "blog-brief",
-        label: "Blog-Briefing",
-        description: "Definiere Zielgruppe, Suchintention, Struktur und CTA fuer ein Thema.",
-        placeholder: "Programmatic SEO fuer SaaS-Startups",
-        urlLabel: "Optionale Ziel-URL",
-      },
-      metadata: {
-        id: "metadata",
-        label: "Metadata-Paket",
-        description: "Erzeuge Title-Tags, Meta-Descriptions, H1-Ideen und SERP-Verpackung.",
-        placeholder: "Homepage einer AI-SEO-Plattform fuer Startups",
-        urlLabel: "Seiten-URL",
-      },
-      "keyword-cluster": {
-        id: "keyword-cluster",
-        label: "Keyword-Cluster",
-        description: "Ordne Hauptthemen, Supporting-Keywords und interne Verlinkung.",
-        placeholder: "AI Content Optimization Tools",
-        urlLabel: "Optionale Referenz-URL",
-      },
-      "schema-faq": {
-        id: "schema-faq",
-        label: "Schema + FAQ",
-        description: "Erzeuge umsetzbare Schema- und FAQ-Ideen fuer Seite oder Thema.",
-        placeholder: "Pricing-Seite fuer ein SaaS-SEO-Produkt",
-        urlLabel: "Seiten-URL",
-      },
-      "fix-plan": {
-        id: "fix-plan",
-        label: "Fix-Plan",
-        description: "Verwandle Audit-Ergebnisse in konkrete Textaenderungen, Checks und Aufgaben.",
-        placeholder: "H1 ueberarbeiten, Hauptkeyword aufnehmen und Suchintention klaeren",
-        urlLabel: "Audit-URL",
-      },
+      "blog-brief": { id: "blog-brief", label: "Blog-Briefing", description: "Definiere Zielgruppe, Suchintention, Struktur und CTA fuer ein Thema.", placeholder: "Programmatic SEO fuer SaaS-Startups", urlLabel: "Optionale Ziel-URL" },
+      metadata: { id: "metadata", label: "Metadata-Paket", description: "Erzeuge Title-Tags, Meta-Descriptions, H1-Ideen und SERP-Verpackung.", placeholder: "Homepage einer AI-SEO-Plattform fuer Startups", urlLabel: "Seiten-URL" },
+      "keyword-cluster": { id: "keyword-cluster", label: "Keyword-Cluster", description: "Ordne Hauptthemen, Supporting-Keywords und interne Verlinkung.", placeholder: "AI Content Optimization Tools", urlLabel: "Optionale Referenz-URL" },
+      "schema-faq": { id: "schema-faq", label: "Schema + FAQ", description: "Erzeuge umsetzbare Schema- und FAQ-Ideen fuer Seite oder Thema.", placeholder: "Pricing-Seite fuer ein SaaS-SEO-Produkt", urlLabel: "Seiten-URL" },
+      "fix-plan": { id: "fix-plan", label: "Fix-Plan", description: "Verwandle Audit-Ergebnisse in konkrete Textaenderungen, Checks und Aufgaben.", placeholder: "H1 ueberarbeiten, Hauptkeyword aufnehmen und Suchintention klaeren", urlLabel: "Audit-URL" },
     },
   },
   ja: {
@@ -368,11 +274,7 @@ const assistantUiCopy: Record<
     primaryInput: "主入力",
     produceTitle: "このアクションで生成される内容",
     produceBody: "このアクションはワークスペースで再利用できる構造化出力を生成します。",
-    bullets: [
-      "静的テンプレートではなく AI による出力",
-      "ワークスペース履歴に保存",
-      "ブログ、監査、SEO 実行で再利用可能",
-    ],
+    bullets: ["静的テンプレートではなく AI による出力", "ワークスペース履歴に保存", "ブログ、監査、SEO 実行で再利用可能"],
     outputLanguage: "出力言語",
     outputLanguageBody: "この出力は現在のサイト言語設定に従います:",
     runPrefix: "実行",
@@ -388,41 +290,11 @@ const assistantUiCopy: Record<
     noUrl: "URL は未設定です",
     sectionsTitle: "生成セクション",
     actions: {
-      "blog-brief": {
-        id: "blog-brief",
-        label: "ブログブリーフ",
-        description: "対象トピックの読者、検索意図、構成、CTA を整理します。",
-        placeholder: "SaaS スタートアップ向けのプログラマティック SEO",
-        urlLabel: "任意の対象 URL",
-      },
-      metadata: {
-        id: "metadata",
-        label: "メタデータパック",
-        description: "タイトルタグ、メタ説明、H1 案、SERP 用コピーを生成します。",
-        placeholder: "スタートアップ向け AI SEO プラットフォームのホームページ",
-        urlLabel: "ページ URL",
-      },
-      "keyword-cluster": {
-        id: "keyword-cluster",
-        label: "キーワードクラスタ",
-        description: "ピラートピック、補助キーワード、内部リンク方針を整理します。",
-        placeholder: "AI コンテンツ最適化ツール",
-        urlLabel: "任意の参照 URL",
-      },
-      "schema-faq": {
-        id: "schema-faq",
-        label: "スキーマ + FAQ",
-        description: "ページやトピック向けの実装可能なスキーマと FAQ 案を生成します。",
-        placeholder: "SaaS SEO プロダクトの価格ページ",
-        urlLabel: "ページ URL",
-      },
-      "fix-plan": {
-        id: "fix-plan",
-        label: "修正プラン",
-        description: "監査結果を具体的な書き換え、確認項目、実装タスクに変換します。",
-        placeholder: "主要キーワードを含むように H1 を修正し、検索意図を明確にする",
-        urlLabel: "監査対象 URL",
-      },
+      "blog-brief": { id: "blog-brief", label: "ブログブリーフ", description: "対象トピックの読者、検索意図、構成、CTA を整理します。", placeholder: "SaaS スタートアップ向けのプログラマティック SEO", urlLabel: "任意の対象 URL" },
+      metadata: { id: "metadata", label: "メタデータパック", description: "タイトルタグ、メタ説明、H1 案、SERP 用コピーを生成します。", placeholder: "スタートアップ向け AI SEO プラットフォームのホームページ", urlLabel: "ページ URL" },
+      "keyword-cluster": { id: "keyword-cluster", label: "キーワードクラスタ", description: "ピラートピック、補助キーワード、内部リンク方針を整理します。", placeholder: "AI コンテンツ最適化ツール", urlLabel: "任意の参照 URL" },
+      "schema-faq": { id: "schema-faq", label: "スキーマ + FAQ", description: "ページやトピック向けの実装可能なスキーマと FAQ 案を生成します。", placeholder: "SaaS SEO プロダクトの価格ページ", urlLabel: "ページ URL" },
+      "fix-plan": { id: "fix-plan", label: "修正プラン", description: "監査結果を具体的な書き換え、確認項目、実装タスクに変換します。", placeholder: "主要キーワードを含むように H1 を修正し、検索意図を明確にする", urlLabel: "監査対象 URL" },
     },
   },
   ko: {
@@ -437,11 +309,7 @@ const assistantUiCopy: Record<
     primaryInput: "주요 입력",
     produceTitle: "이 작업이 생성하는 것",
     produceBody: "이 작업은 워크스페이스에서 재사용할 수 있는 구조화된 출력을 생성합니다.",
-    bullets: [
-      "정적 템플릿이 아닌 AI 생성 결과",
-      "워크스페이스 기록에 저장",
-      "블로그, 감사, SEO 실행에 재사용 가능",
-    ],
+    bullets: ["정적 템플릿이 아닌 AI 생성 결과", "워크스페이스 기록에 저장", "블로그, 감사, SEO 실행에 재사용 가능"],
     outputLanguage: "출력 언어",
     outputLanguageBody: "이 결과는 현재 사이트 언어 설정을 따릅니다:",
     runPrefix: "실행",
@@ -457,56 +325,21 @@ const assistantUiCopy: Record<
     noUrl: "연결된 URL 없음",
     sectionsTitle: "생성된 섹션",
     actions: {
-      "blog-brief": {
-        id: "blog-brief",
-        label: "블로그 브리프",
-        description: "대상 주제의 독자, 검색 의도, 구조, CTA를 정리합니다.",
-        placeholder: "SaaS 스타트업을 위한 프로그래매틱 SEO",
-        urlLabel: "선택 대상 URL",
-      },
-      metadata: {
-        id: "metadata",
-        label: "메타데이터 팩",
-        description: "타이틀 태그, 메타 설명, H1 아이디어, SERP 패키징을 생성합니다.",
-        placeholder: "스타트업용 AI SEO 플랫폼 홈페이지",
-        urlLabel: "페이지 URL",
-      },
-      "keyword-cluster": {
-        id: "keyword-cluster",
-        label: "키워드 클러스터",
-        description: "핵심 주제, 보조 키워드, 내부 링크 방향을 정리합니다.",
-        placeholder: "AI 콘텐츠 최적화 도구",
-        urlLabel: "선택 참조 URL",
-      },
-      "schema-faq": {
-        id: "schema-faq",
-        label: "스키마 + FAQ",
-        description: "페이지나 주제에 맞는 구현 가능한 스키마와 FAQ 아이디어를 생성합니다.",
-        placeholder: "SaaS SEO 제품 가격 페이지",
-        urlLabel: "페이지 URL",
-      },
-      "fix-plan": {
-        id: "fix-plan",
-        label: "수정 계획",
-        description: "감사 결과를 구체적인 수정안, 점검 항목, 구현 작업으로 바꿉니다.",
-        placeholder: "기본 키워드를 포함하도록 H1을 수정하고 검색 의도를 명확히 하기",
-        urlLabel: "감사 URL",
-      },
+      "blog-brief": { id: "blog-brief", label: "블로그 브리프", description: "대상 주제의 독자, 검색 의도, 구조, CTA를 정리합니다.", placeholder: "SaaS 스타트업을 위한 프로그래매틱 SEO", urlLabel: "선택 대상 URL" },
+      metadata: { id: "metadata", label: "메타데이터 팩", description: "타이틀 태그, 메타 설명, H1 아이디어, SERP 패키징을 생성합니다.", placeholder: "스타트업용 AI SEO 플랫폼 홈페이지", urlLabel: "페이지 URL" },
+      "keyword-cluster": { id: "keyword-cluster", label: "키워드 클러스터", description: "핵심 주제, 보조 키워드, 내부 링크 방향을 정리합니다.", placeholder: "AI 콘텐츠 최적화 도구", urlLabel: "선택 참조 URL" },
+      "schema-faq": { id: "schema-faq", label: "스키마 + FAQ", description: "페이지나 주제에 맞는 구현 가능한 스키마와 FAQ 아이디어를 생성합니다.", placeholder: "SaaS SEO 제품 가격 페이지", urlLabel: "페이지 URL" },
+      "fix-plan": { id: "fix-plan", label: "수정 계획", description: "감사 결과를 구체적인 수정안, 점검 항목, 구현 작업으로 바꿉니다.", placeholder: "기본 키워드를 포함하도록 H1을 수정하고 검색 의도를 명확히 하기", urlLabel: "감사 URL" },
     },
   },
 };
 
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
+
 function clampPreview(value: string, maxLength: number) {
   const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    return "";
-  }
-
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
-
+  if (!normalized) return "";
+  if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, Math.max(maxLength - 3, 0)).trimEnd()}...`;
 }
 
@@ -515,10 +348,7 @@ type AssistantRunDraft = Omit<AssistantRun, "id" | "createdAt"> &
 
 type AssistantApiResponse = {
   assistantRun?: AssistantRunDraft;
-  creditsUsed?: {
-    image?: number;
-    prompt?: number;
-  };
+  creditsUsed?: { image?: number; prompt?: number };
   ephemeralImageDataUrl?: string | null;
   error?: string;
   warnings?: string[];
@@ -527,20 +357,17 @@ type AssistantApiResponse = {
 const assistantAddonDefinitions = getAssistantAddonDefinitions();
 
 const addonUi = {
-  checkoutBody:
-    "This is a one-time Razorpay payment for a single assistant add-on credit. The credit is added to your account immediately after verification.",
+  checkoutBody: "This is a one-time Razorpay payment for a single assistant add-on credit. The credit is added to your account immediately after verification.",
   checkoutTitle: "Assistant add-on checkout",
   copy: "Copy",
   copyDone: "Copied",
   downloadImage: "Download image",
   imageCreditLabel: "Image credits",
-  imageHelper:
-    "Generate one SEO-driven blog image per credit. The output includes alt text, a search-friendly filename, and a ready-to-download asset.",
+  imageHelper: "Generate one SEO-driven blog image per credit. The output includes alt text, a search-friendly filename, and a ready-to-download asset.",
   includeWithRun: "Include with this run",
   oneTimeCharge: "One-time charge",
   promptCreditLabel: "Prompt credits",
-  promptHelper:
-    "Generate one direct-use developer prompt pack per credit. The pack includes Conductor and Cursor prompts tailored to the assistant output.",
+  promptHelper: "Generate one direct-use developer prompt pack per credit. The pack includes Conductor and Cursor prompts tailored to the assistant output.",
   purchaseCredit: "Buy credit",
   seoImage: "SEO image generation",
   toolsTitle: "Paid add-ons",
@@ -553,8 +380,7 @@ const addonUi = {
   developerPrompts: "Developer-ready prompts",
   imageOutput: "SEO image output",
   implementationPlan: "Execution plan",
-  sessionPreviewNote:
-    "This image preview is available in the current session. Buy another credit when you want a fresh generated asset.",
+  sessionPreviewNote: "This image preview is available in the current session. Buy another credit when you want a fresh generated asset.",
   warnings: "Generation notes",
 };
 
@@ -562,17 +388,29 @@ function formatAuthErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null) {
     const maybeCode = "code" in error && typeof error.code === "string" ? error.code : null;
     const maybeMessage = "message" in error && typeof error.message === "string" ? error.message : null;
-
-    if (maybeCode && maybeMessage) {
-      return `${fallback} (${maybeCode}: ${maybeMessage})`;
-    }
-
-    if (maybeMessage) {
-      return `${fallback} (${maybeMessage})`;
-    }
+    if (maybeCode && maybeMessage) return `${fallback} (${maybeCode}: ${maybeMessage})`;
+    if (maybeMessage) return `${fallback} (${maybeMessage})`;
   }
-
   return fallback;
+}
+
+/* ─── Tiny primitives ────────────────────────────────────────────────────── */
+
+function SparkDot({ className = "" }: { className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#83f6d7] shadow-[0_0_8px_rgba(131,246,215,0.7)] ${className}`}
+    />
+  );
+}
+
+function SectionEyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--site-muted)] opacity-70">
+      {children}
+    </p>
+  );
 }
 
 function SparkDot({ className = "" }: { className?: string }) {
@@ -601,11 +439,14 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/* ─── Main content ───────────────────────────────────────────────────────── */
+
 function AiAssistantPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { language, uiLanguage } = useLanguage();
   const resultRef = useRef<HTMLDivElement | null>(null);
+
   const [uid, setUid] = useState("");
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [plan, setPlan] = useState<BillingPlan | null>(null);
@@ -622,6 +463,7 @@ function AiAssistantPageContent() {
   const [copiedItem, setCopiedItem] = useState("");
   const [isBusy, setBusy] = useState(false);
   const [isCheckoutBusy, setCheckoutBusy] = useState(false);
+
   const activeLanguage = resolveAppUiLanguage(language, uiLanguage);
   const ui = assistantUiCopy[activeLanguage];
   const activeAction = useMemo(() => ui.actions[action], [action, ui.actions]);
@@ -632,14 +474,9 @@ function AiAssistantPageContent() {
   const imagePreviewSrc = ephemeralImageDataUrl || result?.imageAsset?.imageUrl || null;
   const readyToUse = Array.isArray(result?.readyToUse) ? result.readyToUse : [];
   const resultSections = Array.isArray(result?.sections) ? result.sections : [];
-  const alternativeSections = Array.isArray(result?.alternative?.sections)
-    ? result.alternative.sections
-    : [];
+  const alternativeSections = Array.isArray(result?.alternative?.sections) ? result.alternative.sections : [];
   const resultActionLabel = result ? (ui.actions[result.action]?.label ?? result.action) : activeAction.label;
-  const directUsePreview = clampPreview(
-    readyToUse[0]?.content ?? result?.summary ?? activeAction.description,
-    220,
-  );
+  const directUsePreview = clampPreview(readyToUse[0]?.content ?? result?.summary ?? activeAction.description, 220);
   const sectionCount = resultSections.length || 3;
   const primaryInputPreview = clampPreview(input || result?.input || activeAction.placeholder, 120);
   const linkedUrl = result?.url || url || ui.noUrl;
@@ -649,43 +486,23 @@ function AiAssistantPageContent() {
     const queryAction = searchParams.get("action");
     const queryInput = searchParams.get("input");
     const queryUrl = searchParams.get("url");
-
-    if (queryAction && actionIds.includes(queryAction as AssistantActionType)) {
-      setAction(queryAction as AssistantActionType);
-    }
-
-    if (queryInput) {
-      setInput(queryInput);
-    }
-
-    if (queryUrl) {
-      setUrl(queryUrl);
-    }
+    if (queryAction && actionIds.includes(queryAction as AssistantActionType)) setAction(queryAction as AssistantActionType);
+    if (queryInput) setInput(queryInput);
+    if (queryUrl) setUrl(queryUrl);
   }, [searchParams]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (!currentUser) {
-        router.replace("/auth");
-        return;
-      }
-
+      if (!currentUser) { router.replace("/auth"); return; }
       setUid(currentUser.uid);
-
       try {
         const [dashboard, nextProfile] = await Promise.all([
           getDashboardForUser(currentUser.uid),
           getUserProfile(currentUser.uid),
         ]);
-
         setPlan(dashboard.plan);
         setProfile(nextProfile);
-
-        if (dashboard.plan === "free") {
-          router.replace("/billing?upgrade=assistant-locked");
-          return;
-        }
-
+        if (dashboard.plan === "free") { router.replace("/billing?upgrade=assistant-locked"); return; }
         setResult(dashboard.assistantRuns[0] ?? null);
         setWarnings([]);
         setEphemeralImageDataUrl(null);
@@ -693,276 +510,108 @@ function AiAssistantPageContent() {
         setStatus({ tone: "error", text: ui.loadError });
       }
     });
-
-    return () => {
-      unsubscribe();
-    };
+    return () => { unsubscribe(); };
   }, [router, ui.loadError]);
 
   async function copyText(key: string, text: string) {
-    if (!text) {
-      return;
-    }
-
+    if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
       setCopiedItem(key);
       setStatus({ tone: "muted", text: `${addonUi.copyDone}: ${key}` });
-      window.setTimeout(() => {
-        setCopiedItem((current) => (current === key ? "" : current));
-      }, 1600);
+      window.setTimeout(() => { setCopiedItem((c) => (c === key ? "" : c)); }, 1600);
     } catch {
       setStatus({ tone: "error", text: "Could not copy to clipboard." });
     }
   }
 
   async function handleConfirmAddonCheckout() {
-    if (!checkoutAddon) {
-      return;
-    }
-
+    if (!checkoutAddon) return;
     const currentUser = auth.currentUser;
-    if (!currentUser) {
-      setStatus({ tone: "error", text: ui.authRequired });
-      return;
-    }
-
+    if (!currentUser) { setStatus({ tone: "error", text: ui.authRequired }); return; }
     const addonType = checkoutAddon;
     const addonDefinition = assistantAddonDefinitions[addonType];
-
     setCheckoutBusy(true);
-
-    try {
-      await ensureRazorpayCheckout();
-    } catch (error) {
+    try { await ensureRazorpayCheckout(); } catch (error) {
       setCheckoutBusy(false);
-      setStatus({
-        tone: "error",
-        text: formatAuthErrorMessage(error, "Razorpay checkout could not be loaded."),
-      });
+      setStatus({ tone: "error", text: formatAuthErrorMessage(error, "Razorpay checkout could not be loaded.") });
       return;
     }
-
     setStatus({ tone: "muted", text: "Preparing Razorpay checkout..." });
-
     try {
       const orderToken = await currentUser.getIdToken();
-      const order = await postAuthenticatedJson<RazorpayOrderResponse>(
-        "/api/assistant-addons/order",
-        orderToken,
-        {
-          addonType,
-          phone: profile?.phone ?? "",
-        },
-      );
-
+      const order = await postAuthenticatedJson<RazorpayOrderResponse>("/api/assistant-addons/order", orderToken, { addonType, phone: profile?.phone ?? "" });
       const RazorpayCheckout = window.Razorpay;
-      if (!RazorpayCheckout) {
-        throw new Error("Razorpay checkout could not be loaded.");
-      }
-
+      if (!RazorpayCheckout) throw new Error("Razorpay checkout could not be loaded.");
       const razorpay = new RazorpayCheckout({
-        key: order.keyId,
-        amount: order.amount,
-        currency: order.currency,
-        name: "Aether SEO",
-        description: `${order.title} one-time credit`,
-        order_id: order.orderId,
-        prefill: {
-          contact: profile?.phone || undefined,
-          email: currentUser.email ?? undefined,
-          name: currentUser.displayName ?? undefined,
-        },
-        notes: {
-          addonType,
-          source: "ai-assistant",
-          unitPriceUsd: addonDefinition.priceLabel,
-        },
-        theme: {
-          color: "#111111",
-        },
-        modal: {
-          ondismiss: () => {
-            setCheckoutBusy(false);
-            setStatus({ tone: "muted", text: "Payment was cancelled before completion." });
-          },
-        },
+        key: order.keyId, amount: order.amount, currency: order.currency, name: "Aether SEO",
+        description: `${order.title} one-time credit`, order_id: order.orderId,
+        prefill: { contact: profile?.phone || undefined, email: currentUser.email ?? undefined, name: currentUser.displayName ?? undefined },
+        notes: { addonType, source: "ai-assistant", unitPriceUsd: addonDefinition.priceLabel },
+        theme: { color: "#111111" },
+        modal: { ondismiss: () => { setCheckoutBusy(false); setStatus({ tone: "muted", text: "Payment was cancelled before completion." }); } },
         handler: async (response) => {
           setStatus({ tone: "muted", text: "Verifying Razorpay payment..." });
-
           try {
             const verificationToken = await currentUser.getIdToken();
-            await postAuthenticatedJson<{ ok: true }>(
-              "/api/assistant-addons/verify",
-              verificationToken,
-              {
-                addonType,
-                ...response,
-              },
-            );
-
-            setProfile((current) =>
-              current
-                ? {
-                    ...current,
-                    assistantPromptCredits:
-                      current.assistantPromptCredits +
-                      (addonType === "developer-prompt-pack" ? 1 : 0),
-                    assistantImageCredits:
-                      current.assistantImageCredits + (addonType === "seo-image" ? 1 : 0),
-                  }
-                : current,
-            );
+            await postAuthenticatedJson<{ ok: true }>("/api/assistant-addons/verify", verificationToken, { addonType, ...response });
+            setProfile((current) => current ? { ...current, assistantPromptCredits: current.assistantPromptCredits + (addonType === "developer-prompt-pack" ? 1 : 0), assistantImageCredits: current.assistantImageCredits + (addonType === "seo-image" ? 1 : 0) } : current);
             setCheckoutAddon(null);
             setCheckoutBusy(false);
-            setStatus({
-              tone: "muted",
-              text: `${addonDefinition.title} credit added to your account.`,
-            });
-
-            if (addonType === "developer-prompt-pack") {
-              setIncludePromptPack(true);
-            } else {
-              setIncludeSeoImageAsset(true);
-            }
+            setStatus({ tone: "muted", text: `${addonDefinition.title} credit added to your account.` });
+            if (addonType === "developer-prompt-pack") setIncludePromptPack(true);
+            else setIncludeSeoImageAsset(true);
           } catch (error) {
             setCheckoutBusy(false);
-            setStatus({
-              tone: "error",
-              text: formatAuthErrorMessage(error, "Could not verify the add-on payment."),
-            });
+            setStatus({ tone: "error", text: formatAuthErrorMessage(error, "Could not verify the add-on payment.") });
           }
         },
       });
-
       razorpay.open();
     } catch (error) {
       setCheckoutBusy(false);
-      setStatus({
-        tone: "error",
-        text: formatAuthErrorMessage(error, "Could not create the add-on order."),
-      });
+      setStatus({ tone: "error", text: formatAuthErrorMessage(error, "Could not create the add-on order.") });
     }
   }
 
   async function handleGenerate() {
-    if (!uid) {
-      setStatus({ tone: "error", text: ui.authRequired });
-      return;
-    }
-
-    if (!isAssistantUnlocked) {
-      router.replace("/billing?upgrade=assistant-locked");
-      return;
-    }
-
-    if (!input.trim()) {
-      setStatus({ tone: "error", text: ui.inputRequired });
-      return;
-    }
-
-    if (includePromptPack && promptCredits < 1) {
-      setStatus({
-        tone: "error",
-        text: "Developer prompt credits are empty. Buy a $2 prompt pack before adding it to this run.",
-      });
-      return;
-    }
-
-    if (includeSeoImageAsset && imageCredits < 1) {
-      setStatus({
-        tone: "error",
-        text: "SEO image credits are empty. Buy a $5 image credit before adding it to this run.",
-      });
-      return;
-    }
-
+    if (!uid) { setStatus({ tone: "error", text: ui.authRequired }); return; }
+    if (!isAssistantUnlocked) { router.replace("/billing?upgrade=assistant-locked"); return; }
+    if (!input.trim()) { setStatus({ tone: "error", text: ui.inputRequired }); return; }
+    if (includePromptPack && promptCredits < 1) { setStatus({ tone: "error", text: "Developer prompt credits are empty. Buy a $2 prompt pack before adding it to this run." }); return; }
+    if (includeSeoImageAsset && imageCredits < 1) { setStatus({ tone: "error", text: "SEO image credits are empty. Buy a $5 image credit before adding it to this run." }); return; }
     const currentUser = auth.currentUser;
-    if (!currentUser) {
-      setStatus({ tone: "error", text: ui.authRequired });
-      return;
-    }
-
+    if (!currentUser) { setStatus({ tone: "error", text: ui.authRequired }); return; }
     setBusy(true);
     setWarnings([]);
     setStatus({ tone: "muted", text: ui.generating });
-
     try {
       const token = await currentUser.getIdToken();
-      const payload = await postAuthenticatedJson<AssistantApiResponse>(
-        "/api/ai-assistant",
-        token,
-        {
-          action,
-          includePromptPack,
-          includeSeoImageAsset,
-          input,
-          language: activeLanguage,
-          url,
-        },
-      );
-
-      if (!payload.assistantRun) {
-        throw new Error("AI assistant returned an empty result.");
-      }
-
+      const payload = await postAuthenticatedJson<AssistantApiResponse>("/api/ai-assistant", token, { action, includePromptPack, includeSeoImageAsset, input, language: activeLanguage, url });
+      if (!payload.assistantRun) throw new Error("AI assistant returned an empty result.");
       setEphemeralImageDataUrl(payload.ephemeralImageDataUrl ?? null);
       setWarnings(payload.warnings ?? []);
-
       const nextDashboard = await saveAssistantRunForUser(uid, payload.assistantRun);
       const nextResult = nextDashboard.assistantRuns[0] ?? null;
-
       setPlan(nextDashboard.plan);
       setResult(nextResult);
-      setProfile((current) =>
-        current
-          ? {
-              ...current,
-              assistantPromptCredits: Math.max(
-                0,
-                current.assistantPromptCredits - (payload.creditsUsed?.prompt ?? 0),
-              ),
-              assistantImageCredits: Math.max(
-                0,
-                current.assistantImageCredits - (payload.creditsUsed?.image ?? 0),
-              ),
-            }
-          : current,
-      );
-
-      if ((payload.creditsUsed?.prompt ?? 0) > 0) {
-        setIncludePromptPack(false);
-      }
-
-      if ((payload.creditsUsed?.image ?? 0) > 0) {
-        setIncludeSeoImageAsset(false);
-      }
-
-      setStatus({
-        tone: "muted",
-        text: payload.warnings?.length ? `${ui.saved} ${payload.warnings[0]}` : ui.saved,
-      });
-
-      requestAnimationFrame(() => {
-        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
+      setProfile((current) => current ? { ...current, assistantPromptCredits: Math.max(0, current.assistantPromptCredits - (payload.creditsUsed?.prompt ?? 0)), assistantImageCredits: Math.max(0, current.assistantImageCredits - (payload.creditsUsed?.image ?? 0)) } : current);
+      if ((payload.creditsUsed?.prompt ?? 0) > 0) setIncludePromptPack(false);
+      if ((payload.creditsUsed?.image ?? 0) > 0) setIncludeSeoImageAsset(false);
+      setStatus({ tone: "muted", text: payload.warnings?.length ? `${ui.saved} ${payload.warnings[0]}` : ui.saved });
+      requestAnimationFrame(() => { resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); });
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message === "AI assistant is available on paid plans only. Upgrade to continue."
-      ) {
+      if (error instanceof Error && error.message === "AI assistant is available on paid plans only. Upgrade to continue.") {
         router.replace("/billing?upgrade=assistant-locked");
         return;
       }
-
-      setStatus({
-        tone: "error",
-        text: error instanceof Error ? error.message : "Could not generate the AI assistant result.",
-      });
+      setStatus({ tone: "error", text: error instanceof Error ? error.message : "Could not generate the AI assistant result." });
     } finally {
       setBusy(false);
     }
   }
+
+  /* ── Render ─────────────────────────────────────────────────────────── */
 
   return (
     <div className="space-y-4">
@@ -1115,7 +764,7 @@ function AiAssistantPageContent() {
                 </span>
                 <textarea
                   value={input}
-                  onChange={(event) => setInput(event.target.value)}
+                  onChange={(e) => setInput(e.target.value)}
                   placeholder={activeAction.placeholder}
                   rows={3}
                   className="site-input w-full resize-none rounded-[12px] border px-3 py-2.5 text-[13px] outline-none transition-colors duration-200 focus:border-[#8d84ff]/55"
@@ -1128,7 +777,7 @@ function AiAssistantPageContent() {
                 </span>
                 <input
                   value={url}
-                  onChange={(event) => setUrl(event.target.value)}
+                  onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.com/page"
                   type="url"
                   className="site-input w-full rounded-[12px] border px-3 py-2.5 text-[13px] outline-none transition-colors duration-200 focus:border-[#8d84ff]/55"
@@ -1274,6 +923,7 @@ function AiAssistantPageContent() {
             </div>
           </section>
 
+          {/* Warnings */}
           {warnings.length ? (
             <section
               aria-label="Generation notes"
@@ -1291,6 +941,7 @@ function AiAssistantPageContent() {
             </section>
           ) : null}
 
+          {/* ── Result content ───────────────────────────────── */}
           {result ? (
             <div className="grid items-start gap-4 md:grid-cols-[1.08fr,0.92fr]">
               <div className="space-y-4">
@@ -1368,7 +1019,10 @@ function AiAssistantPageContent() {
                 </article>
               </div>
 
+              {/* Right column: alternative + addons */}
               <div className="space-y-4">
+
+                {/* Alternative */}
                 {result?.alternative ? (
                   <article className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
                     <SectionEyebrow>{addonUi.alternative}</SectionEyebrow>
@@ -1392,6 +1046,7 @@ function AiAssistantPageContent() {
                   </article>
                 ) : null}
 
+                {/* Prompt pack */}
                 {result?.promptPack ? (
                   <article className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
                     <header className="flex items-center justify-between gap-3">
@@ -1430,6 +1085,7 @@ function AiAssistantPageContent() {
                   </article>
                 ) : null}
 
+                {/* Image asset */}
                 {result?.imageAsset ? (
                   <article className="rounded-[18px] border border-[var(--site-border)] bg-[var(--site-surface)] p-5">
                     <header className="flex items-center justify-between gap-3">
@@ -1571,6 +1227,8 @@ function AiAssistantPageContent() {
     </div>
   );
 }
+
+/* ─── Export with Suspense ───────────────────────────────────────────────── */
 
 export default function AiAssistantPage() {
   return (

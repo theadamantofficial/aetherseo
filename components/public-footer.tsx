@@ -144,11 +144,7 @@ function Sparkline() {
 export default function PublicFooter({ language }: { language: SiteLanguage }) {
   const { language: preferredLanguage } = useLanguage();
   const copy = useTranslatedCopy(footerCopy[language], preferredLanguage, `public-footer-copy-${language}`);
-  const landing = useTranslatedCopy(
-    landingCopy[language],
-    preferredLanguage,
-    `public-footer-landing-${language}`,
-  );
+  const landing = useTranslatedCopy(landingCopy[language], preferredLanguage, `public-footer-landing-${language}`);
 
   return (
     <footer className="mt-20 grid gap-4">
@@ -332,7 +328,6 @@ export default function PublicFooter({ language }: { language: SiteLanguage }) {
                 </Link>
               </div>
             </div>
-          </div>
 
           <div className="flex flex-col gap-4">
             <div className="grid gap-6 sm:grid-cols-2">
@@ -355,6 +350,7 @@ export default function PublicFooter({ language }: { language: SiteLanguage }) {
                 </div>
               </div>
             </div>
+          </div>
 
             <div className="site-panel-soft rounded-[1.6rem] border p-4">
               <p className="site-accent-text text-[10px] uppercase tracking-[0.16em]">Publishing activity</p>

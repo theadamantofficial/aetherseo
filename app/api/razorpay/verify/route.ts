@@ -141,6 +141,7 @@ export async function POST(request: Request) {
               assistantRuns: [],
               auditRuns: [],
               generatedBlogs: [],
+              plagiarismRuns: [],
               plan: "paid",
               uid: decodedToken.uid,
               updatedAt: FieldValue.serverTimestamp(),

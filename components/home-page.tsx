@@ -9,6 +9,8 @@ import { type PublishedBlogPost } from "@/lib/blog-post-utils";
 import { landingCopy } from "@/lib/site-language";
 import { useTranslatedCopy } from "@/lib/use-translated-copy";
 
+/* ─── Tiny reusable primitives ─────────────────────────────────────────── */
+
 function SparkDot() {
   return (
     <span
@@ -39,9 +41,23 @@ function formatPublishedDate(date: string, language: string) {
   }
 }
 
+function SectionEyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--site-muted)] opacity-70">
+      {children}
+    </p>
+  );
+}
+
+/* ─── Page ──────────────────────────────────────────────────────────────── */
+
 export default function HomePage() {
   const { language, uiLanguage } = useLanguage();
-  const copy = useTranslatedCopy(landingCopy[uiLanguage], language, `home-page-copy-${uiLanguage}`);
+  const copy = useTranslatedCopy(
+    landingCopy[uiLanguage],
+    language,
+    `home-page-copy-${uiLanguage}`,
+  );
   const [posts, setPosts] = useState<PublishedBlogPost[]>([]);
   const [contactState, setContactState] = useState<"idle" | "sending" | "success" | "error">("idle");
 
@@ -153,7 +169,6 @@ export default function HomePage() {
 
   useEffect(() => {
     let isMounted = true;
-
     async function loadPosts() {
       try {
         const response = await fetch(`/api/public-blog-posts?language=${uiLanguage}&limit=3`, {
@@ -165,17 +180,11 @@ export default function HomePage() {
           setPosts(payload.posts ?? []);
         }
       } catch {
-        if (isMounted) {
-          setPosts([]);
-        }
+        if (isMounted) setPosts([]);
       }
     }
-
     void loadPosts();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [uiLanguage]);
 
   async function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
@@ -184,18 +193,18 @@ export default function HomePage() {
     const formData = new FormData(form);
 
     setContactState("sending");
-
     try {
-      const response = await fetch("/api/contact", {
+      const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: String(formData.get("name") ?? ""),
-          email: String(formData.get("email") ?? ""),
-          company: String(formData.get("company") ?? ""),
-          goal: String(formData.get("goal") ?? ""),
-          details: String(formData.get("details") ?? ""),
+          name: String(fd.get("name") ?? ""),
+          email: String(fd.get("email") ?? ""),
+          company: String(fd.get("company") ?? ""),
+          goal: String(fd.get("goal") ?? ""),
+          details: String(fd.get("details") ?? ""),
           language,
+          website: String(fd.get("website") ?? ""),
         }),
       });
 

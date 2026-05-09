@@ -19,6 +19,8 @@ import {
 import { resolveAppUiLanguage, type AppUiLanguage } from "@/lib/app-ui-language";
 import { useTranslatedCopy } from "@/lib/use-translated-copy";
 
+/* ─── Types ──────────────────────────────────────────────────────────────── */
+
 type DashboardViewState =
   | { loading: true; error: "" | "load_failed"; data: null; profile: null }
   | {
@@ -34,6 +36,8 @@ const initialState: DashboardViewState = {
   data: null,
   profile: null,
 };
+
+/* ─── i18n copy ──────────────────────────────────────────────────────────── */
 
 const dashboardUiCopy: Record<
   AppUiLanguage,
@@ -142,8 +146,7 @@ const dashboardUiCopy: Record<
     createStandardDraft: "Creer un brouillon standard",
     createPaidDraft: "Creer un brouillon {tier}",
     auditTitle: "Audit complet du site web",
-    auditBody:
-      "Analysez votre domaine pour detecter les problemes SEO techniques et les goulots de performance.",
+    auditBody: "Analysez votre domaine pour detecter les problemes SEO techniques et les goulots de performance.",
     runBasicAudit: "Lancer un audit basique",
     runPaidAudit: "Lancer un audit {tier}",
     assistantTitle: "Assistant IA SEO",
@@ -335,9 +338,9 @@ export default function DashboardPage() {
     ? ui.runPaidAudit.replace("{tier}", paidTierLabel ?? "Paid")
     : ui.runBasicAudit;
 
-  if (state.loading) {
-    return <SiteLoader size="lg" />;
-  }
+  /* ── Loading / error states ─────────────────────────────────────────── */
+
+  if (state.loading) return <SiteLoader size="lg" />;
 
   if (state.error) {
     return (
@@ -351,14 +354,18 @@ export default function DashboardPage() {
     return <p className="text-[13px] text-[var(--site-muted)]">{ui.empty}</p>;
   }
 
-  const isFreeBlogLimitReached = dashboard.plan === "free" && dashboard.generatedBlogs.length >= 3;
+  /* ── Derived hrefs / labels ─────────────────────────────────────────── */
+
+  const isFreeBlogLimitReached  = dashboard.plan === "free" && dashboard.generatedBlogs.length >= 3;
   const isFreeAuditLimitReached = dashboard.plan === "free" && dashboard.auditRuns.length >= 1;
-  const blogHref = isFreeBlogLimitReached ? "/billing?upgrade=blog-limit" : "/generate-blog";
-  const auditHref = isFreeAuditLimitReached ? "/billing?upgrade=audit-limit" : "/website-audit";
-  const assistantHref = isPaid ? "/ai-assistant" : "/billing?upgrade=assistant-locked";
-  const draftButtonLabel = isFreeBlogLimitReached ? ui.upgradePlan : draftLabel;
-  const auditButtonLabel = isFreeAuditLimitReached ? ui.upgradePlan : auditLabel;
+  const blogHref        = isFreeBlogLimitReached  ? "/billing?upgrade=blog-limit"      : "/generate-blog";
+  const auditHref       = isFreeAuditLimitReached ? "/billing?upgrade=audit-limit"     : "/website-audit";
+  const assistantHref   = isPaid                  ? "/ai-assistant"                    : "/billing?upgrade=assistant-locked";
+  const draftButtonLabel     = isFreeBlogLimitReached  ? ui.upgradePlan : draftLabel;
+  const auditButtonLabel     = isFreeAuditLimitReached ? ui.upgradePlan : auditLabel;
   const assistantButtonLabel = isPaid ? ui.openAssistant : ui.upgradePlan;
+
+  /* ── Render ─────────────────────────────────────────────────────────── */
 
   return (
     <div className="space-y-4">
@@ -523,8 +530,8 @@ export default function DashboardPage() {
             {translatedDashboard.recommendations.map((recommendation: string) => {
               const href = isPaid
                 ? latestAuditUrl
-                  ? `/ai-assistant?action=fix-plan&input=${encodeURIComponent(recommendation)}&url=${encodeURIComponent(latestAuditUrl)}`
-                  : `/ai-assistant?action=fix-plan&input=${encodeURIComponent(recommendation)}`
+                  ? `/ai-assistant?action=fix-plan&input=${encodeURIComponent(rec)}&url=${encodeURIComponent(latestAuditUrl)}`
+                  : `/ai-assistant?action=fix-plan&input=${encodeURIComponent(rec)}`
                 : "/billing?upgrade=assistant-locked";
               const actionLabel = isPaid ? ui.launchFixPlan : ui.upgradePlan;
 

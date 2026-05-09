@@ -435,6 +435,18 @@ function createRecentBuckets(dashboard: DashboardData, locale: string): Activity
     }
   }
 
+  for (const scan of dashboard.plagiarismRuns) {
+    const parsed = parseDateValue(scan.createdAt);
+    if (parsed === null) {
+      continue;
+    }
+
+    const targetIndex = bucketIndex.get(startOfDay(parsed));
+    if (targetIndex !== undefined) {
+      buckets[targetIndex].values.assistant += 1;
+    }
+  }
+
   return buckets.map((bucket) => ({
     label: bucket.label,
     total: bucket.values.blog + bucket.values.audit + bucket.values.assistant,
@@ -477,7 +489,17 @@ export default function AnalyticsPage() {
 
   const latestBlog = dashboard?.generatedBlogs[0] ?? null;
   const latestAudit = dashboard?.auditRuns[0] ?? null;
-  const latestAssistant = dashboard?.assistantRuns[0] ?? null;
+  const latestAssistant = useMemo(() => {
+    if (!dashboard) {
+      return null;
+    }
+
+    return [...dashboard.assistantRuns, ...dashboard.plagiarismRuns].sort((left, right) => {
+      const leftDate = parseDateValue(left.createdAt) ?? 0;
+      const rightDate = parseDateValue(right.createdAt) ?? 0;
+      return rightDate - leftDate;
+    })[0] ?? null;
+  }, [dashboard]);
   const translatedDashboard = useTranslatedCopy(
     dashboard
       ? {
@@ -592,7 +614,7 @@ export default function AnalyticsPage() {
       {
         key: "assistant",
         label: translatedDashboard.cards[2]?.label ?? "AI tasks",
-        value: dashboard.assistantRuns.length,
+        value: dashboard.assistantRuns.length + dashboard.plagiarismRuns.length,
         solid: ACTIVITY_STYLES.assistant.solid,
         soft: ACTIVITY_STYLES.assistant.soft,
       },

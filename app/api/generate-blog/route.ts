@@ -75,6 +75,98 @@ function normalizeStringArray(value: unknown, limit: number) {
     : [];
 }
 
+function normalizeWhitespace(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function countWords(value: string) {
+  return value ? value.split(/\s+/).filter(Boolean).length : 0;
+}
+
+function splitSentences(value: string) {
+  return value
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => normalizeWhitespace(sentence))
+    .filter(Boolean);
+}
+
+function readString(value: unknown, fallback = "") {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function estimateAiContentPercent(value: string) {
+  const text = normalizeWhitespace(value).toLowerCase();
+  if (!text) {
+    return 0;
+  }
+
+  const phrases = [
+    "in today's",
+    "in today s",
+    "ever-evolving",
+    "ever evolving",
+    "delve into",
+    "unlock the",
+    "unlock your",
+    "game-changer",
+    "game changer",
+    "leverage",
+    "furthermore",
+    "moreover",
+    "in conclusion",
+    "streamline",
+    "seamless",
+    "robust",
+    "landscape",
+    "valuable insights",
+    "cutting-edge",
+    "cutting edge",
+  ];
+  const sentences = splitSentences(value);
+  const longSentenceCount = sentences.filter((sentence) => countWords(sentence) >= 24).length;
+  const transitionCount = (text.match(/\b(furthermore|moreover|additionally|however|therefore)\b/g) ?? []).length;
+  const listyCount = (text.match(/\b(firstly|secondly|thirdly|overall)\b/g) ?? []).length;
+  const phraseCount = phrases.reduce((count, phrase) => count + (text.includes(phrase) ? 1 : 0), 0);
+  const sentenceStarts = new Map<string, number>();
+
+  for (const sentence of sentences) {
+    const start = sentence.toLowerCase().split(/\s+/).slice(0, 2).join(" ");
+    if (start) {
+      sentenceStarts.set(start, (sentenceStarts.get(start) ?? 0) + 1);
+    }
+  }
+
+  const repeatedStarts = [...sentenceStarts.values()].filter((count) => count > 1).length;
+  const averageWords = sentences.length
+    ? Math.round(sentences.reduce((total, sentence) => total + countWords(sentence), 0) / sentences.length)
+    : 0;
+
+  const score =
+    18 +
+    phraseCount * 7 +
+    transitionCount * 4 +
+    listyCount * 4 +
+    longSentenceCount * 3 +
+    repeatedStarts * 5 +
+    Math.max(0, averageWords - 18);
+
+  return Math.max(8, Math.min(96, Math.round(score)));
+}
+
+function buildBlogDetectorText(draft: Record<string, unknown>, paragraphCount: number) {
+  return [
+    readString(draft.title),
+    readString(draft.metaDescription),
+    readString(draft.previewMeta),
+    ...normalizeStringArray(draft.paragraphs, paragraphCount),
+    readString(draft.sectionTitle),
+    readString(draft.sectionBody),
+    ...normalizeStringArray(draft.bullets, 3),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -294,6 +386,96 @@ async function requestOpenAIBlogDraft({
   const parsed = extractJsonObject(content);
   if (!parsed) {
     throw new Error("Could not parse OpenAI JSON response.");
+  }
+
+  return parsed;
+}
+
+async function requestOpenAIHumanizedBlogDraft({
+  apiKey,
+  draft,
+  includeSeoImageAsset,
+  keyword,
+  language,
+  paragraphCount,
+  scoreHint,
+  tone,
+}: {
+  apiKey: string;
+  draft: Record<string, unknown>;
+  includeSeoImageAsset: boolean;
+  keyword: string;
+  language: string;
+  paragraphCount: number;
+  scoreHint: number;
+  tone: string;
+}) {
+  const response = await fetch(OPENAI_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: resolveModel(),
+      temperature: 0.55,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a senior SEO editor humanizing AI-generated blog drafts. Preserve meaning and SEO structure. Return valid JSON only.",
+        },
+        {
+          role: "user",
+          content: `Regenerate this SEO blog draft in ${language} so it reads like careful human editorial work, not AI-written content.
+
+Keyword: ${keyword}
+Tone: ${tone}
+Current detector-style AI content estimate: ${scoreHint}/100
+
+Draft:
+${JSON.stringify(draft, null, 2)}
+
+Return JSON with this exact shape:
+{
+  "title": string,
+  "metaDescription": string,
+  "previewMeta": string,
+  "paragraphs": string[],
+  "sectionTitle": string,
+  "sectionBody": string,
+  "bullets": string[],
+  "imageAsset": ${includeSeoImageAsset ? `{"prompt": string, "alt": string, "title": string, "fileName": string}` : "null"}
+}
+
+Requirements:
+- keep the same topic, search intent, and factual scope
+- exactly ${paragraphCount} paragraphs and exactly 3 bullets
+- title under 70 characters and metaDescription under 160 characters
+- remove AI tells: generic setup lines, repetitive sentence starts, predictable transitions, filler, and abstract marketing language
+- vary sentence length and rhythm naturally
+- add concrete workflow phrasing without inventing statistics, case studies, customers, citations, or claims
+- preserve or improve the imageAsset metadata when present
+- no markdown fences`,
+        },
+      ],
+    }),
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.error?.message || "OpenAI blog humanization failed.");
+  }
+
+  const content = payload?.choices?.[0]?.message?.content;
+  if (typeof content !== "string") {
+    throw new Error("OpenAI returned an empty blog humanization response.");
+  }
+
+  const parsed = extractJsonObject(content);
+  if (!parsed) {
+    throw new Error("Could not parse OpenAI blog humanization JSON response.");
   }
 
   return parsed;
@@ -573,6 +755,53 @@ export async function POST(request: Request) {
       }
     }
 
+    const aiContentBefore = estimateAiContentPercent(buildBlogDetectorText(parsed, paragraphCount));
+    let aiContentAfter = aiContentBefore;
+
+    if (openAIKey && aiContentBefore >= 35) {
+      for (let pass = 1; pass <= 2 && aiContentAfter >= 25; pass += 1) {
+        try {
+          const regenerated = await requestOpenAIHumanizedBlogDraft({
+            apiKey: openAIKey,
+            draft: parsed,
+            includeSeoImageAsset,
+            keyword,
+            language,
+            paragraphCount,
+            scoreHint: aiContentAfter,
+            tone,
+          });
+          const regeneratedScore = estimateAiContentPercent(
+            buildBlogDetectorText(regenerated, paragraphCount),
+          );
+
+          if (regeneratedScore <= aiContentAfter) {
+            parsed = regenerated;
+            aiContentAfter = regeneratedScore;
+            warnings.push(
+              `AI-content refinement pass ${pass} reduced the detector-style estimate to ${aiContentAfter}%.`,
+            );
+          } else {
+            warnings.push(
+              `AI-content refinement pass ${pass} did not improve the detector-style estimate, so the previous draft was kept.`,
+            );
+            break;
+          }
+        } catch (error) {
+          warnings.push(
+            error instanceof Error
+              ? `AI-content refinement failed, so the best available draft was kept. ${error.message}`
+              : "AI-content refinement failed, so the best available draft was kept.",
+          );
+          break;
+        }
+      }
+    } else if (!openAIKey && aiContentBefore >= 35) {
+      warnings.push(
+        "AI-content estimate was high, but no OpenAI paid key is configured for the regeneration pass.",
+      );
+    }
+
     let imageAsset: GeneratedBlogImageAsset | null =
       includeSeoImageAsset &&
       parsed.imageAsset &&
@@ -648,6 +877,10 @@ export async function POST(request: Request) {
         imageAsset,
       },
       creditsUsed,
+      aiContent: {
+        after: aiContentAfter,
+        before: aiContentBefore,
+      },
       ephemeralImageDataUrl,
       warnings,
     });

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withOpenAIChatTemperature } from "@/lib/openai-chat-options";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 
@@ -63,9 +64,8 @@ export async function POST(request: Request) {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
+    body: JSON.stringify(withOpenAIChatTemperature({
       model: resolveModel(),
-      temperature: 0.2,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
           content: `Translate this JSON payload into ${language}.\n\n${JSON.stringify({ source })}`,
         },
       ],
-    }),
+    }, 0.2)),
   });
 
   const payload = await response.json().catch(() => null);

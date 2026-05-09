@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase-admin";
+import { withOpenAIChatTemperature } from "@/lib/openai-chat-options";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const OPENAI_IMAGE_ENDPOINT = "https://api.openai.com/v1/images/generations";
@@ -745,9 +746,8 @@ async function requestAssistantPayload({
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
+    body: JSON.stringify(withOpenAIChatTemperature({
       model: resolveModel(),
-      temperature: 0.45,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -769,7 +769,7 @@ Page context:
 ${pageContext}`,
         },
       ],
-    }),
+    }, 0.45)),
   });
 
   const payload = await response.json().catch(() => null);

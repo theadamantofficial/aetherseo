@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase-admin";
+import { withOpenAIChatTemperature } from "@/lib/openai-chat-options";
 import type { GeneratedBlogImageAsset } from "@/lib/firebase-data";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
@@ -348,29 +349,33 @@ async function requestOpenAIBlogDraft({
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: resolveModel(),
-      temperature: 0.7,
-      response_format: { type: "json_object" },
-      messages: [
+    body: JSON.stringify(
+      withOpenAIChatTemperature(
         {
-          role: "system",
-          content:
-            "You write high-quality SEO blog drafts. Always respond with valid JSON only.",
+          model: resolveModel(),
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content:
+                "You write high-quality SEO blog drafts. Always respond with valid JSON only.",
+            },
+            {
+              role: "user",
+              content: buildBlogPrompt({
+                includeSeoImageAsset,
+                keyword,
+                language,
+                length,
+                paragraphCount,
+                tone,
+              }),
+            },
+          ],
         },
-        {
-          role: "user",
-          content: buildBlogPrompt({
-            includeSeoImageAsset,
-            keyword,
-            language,
-            length,
-            paragraphCount,
-            tone,
-          }),
-        },
-      ],
-    }),
+        0.7,
+      ),
+    ),
   });
 
   const payload = await response.json().catch(() => null);
@@ -416,19 +421,20 @@ async function requestOpenAIHumanizedBlogDraft({
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: resolveModel(),
-      temperature: 0.55,
-      response_format: { type: "json_object" },
-      messages: [
+    body: JSON.stringify(
+      withOpenAIChatTemperature(
         {
-          role: "system",
-          content:
-            "You are a senior SEO editor humanizing AI-generated blog drafts. Preserve meaning and SEO structure. Return valid JSON only.",
-        },
-        {
-          role: "user",
-          content: `Regenerate this SEO blog draft in ${language} so it reads like careful human editorial work, not AI-written content.
+          model: resolveModel(),
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a senior SEO editor humanizing AI-generated blog drafts. Preserve meaning and SEO structure. Return valid JSON only.",
+            },
+            {
+              role: "user",
+              content: `Regenerate this SEO blog draft in ${language} so it reads like careful human editorial work, not AI-written content.
 
 Keyword: ${keyword}
 Tone: ${tone}
@@ -458,9 +464,12 @@ Requirements:
 - add concrete workflow phrasing without inventing statistics, case studies, customers, citations, or claims
 - preserve or improve the imageAsset metadata when present
 - no markdown fences`,
+            },
+          ],
         },
-      ],
-    }),
+        0.55,
+      ),
+    ),
   });
 
   const payload = await response.json().catch(() => null);

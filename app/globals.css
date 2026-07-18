@@ -731,6 +731,104 @@ html[data-theme="light"] .site-page [class*="bg-black/"] {
   }
 }
 
+.site-loader-glyph {
+  color: var(--site-primary);
+  isolation: isolate;
+}
+
+.site-loader-aura {
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--site-primary) 20%, transparent), transparent 48%),
+    radial-gradient(circle at 62% 38%, color-mix(in srgb, var(--site-tertiary) 18%, transparent), transparent 34%);
+  animation: site-loader-breathe 2.4s ease-in-out infinite;
+}
+
+.site-loader-grid {
+  border: 1px solid color-mix(in srgb, var(--site-primary) 18%, var(--site-border));
+  background:
+    linear-gradient(135deg, transparent 47%, color-mix(in srgb, var(--site-primary) 18%, transparent) 50%, transparent 53%),
+    radial-gradient(circle, color-mix(in srgb, var(--site-surface-soft) 78%, transparent), transparent 68%);
+  box-shadow: inset 0 0 24px color-mix(in srgb, var(--site-primary) 9%, transparent);
+}
+
+.site-loader-ring {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--site-primary) 18%, transparent) 38deg,
+    var(--site-primary) 92deg,
+    color-mix(in srgb, var(--site-tertiary) 60%, transparent) 132deg,
+    transparent 170deg,
+    transparent 360deg
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+}
+
+.site-loader-ring-primary {
+  animation: site-loader-spin 1.35s linear infinite;
+}
+
+.site-loader-ring-secondary {
+  opacity: 0.72;
+  animation: site-loader-spin 2.2s linear infinite reverse;
+}
+
+.site-loader-orbit {
+  border: 1px solid color-mix(in srgb, var(--site-primary) 16%, transparent);
+  animation: site-loader-spin 2.8s linear infinite;
+}
+
+.site-loader-orbit-reverse {
+  border-color: color-mix(in srgb, var(--site-tertiary) 18%, transparent);
+  animation-duration: 3.6s;
+  animation-direction: reverse;
+}
+
+.site-loader-orbit span {
+  background: var(--site-tertiary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--site-tertiary) 80%, transparent);
+}
+
+.site-loader-core {
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--site-primary) 92%, white 8%), var(--site-primary));
+  border: 1px solid color-mix(in srgb, white 24%, transparent);
+  color: white;
+  box-shadow:
+    0 10px 28px color-mix(in srgb, var(--site-primary) 24%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 28%, transparent);
+  animation: site-loader-core-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes site-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes site-loader-breathe {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes site-loader-core-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.94);
+  }
+}
+
 .site-skeleton {
   background: var(--site-surface-soft);
   animation: site-skeleton-pulse 1.8s ease-in-out infinite;
@@ -750,7 +848,12 @@ html[data-theme="light"] .site-page [class*="bg-black/"] {
   .footer-orbit-dot-a,
   .footer-orbit-dot-b,
   .footer-orbit-dot-c,
-  .footer-shimmer::after {
+  .footer-shimmer::after,
+  .site-loader-aura,
+  .site-loader-ring-primary,
+  .site-loader-ring-secondary,
+  .site-loader-orbit,
+  .site-loader-core {
     animation: none !important;
   }
 

@@ -129,7 +129,7 @@ function IconMoon({ className }: { className?: string }) {
   return (
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className={className} aria-hidden>
       <path
-        d="M10.5 7.5A5 5 0 015.5 2.5a5 5 0 100 8 5 5 0 005-3z"
+        d="M6.5 1.6a3.35 3.35 0 004.9 4.9 4.9 4.9 0 11-4.9-4.9z"
         stroke="currentColor"
         strokeWidth="1.1"
         strokeLinecap="round"
